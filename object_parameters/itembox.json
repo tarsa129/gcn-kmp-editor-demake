@@ -1,0 +1,37 @@
+{
+    "Object Parameters": [
+        "Unknown",
+        "Item type (player)",
+        "Item type (enemy)",
+        "Disables shadow if set",
+        "Unused",
+        "Timing lottery",
+        "Additional height, multiplied with unknown number (always 1?).",
+        "Unknown"
+    ],
+    "Assets": [
+        ".brres file needed"
+    ],
+    "Default Values": [
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        44
+    ],
+    "Route Info": null,
+    "Description": "Spinning box with a question mark inside it. If touched, it snaps and an item lottery begins; after the lottery, the item shown is retrieved.",
+    "Tooltips": [
+        "",
+        "1: mushroom",
+        "1: mushroom",
+        "1: mushroom",
+        "",
+        "1: mushroom",
+        "1: mushroom",
+        "1: mushroom"
+    ]
+}

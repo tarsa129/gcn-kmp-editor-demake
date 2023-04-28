@@ -1,0 +1,34 @@
+mkdd-master to do list:
+refactor options code to move stuff to libkmp
+
+gobj:
+- manually improve all descriptions / settings / and add default values
+- create side buttons for object placement based on type (create icons)
+- line drawing for item boxes via "i"
+- support for optional routes
+
+poti:
+- show splines (talk to zatchi)
+- camera auto route - make it based on the total length (parse all files to find average distance / speed)
+- add radius of route points with areas for multiple point rouetes
+- when route is highlighted, highlight the objects that are used
+- make sure that at most 255 routes are being created between camears and areas
+- when creating routes, make sure that the route settings are being set
+
+area:
+- add back helper functions for copy
+
+came:
+- camera replaying (long shot)
+- render unused cameras differently (or just don't have them)
+
+cnpt:
+- add stuff in general (make sure it works in top ortho)
+
+general:
+error analyzer
+- checkpoints: make sure that the # of keycps on each split path are balanced
+create dialog for auto generation and auto cleanup
+add conditional out of bounds? - not yet
+make 'c' work in 3d
+add option to select x to y points

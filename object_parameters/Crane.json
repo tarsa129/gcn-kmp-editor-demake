@@ -1,0 +1,28 @@
+{
+    "Object Parameters": [
+        "Unused",
+        "Amplitude of the motion (in game units)",
+        "Period of the motion (in 1/60s)",
+        "Time before starting",
+        "Unused",
+        "Unused",
+        "Unused",
+        "Unused"
+    ],
+    "Assets": [
+        ".brres file needed",
+        ".kcl files needed"
+    ],
+    "Default Values": [
+        0,
+        1200,
+        2100,
+        300,
+        0,
+        0,
+        0,
+        0
+    ],
+    "Route Info": null,
+    "Description": "Crane platform Toad's Factory. Slot [[Slot#1.4|1.4]] enables its SFX."
+}

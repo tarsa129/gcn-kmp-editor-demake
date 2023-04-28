@@ -1,0 +1,27 @@
+{
+    "Object Parameters": [
+        "Unused",
+        " Delay before starting in 1/60 seconds.",
+        "Length of steam effect.",
+        "Time between two steam effects.",
+        "Unused",
+        "Unused",
+        "Unused",
+        "Unused"
+    ],
+    "Assets": [
+        ".breff/.breft files needed"
+    ],
+    "Default Values": [
+        0,
+        160,
+        130,
+        160,
+        0,
+        0,
+        0,
+        0
+    ],
+    "Route Info": null,
+    "Description": "Steam effect from Toad's Factory."
+}

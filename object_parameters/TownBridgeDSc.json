@@ -1,0 +1,28 @@
+{
+    "Object Parameters": [
+        "Angle of inclination in degrees",
+        "Time in 1/60 seconds used to lift and lower",
+        "Time in 1/60 seconds of stop after lift",
+        "Time in 1/60 seconds of stop after lowering",
+        "Unused",
+        "Unused",
+        "Unused",
+        "Unused"
+    ],
+    "Assets": [
+        ".brres file needed",
+        ".kcl files needed"
+    ],
+    "Default Values": [
+        40,
+        360,
+        600,
+        600,
+        0,
+        0,
+        0,
+        0
+    ],
+    "Route Info": null,
+    "Description": "Drawbridge from DS Delfino Square; the bridge in DS Delfino Square is created using two of these objects face to face. Regardless of Y-rotation, the object will always rotate on the Z-axis of the stage when the bridge is being lifted or lowered."
+}

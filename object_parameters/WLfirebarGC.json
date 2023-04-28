@@ -1,0 +1,27 @@
+{
+    "Object Parameters": [
+        "Fireballs per arm",
+        "Rotations X per 360 seconds.<br>Counterclockwise = X<br>Clockwise = 65536 - X",
+        "Fireball distance",
+        "Number or arms",
+        "Unused",
+        "Unused",
+        "Unused",
+        "Unused"
+    ],
+    "Assets": [
+        ".brres file needed"
+    ],
+    "Default Values": [
+        4,
+        21862,
+        5,
+        3,
+        0,
+        0,
+        0,
+        0
+    ],
+    "Route Info": null,
+    "Description": "Rotating fire bars from GCN Waluigi Stadium.<br/>Can't be used together with {{obj-ref|koopaFirebar}}."
+}

@@ -1,0 +1,27 @@
+{
+    "Object Parameters": [
+        "Speed",
+        "Max Y difference",
+        "Unused",
+        "Unused",
+        "Unused",
+        "Unused",
+        "Unused",
+        "Unused"
+    ],
+    "Assets": [
+        ".brres file needed"
+    ],
+    "Default Values": [
+        18,
+        200,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ],
+    "Route Info": 2,
+    "Description": "Balloon from Mario Circuit."
+}
