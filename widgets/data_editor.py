@@ -404,6 +404,19 @@ class DataEditor(QWidget):
         for val in keyval_dict:
             if val != "INVALID":
                 combobox.addItem(val)
+
+        tt_dict = getattr(ttl, attribute, None)
+        try:
+            defaultitem = list(tt_dict)[0]
+        except TypeError:
+            pass
+        else:
+            if tt_dict is not None and combobox.currentText() == defaultitem:
+                combobox.setToolTip(tt_dict[defaultitem])
+        policy = combobox.sizePolicy()
+        policy.setHorizontalPolicy(QSizePolicy.Expanding)
+        combobox.setSizePolicy(policy)
+
         max_value = max( keyval_dict.values()  )
         #create the layout and label
         layout, label = self.create_labeled_widget_ret_both(self, text, combobox)
@@ -420,6 +433,12 @@ class DataEditor(QWidget):
                 set_attr_mult( [getattr(com_obj, sub_obj)], attr, val)
             else:
                 set_attr_mult([com_obj], attribute, val)
+
+            if tt_dict is not None and item in tt_dict:
+                combobox.setToolTip(tt_dict[item])
+            else:
+                combobox.setToolTip('')
+
         combobox.currentTextChanged.connect(item_selected)
 
         #print("created for", text, attribute)
@@ -970,8 +989,6 @@ class KMPEdit(DataEditor):
             self.update_data()
 
 class ObjectEdit(DataEditor):
-    emit_route_update = pyqtSignal("PyQt_PyObject", "int", "int")
-
     #want it so that in the making stage, changing the id changes the defaults
     #once the object has been created fully, then changing the id changes the defaults
 
@@ -1193,8 +1210,6 @@ class KartStartPointEdit(DataEditor):
         self.playerid.setText(str(obj.playerid))
 
 class AreaEdit(DataEditor):
-    emit_camera_update = pyqtSignal("PyQt_PyObject", "int", "int")
-    emit_route_update = pyqtSignal("PyQt_PyObject", "int", "int")
 
     def setup_widgets(self):
         self.position = self.add_multiple_decimal_input("Position", "position", ["x", "y", "z"],
@@ -1274,7 +1289,6 @@ class AreaEdit(DataEditor):
         super().update_name()
 
 class CameraEdit(DataEditor):
-    emit_route_update = pyqtSignal("PyQt_PyObject", "int", "int")
 
     def setup_widgets(self):
         self.position = self.add_multiple_decimal_input("Position", "position", ["x", "y", "z"],

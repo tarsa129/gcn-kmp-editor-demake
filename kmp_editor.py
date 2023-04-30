@@ -108,7 +108,7 @@ class GenEditor(QMainWindow):
         self.bco_coll = None
         self.loaded_archive = None
         self.loaded_archive_file = None
-        self.last_position_clicked = []
+        self.next_checkpoint_start_position = None
 
         self.connect_start = None
         self.select_start = None
@@ -195,7 +195,7 @@ class GenEditor(QMainWindow):
 
     @catch_exception
     def reset(self):
-        self.last_position_clicked = []
+        self.next_checkpoint_start_position = None
         self.loaded_archive = None
         self.loaded_archive_file = None
         self.object_to_be_added = None
@@ -528,6 +528,7 @@ class GenEditor(QMainWindow):
 
         self.level_view = KMPMapViewer(int(self.editorconfig.get("multisampling", 8)),
                                        self.centralwidget)
+        self.level_view.editor = self
 
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.horizontalLayout.addWidget(self.leveldatatreeview)
@@ -1314,31 +1315,6 @@ class GenEditor(QMainWindow):
 
             self.update_3d()
 
-
-    def load_optional_bmd(self, bmdfile):
-        alternative_mesh = load_textured_bmd(bmdfile)
-        with open("lib/temp/temp.obj", "r") as f:
-            verts, faces, normals = py_obj.read_obj(f)
-
-        self.setup_collision(verts, faces, bmdfile, alternative_mesh)
-
-    def load_optional_bco(self, collisionfile):
-        bco_coll = RacetrackCollision()
-        verts = []
-        faces = []
-
-        with open(collisionfile, "rb") as f:
-            bco_coll.load_file(f)
-        self.bco_coll = bco_coll
-
-        for vert in bco_coll.vertices:
-            verts.append(vert)
-
-        for v1, v2, v3, collision_type, rest in bco_coll.triangles:
-            faces.append(((v1 + 1, None), (v2 + 1, None), (v3 + 1, None), collision_type))
-        model = CollisionModel(bco_coll)
-        self.setup_collision(verts, faces, collisionfile, alternative_mesh=model)
-
     def setup_kmp_file(self, bol_file, filepath, add_to_ini):
         self.level_file = bol_file
         self.level_view.level_file = self.level_file
@@ -1351,8 +1327,8 @@ class GenEditor(QMainWindow):
         # self.bw_map_screen.update()
         # path_parts = path.split(filepath)
         self.set_base_window_title(filepath)
-        self.pathsconfig["kmp"] = filepath
         if add_to_ini:
+            self.pathsconfig["kmp"] = filepath
             self.update_recent_files_list(filepath)
             save_cfg(self.configuration)
         self.current_gen_path = filepath
@@ -1559,13 +1535,14 @@ class GenEditor(QMainWindow):
 
         if add_something:
             return
-
+        self.next_checkpoint_start_position = None
         accepted = self.add_object_window.exec_()
         if accepted:
             self.add_item_window_save()
         else:
             self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_NONE)
             self.pik_control.button_add_object.setChecked(False)
+        self.update_3d()
 
     def shortcut_open_add_item_window(self):
         self.button_open_add_item_window()
@@ -2082,13 +2059,15 @@ class GenEditor(QMainWindow):
             position = 99999999 # this forces insertion at the end of the list
 
         if isinstance(object, libkmp.Checkpoint):
-            if len(self.last_position_clicked) == 1:
+
+            if self.next_checkpoint_start_position is not None:
                 try:
                     placeobject = deepcopy(object)
                 except:
                     placeobject = object.copy()
 
-                x1, y1, z1 = self.last_position_clicked[0]
+                x1, y1, z1 = self.next_checkpoint_start_position
+                self.next_checkpoint_start_position = None
                 placeobject.start.x = x1
                 placeobject.start.y = y1
                 placeobject.start.z = z1
@@ -2096,7 +2075,6 @@ class GenEditor(QMainWindow):
                 placeobject.end.x = x
                 placeobject.end.y = y
                 placeobject.end.z = z
-                self.last_position_clicked = []
                 # For convenience, create a group if none exists yet.
                 if group == 0 and not self.level_file.checkpoints.groups:
                     self.level_file.checkpoints.groups.append(libkmp.CheckpointGroup.new())
@@ -2114,7 +2092,7 @@ class GenEditor(QMainWindow):
                 if to_deal_with.num_total_points() == 255:
                     self.button_stop_adding()
             else:
-                self.last_position_clicked = [(x, y, z)]
+                self.next_checkpoint_start_position = (x, y, z)
 
         else:
             try:
@@ -2379,8 +2357,10 @@ class GenEditor(QMainWindow):
         if event.key() == Qt.Key_Escape:
             self.points_added = 0
             self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_NONE)
+            self.next_checkpoint_start_position = None
             self.pik_control.button_add_object.setChecked(False)
             #self.pik_control.button_move_object.setChecked(False)
+            self.update_3d()
 
         if event.key() == Qt.Key_Shift:
             self.level_view.shift_is_pressed = True

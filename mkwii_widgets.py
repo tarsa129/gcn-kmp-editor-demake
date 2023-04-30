@@ -99,6 +99,8 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
     def __init__(self, samples, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.editor = None
+
         # Enable multisampling by setting the number of configured samples in the surface format.
         self.samples = samples
         if self.samples > 1:
@@ -1114,7 +1116,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                             self.models.draw_arrow_head(prev_point, point.position)
                         prev_point = point.position
 
-                    if selected_groups[i] and len(all_groups) > 1:
+                    if selected_groups[i] :
                         glLineWidth(1.0)
 
                 #draw connections between groups
@@ -1189,7 +1191,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
                         point_index += 1
 
-                    if selected_groups[i] and len(all_groups) > 1:
+                    if selected_groups[i]:
                         glLineWidth(3.0)
 
                     glBegin(GL_LINE_STRIP)
@@ -1263,8 +1265,8 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                     for checkpoint in group.points:
                         start_point_selected = checkpoint.start in positions
                         end_point_selected = checkpoint.end in positions
-                        self.models.render_generic_position_colored(checkpoint.start, checkpoint.start in positions, "checkpointleft")
-                        self.models.render_generic_position_colored(checkpoint.end, checkpoint.end in positions, "checkpointright")
+                        self.models.render_generic_position_colored(checkpoint.start, start_point_selected, "checkpointleft")
+                        self.models.render_generic_position_colored(checkpoint.end, end_point_selected, "checkpointright")
 
                         if start_point_selected or end_point_selected:
 
@@ -1438,6 +1440,10 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
                         if selected_groups[i] :#or selected_groups[group]:
                             glLineWidth(normal_width)
+                if self.editor.next_checkpoint_start_position is not None:
+                    self.models.render_generic_position_colored(
+                    Vector3(*self.editor.next_checkpoint_start_position), True,
+                    "checkpointleft")
             glPopMatrix()
             #go between the groups
             if vismenu.objects.is_visible():
@@ -2031,7 +2037,7 @@ class FilterViewMenu(QMenu):
 
         with open("lib/color_coding.json", "r") as f:
             colors = json.load(f)
-            colors = {k: (r * 255, g * 255, b * 255) for k, (r, g, b, _a) in colors.items()}
+            colors = {k: (round(r * 255), round(g * 255), round(b * 255)) for k, (r, g, b, _a) in colors.items()}
 
 
 

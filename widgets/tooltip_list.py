@@ -101,8 +101,3 @@ area_type = {
     "Lighting": "For changing lighting while under the area, similar to Shadow",
 }
 
-lightparam = {
-    "Light": "RGBA Light Color",
-    "Position": "3D Light Source Position",
-    "Ambient": "RGBA Ambient Color",
-}

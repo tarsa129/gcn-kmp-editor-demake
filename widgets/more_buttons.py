@@ -20,8 +20,9 @@ class MoreButtons(QWidget):
     def add_button(self, text, option, obj):
         new_enemy_group = QPushButton(self)
         new_enemy_group.setText(text)
+        gen_editor = self.parent().parent().parent()
         new_enemy_group.clicked.connect(
-            lambda: self.parent().parent.button_side_button_action(option, obj) )
+            lambda: gen_editor.button_side_button_action(option, obj) )
         self.vbox.addWidget(new_enemy_group)
 
     #where the list of buttons is defined
