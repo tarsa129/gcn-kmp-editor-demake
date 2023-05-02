@@ -2,7 +2,7 @@ import os
 import json
 
 from collections import OrderedDict
-from PyQt5.QtWidgets import QSizePolicy, QWidget, QVBoxLayout, QPushButton, QGridLayout
+from PyQt5.QtWidgets import QSizePolicy, QWidget, QVBoxLayout, QPushButton, QGridLayout, QLabel
 from lib.vectors import Vector3
 from PyQt5.QtCore import pyqtSignal
 from lib.libkmp import *
@@ -16,14 +16,37 @@ class MoreButtons(QWidget):
         #self.parent = parent
         self.vbox = QVBoxLayout(self)
         self.vbox.setContentsMargins(0, 0, 0, 0)
+        self.objgrid = None
+
+    def add_label(self, text):
+        label = QLabel( text)
+        self.vbox.addWidget(label)
 
     def add_button(self, text, option, obj):
         new_enemy_group = QPushButton(self)
         new_enemy_group.setText(text)
         gen_editor = self.parent().parent().parent()
         new_enemy_group.clicked.connect(
-            lambda: gen_editor.button_side_button_action(option, obj) )
+            lambda: gen_editor.button_add_from_addi_options(option, obj) )
         self.vbox.addWidget(new_enemy_group)
+
+    def add_obj_group_button(self, text, objids):
+        new_enemy_group = QPushButton(self)
+        new_enemy_group.setText(text)
+        new_enemy_group.clicked.connect(
+            lambda: self.add_obj_buttons(text, objids) )
+        return new_enemy_group
+
+    def add_obj_buttons(self, text, objids):
+        self.clear_buttons()
+        gen_editor = self.parent().parent().parent()
+        self.add_label("List of Objects for " + text)
+        for objid in objids:
+            new_enemy_group = QPushButton(self)
+            new_enemy_group.setText(str(objid))
+            new_enemy_group.clicked.connect(
+                lambda: gen_editor.button_add_object(objid) )
+            self.vbox.addWidget(new_enemy_group)
 
     #where the list of buttons is defined
     def add_buttons(self, obj = None):
@@ -38,6 +61,8 @@ class MoreButtons(QWidget):
                 point_type = "Item"
             if isinstance(obj, (Checkpoint, CheckpointGroup, CheckpointGroups) ):
                 point_type = "Checkpoint"
+
+            self.add_label(point_type + " Actions")
 
             if isinstance(obj, PointGroups):
                 self.add_button("v: Add New" + point_type + " Points", "add_enemygroup", obj)
@@ -60,13 +85,37 @@ class MoreButtons(QWidget):
             self.add_button("v: Add Route Points Here", "add_routepoints", obj)
 
         elif isinstance(obj, MapObjects):
+            self.add_label("Objects Actions")
             self.add_button("Auto Route All Objects", "auto_route", obj)
             self.add_button("Add Generic Object", "add_object", 0)
             self.add_button("Add Item Box", "add_object", 101)
             self.add_button("Add group_enemy_c", "add_object", 702)
-            self.objgrid = QGridLayout()
 
-            self.vbox.addLayout(self.objgrid)
+            self.add_label("Add Specific Object")
+            dummywidget = QWidget()
+
+            objgrid = QGridLayout(dummywidget)
+            gen_cate = ("Gen Use", "Tree", "Enemies", "Audience",
+                        "Flying", "KCL", "Misc Hazards", "-",
+                        "Sound", "Flags", "Mii", "Unused")
+            for idx, crs in enumerate(gen_cate):
+                objgrid.addWidget( self.add_obj_group_button(crs, (303, 304)),
+                                        int(idx / 4), idx % 4 )
+            #add by course
+            courses = ("LC", "MMM", "MG", "TF", "MC", "CM", "DKSC", "WGM",
+                       "DC", "KC", "MT", "GV", "DDR", "MH", "BC", "RR",
+                       "rPB", "rYF", "rGV2", "rMR", "rSL", "rSGB", "rDS", "rWS",
+                       "rDS", "rBC3", "rDKJP", "rMC", "rMC3", "rPG", "rDKM", "rBC")
+            for idx, crs in enumerate(courses):
+                objgrid.addWidget( self.add_obj_group_button(crs, (303, 304)),
+                                        5 + int(idx / 4), idx % 4 )
+
+            battles = ("BP", "DP", "FS", "CCW", "TD", "rBC4", "rBC3", "rS", "rCL", "rTH")
+            for idx, crs in enumerate(battles):
+                objgrid.addWidget( self.add_obj_group_button(crs, (303, 304)),
+                                        13 + int(idx / 4), idx % 4 )
+
+            self.vbox.addWidget(dummywidget)
 
         elif isinstance(obj, MapObject):
 
@@ -181,4 +230,12 @@ class MoreButtons(QWidget):
 
     def clear_buttons(self):
         for i in reversed(range(self.vbox.count())):
-            self.vbox.itemAt(i).widget().setParent(None)
+            if ( self.vbox.itemAt(i).widget().layout()):
+                layout = self.vbox.itemAt(i).widget().layout()
+                while layout.count():
+                    widget = layout.takeAt(0).widget()
+                    if widget is not None:
+                        widget.setParent(None)
+                self.vbox.itemAt(i).widget().setParent(None)
+            else:
+                self.vbox.itemAt(i).widget().setParent(None)

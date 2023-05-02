@@ -8,22 +8,7 @@ gobj:
 - support for optional routes
 
 poti:
-- show splines (talk to zatchi)
-- camera auto route - make it based on the total length (parse all files to find average distance / speed)
-- add radius of route points with areas for multiple point rouetes
-- when route is highlighted, highlight the objects that are used
-- make sure that at most 255 routes are being created between camears and areas
 - when creating routes, make sure that the route settings are being set
-
-area:
-- add back helper functions for copy
-
-came:
-- camera replaying (long shot)
-- render unused cameras differently (or just don't have them)
-
-cnpt:
-- add stuff in general (make sure it works in top ortho)
 
 general:
 error analyzer

@@ -1458,6 +1458,8 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                     if obj.route_obj is not None and obj in select_optimize:
                         routes_to_highlight.add(obj.route_obj)
 
+                objs_to_highlight = set()
+
                 for i, route in enumerate(self.level_file.routes):
 
                     selected = route in routes_to_highlight
@@ -1471,6 +1473,8 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
                     for point in route.points:
                         point_selected = point in select_optimize
+                        if point_selected:
+                            objs_to_highlight.update( route.used_by )
                         self.models.render_generic_position_colored(point.position, point_selected, render_type)
                         selected = selected or point_selected
 
@@ -1490,6 +1494,10 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                     glEnd()
                     if selected:
                         glLineWidth(1.0)
+
+                for obj in objs_to_highlight:
+                    glColor3f(1.0, 1.0, 0.0)
+                    self.models.draw_sphere(obj.position, 300)
 
             if vismenu.kartstartpoints.is_visible():
                 for object in self.level_file.kartpoints.positions:

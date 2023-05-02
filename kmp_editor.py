@@ -32,7 +32,7 @@ from configuration import read_config, make_default_config, save_cfg
 import mkwii_widgets
 from widgets.side_widget import PikminSideWidget
 from widgets.editor_widgets import open_error_dialog, catch_exception_with_dialog
-from widgets.data_editor import load_route_info
+from widgets.data_editor import load_route_info, load_default_info
 from mkwii_widgets import KMPMapViewer, MODE_TOPDOWN
 from lib.libkmp import *
 import lib.libkmp as libkmp
@@ -1548,6 +1548,12 @@ class GenEditor(QMainWindow):
         self.button_open_add_item_window()
 
     def select_tree_item_bound_to(self, obj):
+        # If found, deselect current selection, and select the new item.
+        for selected_item in self.leveldatatreeview.selectedItems():
+            if selected_item.isSelected():
+                #the problem line
+                selected_item.setSelected(False)
+
         # Iteratively traverse all the tree widget items.
         pending_items = [self.leveldatatreeview.invisibleRootItem()]
         while pending_items:
@@ -1559,9 +1565,7 @@ class GenEditor(QMainWindow):
                 # object.
                 bound_item = get_treeitem(child_item, obj)
                 if bound_item is not None:
-                    # If found, deselect current selection, and select the new item.
-                    for selected_item in self.leveldatatreeview.selectedItems():
-                        selected_item.setSelected(False)
+
                     bound_item.setSelected(True)
 
                     # Ensure that the new item is visible.
@@ -1969,6 +1973,36 @@ class GenEditor(QMainWindow):
         self.update_3d()
         self.set_has_unsaved_changes(True)
 
+    @catch_exception
+    def button_add_object(self, objid):
+        obj = libkmp.MapObject.new(objid)
+        obj_name = libkmp.OBJECTNAMES[objid]
+
+        route_info = load_route_info(obj_name)
+        default_params = load_default_info(obj_name)
+        if default_params:
+            defaults = [0 if x is None else deepcopy(x) for x in default_params]
+            obj.userdata = deepcopy(defaults)
+        if route_info == 2:
+            self.objects_to_be_added = []
+            self.object_to_be_added = None
+
+            self.objects_to_be_added.append( [obj, None, None ] )
+
+            new_route = self.level_file.get_route_for_obj(obj)
+            for i in range(2):
+                point = libkmp.RoutePoint.new()
+                point.partof = new_route
+                new_route.points.append(point)
+
+            self.objects_to_be_added.append( [new_route, None, None ]  )
+
+        else:
+            self.object_to_be_added = [obj, None, None ]
+
+        self.pik_control.button_add_object.setChecked(True)
+        self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
+
     def auto_route_obj(self, obj):
         #do object route
         route_collec = self.level_file.get_route_container(obj)
@@ -2160,7 +2194,6 @@ class GenEditor(QMainWindow):
                 self.level_file.replaycameras.append(placeobject)
             else:
                 raise RuntimeError("Unknown object type {0}".format(type(object)))
-
             self.level_view.do_redraw()
             self.leveldatatreeview.set_objects(self.level_file)
             self.set_has_unsaved_changes(True)

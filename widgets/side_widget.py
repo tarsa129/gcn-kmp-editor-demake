@@ -105,7 +105,7 @@ class PikminSideWidget(QtWidgets.QWidget):
 
     #updates the data editor
     def set_info(self, obj, update3d, usedby=[]):
-
+        self.set_buttons(None)
         if usedby:
             self.name_label.setText("Selected: {}\nUsed by: {}".format(
                 type(obj).__name__, ", ".join(usedby)))
@@ -129,6 +129,7 @@ class PikminSideWidget(QtWidgets.QWidget):
         self.comment_label.hide()
 
     def set_info_multiple(self, objs, update3d):
+        self.set_buttons(None)
         if not objs:
             return
         #print(objs)
