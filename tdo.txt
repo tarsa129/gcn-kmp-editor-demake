@@ -3,7 +3,6 @@ refactor options code to move stuff to libkmp
 
 gobj:
 - manually improve all descriptions / settings / and add default values
-- create side buttons for object placement based on type (create icons)
 - line drawing for item boxes via "i"
 - support for optional routes
 

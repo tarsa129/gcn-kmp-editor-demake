@@ -178,11 +178,13 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
         self.shift_is_pressed = False
         self.rotation_is_pressed = False
+    
         self.last_drag_update = 0
         self.change_height_is_pressed = False
         self.last_mouse_move = None
         self.connecting_mode = False
         self.connecting_start = None
+        self.connecting_rotation = None
 
         self.timer = QtCore.QTimer()
         self.timer.setInterval(2)
@@ -1742,19 +1744,26 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                                                                  object in select_optimize)
 
         #connections?
-        if self.connecting_mode:
-            if self.mode == MODE_TOPDOWN:
-                mouse_pos = self.mapFromGlobal(QCursor.pos())
-                mapx, mapz = self.mouse_coord_to_world_coord(mouse_pos.x(), mouse_pos.y())
-                pos1 : Vector3 = self.connecting_start
-                pos2 = Vector3( mapx, 0, -mapz)
-                glLineWidth(5.0)
-                glBegin(GL_LINES)
-                glColor3f(0.0, 0.0, 0.0)
-                glVertex3f(pos1.x, -pos1.z, pos1.y)
-                glVertex3f(pos2.x, -pos2.z, pos1.y)
-                glEnd()
-                self.models.draw_arrow_head(pos1, pos2)
+        if self.connecting_mode and self.mode == MODE_TOPDOWN:
+            mouse_pos = self.mapFromGlobal(QCursor.pos())
+            mapx, mapz = self.mouse_coord_to_world_coord(mouse_pos.x(), mouse_pos.y())
+            pos1 : Vector3 = self.connecting_start
+            pos2 = Vector3( mapx, 0, -mapz)
+            glLineWidth(5.0)
+            glBegin(GL_LINES)
+            glColor3f(0.0, 0.0, 0.0)
+            glVertex3f(pos1.x, -pos1.z, pos1.y)
+            glVertex3f(pos2.x, -pos2.z, pos1.y)
+            glEnd()
+            self.models.draw_arrow_head(pos1, pos2)
+            if self.connecting_mode == "linedraw":
+                diff = pos2 - pos1
+                for i in range(1, 5):
+                    position = diff * (i/4) + pos1
+                    self.models.render_generic_position_rotation_colored("objects",
+                        position, self.connecting_rotation,
+                        object in select_optimize)
+            
 
         self.gizmo.render_scaled(gizmo_scale, is3d=self.mode == MODE_3D, hover_id=gizmo_hover_id)
 

@@ -203,9 +203,9 @@ class MoreButtons(QWidget):
             if area.type == 0:
                 self.add_button("Copy With Same Camera", "copy_area_camera", obj)
             elif area.type == 3:
-                self.add_button("Copy With Same Camera", "auto_route_single", obj)
+                self.add_button("Copy With Same Route", "copy_area_camera", obj)
             elif area.type == 4:
-                self.add_button("Assign to Closest Enemypoint", "auto_route_single", obj)
+                self.add_button("Assign to Closest Enemypoint", "assign_closest_enemy", obj)
 
         elif isinstance(obj, OpeningCamera):
 

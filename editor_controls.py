@@ -565,7 +565,7 @@ class UserControl(object):
     def handle_release(self, event):
         editor = self._editor_widget
 
-        if editor.connecting_mode: #and editor.mode == MODE_TOPDOWN:
+        if editor.connecting_mode == "connect": #and editor.mode == MODE_TOPDOWN:
             #mapx, mapz = editor.mouse_coord_to_world_coord(event.x(), event.y())
             x = event.x()
             y = event.y()

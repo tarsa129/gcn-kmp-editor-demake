@@ -112,7 +112,6 @@ class GenEditor(QMainWindow):
 
         self.connect_start = None
         self.select_start = None
-        self.ready_to_connect = False
 
         self._dontselectfromtree = False
 
@@ -1739,12 +1738,6 @@ class GenEditor(QMainWindow):
             self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
 
             self.object_to_be_added = None
-        elif option == 5: #new object route
-            new_route_group = libkmp.ObjectRoute()
-            self.level_file.routes.append(new_route_group)
-        elif option == 5.5: #new camera route
-            new_route_group = libkmp.CameraRoute.new()
-            self.level_file.cameraroutes.append(new_route_group)
         elif option == "add_routepoints_end": #add route point to end of route
             if obj.route_obj is None:
                 route_collec = self.level_file.get_route_container(obj)
@@ -1895,14 +1888,8 @@ class GenEditor(QMainWindow):
         elif option == "autocreate_jgpt": #respawns
             self.level_file.create_respawns()
             self.level_view.do_redraw()
-        elif option == 22.5: #reassign respawns
-            self.level_file.reassign_respawns()
-            self.level_view.do_redraw()
         elif option == "remove_unused": #remove unused object routes
             self.level_file.remove_unused_object_routes()
-            self.level_view.do_redraw()
-        elif option == 23.5: #remove unused camera routes
-            self.level_file.remove_unused_camera_routes()
             self.level_view.do_redraw()
         elif option == "copy_enemy_item": #copy enemy to item
             self.level_file.copy_enemy_to_item()
@@ -1911,7 +1898,7 @@ class GenEditor(QMainWindow):
             self.level_view.do_redraw()
         elif option == "removed_unused_jgpt": #remove unused respawns:
             self.level_file.remove_unused_respawns()
-        elif option == 27:
+        elif option == "assign_closest_enemy":
             obj.find_closest_enemypoint()
         self.leveldatatreeview.set_objects(self.level_file)
 
@@ -2024,7 +2011,7 @@ class GenEditor(QMainWindow):
         if route_data == 2:
             if obj.route_obj is None:
                 self.add_points_around_obj(obj,route_data,True)
-            elif  len(obj.route_obj.points) < 2:
+            elif len(obj.route_obj.points) < 2:
                 self.add_points_around_obj(obj,2 - len(obj.route_obj.points),False)
         elif route_data == 3:
             if obj.route_obj is None:
@@ -2424,24 +2411,33 @@ class GenEditor(QMainWindow):
 
         #C IS FOR "connecting"
         #
+        if self.level_view.mode != MODE_TOPDOWN:
+            return
         if event.key() == Qt.Key_C and len(self.level_view.selected) == 1:
             sel_obj = self.level_view.selected[0]
             if isinstance(sel_obj, Checkpoint):
                 self.connect_start = self.level_view.selected[0]
-                self.level_view.connecting_mode = True
+                self.level_view.connecting_mode = "connect"
                 self.level_view.connecting_start = self.connect_start.get_mid()
+                self.level_view.connecting_rotation = None
             elif isinstance( sel_obj , (KMPPoint, MapObject, OpeningCamera, Area) ):
                 if isinstance(sel_obj, MapObject) and sel_obj.route_info is None:
                     return
                 if isinstance(sel_obj, Area) and sel_obj.type not in [0, 3, 4]:
                     return
                 self.connect_start = self.level_view.selected[0]
-                self.level_view.connecting_mode = True
+                self.level_view.connecting_mode = "connect"
                 self.level_view.connecting_start = self.connect_start.position
         elif event.key() == Qt.Key_B and self.level_view.selected:
             if self.select_start is not None:
                 self.select_start = [x for x in self.level_view.selected]
-
+        elif event.key() == Qt.Key_L and len(self.level_view.selected) == 1:
+            sel_obj = self.level_view.selected[0]
+            if isinstance(sel_obj, MapObject):
+                self.connect_start = sel_obj
+                self.level_view.connecting_mode = "linedraw"
+                self.level_view.connecting_start = self.connect_start.position
+                self.level_view.connecting_rotation = self.connect_start.rotation
             pass
     def keyReleaseEvent(self, event: QtGui.QKeyEvent):
         if event.key() == Qt.Key_Shift:
@@ -3089,17 +3085,109 @@ class GenEditor(QMainWindow):
 
     def action_connectedto_end(self):
 
-        if self.connect_start is not None and self.level_view.connecting_mode:
-            self.ready_to_connect = True
-        else:
-            self.ready_to_connect = False
+        pass
 
     def action_connectedto_final(self):
-        if not self.ready_to_connect or self.connect_start is None:
+        can_proceed = (self.level_view.connecting_mode) and (self.connect_start is not None)
+        if not can_proceed:
             return
-        self.ready_to_connect = False
+        old_mode = self.level_view.connecting_mode
+        self.level_view.connecting_mode = False
+
+        if old_mode == "linedraw":
+            self.handle_linedraw()
+        elif old_mode == "connect":
+            self.handle_connecting()
+
+        self.connect_start = None
+        self.select_start = None
+        self.connect_mode = None
+
+        self.leveldatatreeview.set_objects(self.level_file)
+        self.update_3d()
+        self.set_has_unsaved_changes(True)
+
+    def connect_two_groups(self, endpoint, to_deal_with : PointGroups):
+        if endpoint == self.connect_start:
+            return
+
+        end_groupind, end_group, end_pointind = to_deal_with.find_group_of_point(endpoint)
+
+        start_groupind, start_group, start_pointind = to_deal_with.find_group_of_point(self.connect_start)
+        #print( end_groupind, end_group, end_pointind )
+        #print( start_groupind, start_group, start_pointind  )
+        #make sure that start_group is good to add another
+        if start_group.num_next() == 6:
+            return
+
+        #if drawing from an endpoint to a startpoint of the next group
+        if (start_pointind + 1 == len(start_group.points) and end_pointind == 0):
+            #if a link already exists, remove it
+            if end_group in start_group.nextgroup:
+                start_group.remove_next(end_group)
+                end_group.remove_prev(start_group)
+                to_deal_with.merge_groups()
+            else:
+                if end_group.num_prev() < 6 and start_group.num_next() < 6:
+                    start_group.add_new_next( end_group  )
+                    end_group.add_new_prev(start_group)
+                if end_group != start_group:
+                    start_group.remove_next(start_group)
+                    start_group.remove_prev(start_group)
+            return
+
+        self.split_group( start_group, self.connect_start )
+        group_1 = to_deal_with.groups[-1]
+
+        if start_groupind == end_groupind and end_pointind > start_pointind:
+            new_idx = end_pointind - 1 - len(group_1.points)
+            self.split_group( group_1, group_1.points[new_idx])
+        else:
+            self.split_group( end_group, end_group.points[end_pointind - 1])
+
+        group_2 = to_deal_with.groups[-1]
+
+        #remove self connections, if they exist
+        start_group.remove_next(start_group)
+        start_group.remove_prev(start_group)
+
+        if start_groupind == end_groupind and end_pointind < start_pointind:
+            group_1.add_new_prev(group_2)
+            group_2.add_new_next(group_2)
+        else:
+            start_group.add_new_next(group_2)
+            group_2.add_new_prev(start_group)
+
+    def handle_linedraw(self):
+        if isinstance(self.connect_start, MapObject):
+            pos1 : Vector3 = self.level_view.connecting_start
+            pos2 = Vector3(*self.current_coordinates)
+            diff = pos2 - pos1
+            for i in range(1, 5):
+                position = diff * (i/4) + pos1
+                new_copy = self.connect_start.copy()
+
+                new_copy.position = position
+                self.action_ground_spec_object(new_copy)
+
+                #deal with route:
+                self.auto_route_obj(new_copy)
+                if new_copy.route_obj:
+                    new_route = new_copy.route_obj.copy()
+                    new_route.used_by.append(new_copy)
+                    for i, point in enumerate(new_copy.route_obj.points):
+                        offset = point.position - pos1
+                        new_route.points[i].position = new_copy.position + offset
+                        self.action_ground_spec_object(point)
+                    new_copy.route_obj = new_route
+                    self.level_file.routes.append(new_route)
+                self.level_file.objects.objects.append(new_copy)
+                #copy the route, if the route is type 2
+                #place the object
 
 
+
+    def handle_connecting(self):
         if len(self.level_view.selected) == 0:
             #create a new enemy/item/checkpoint group
             if isinstance(self.connect_start, KMPPoint):
@@ -3194,64 +3282,6 @@ class GenEditor(QMainWindow):
             elif isinstance(endpoint, Camera) and isinstance(self.connect_start, Camera):
                 if (endpoint in self.level_file.cameras) and (self.connect_start in self.level_file.cameras):
                     self.connect_start.nextcam_obj = endpoint
-
-        self.connect_start = None
-        self.select_start = None
-
-        self.leveldatatreeview.set_objects(self.level_file)
-        self.update_3d()
-        self.set_has_unsaved_changes(True)
-
-    def connect_two_groups(self, endpoint, to_deal_with : PointGroups):
-        if endpoint == self.connect_start:
-            return
-
-        end_groupind, end_group, end_pointind = to_deal_with.find_group_of_point(endpoint)
-
-        start_groupind, start_group, start_pointind = to_deal_with.find_group_of_point(self.connect_start)
-        #print( end_groupind, end_group, end_pointind )
-        #print( start_groupind, start_group, start_pointind  )
-        #make sure that start_group is good to add another
-        if start_group.num_next() == 6:
-            return
-
-        #if drawing from an endpoint to a startpoint of the next group
-        if (start_pointind + 1 == len(start_group.points) and end_pointind == 0):
-            #if a link already exists, remove it
-            if end_group in start_group.nextgroup:
-                start_group.remove_next(end_group)
-                end_group.remove_prev(start_group)
-                to_deal_with.merge_groups()
-            else:
-                if end_group.num_prev() < 6 and start_group.num_next() < 6:
-                    start_group.add_new_next( end_group  )
-                    end_group.add_new_prev(start_group)
-                if end_group != start_group:
-                    start_group.remove_next(start_group)
-                    start_group.remove_prev(start_group)
-            return
-
-        self.split_group( start_group, self.connect_start )
-        group_1 = to_deal_with.groups[-1]
-
-        if start_groupind == end_groupind and end_pointind > start_pointind:
-            new_idx = end_pointind - 1 - len(group_1.points)
-            self.split_group( group_1, group_1.points[new_idx])
-        else:
-            self.split_group( end_group, end_group.points[end_pointind - 1])
-
-        group_2 = to_deal_with.groups[-1]
-
-        #remove self connections, if they exist
-        start_group.remove_next(start_group)
-        start_group.remove_prev(start_group)
-
-        if start_groupind == end_groupind and end_pointind < start_pointind:
-            group_1.add_new_prev(group_2)
-            group_2.add_new_next(group_2)
-        else:
-            start_group.add_new_next(group_2)
-            group_2.add_new_prev(start_group)
 
     def set_and_start_copying(self):
         #print(self.level_view.selected)
