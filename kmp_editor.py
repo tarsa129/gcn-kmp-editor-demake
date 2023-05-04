@@ -3162,6 +3162,8 @@ class GenEditor(QMainWindow):
         if isinstance(self.connect_start, MapObject):
             pos1 : Vector3 = self.level_view.connecting_start
             pos2 = Vector3(*self.current_coordinates)
+            if pos2.y is None:
+                pos2.y = pos1.y
             diff = pos2 - pos1
             for i in range(1, 5):
                 position = diff * (i/4) + pos1
