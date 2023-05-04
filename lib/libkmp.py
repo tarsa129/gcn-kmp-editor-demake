@@ -1288,6 +1288,8 @@ class MapObject(object):
         self.widget = None
         self.route_info = None
 
+        
+
     @classmethod
     def get_empty(cls):
         null_obj = cls.new()

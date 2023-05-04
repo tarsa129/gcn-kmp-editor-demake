@@ -2,21 +2,102 @@ import os
 import json
 
 from collections import OrderedDict
-from PyQt5.QtWidgets import QSizePolicy, QWidget, QVBoxLayout, QPushButton, QGridLayout, QLabel
+from typing import Any
+from PyQt5.QtWidgets import QSizePolicy, QWidget, QVBoxLayout, QPushButton, QGridLayout, QLabel, QScrollArea, QFrame
 from lib.vectors import Vector3
 from PyQt5.QtCore import pyqtSignal
 from lib.libkmp import *
 from widgets.tree_view import KMPHeader, EnemyRoutePoint
+from widgets.objlists import *
+from copy import copy
 #will create buttons based on the current selection
 #when something selected: add to it from the end
+
+def clear_layout(layout):
+    while layout.count():
+        widget = layout.takeAt(0).widget()
+        if widget is not None:
+            widget.deleteLater()
+
+class ButtonSelectPanel(QWidget):
+    def __init__(self, text, revealed, options):
+        super().__init__()
+
+        vbox = QVBoxLayout(self)
+        label = QLabel("Add from " + text)
+        vbox.addWidget(label)
+
+        options_widg = QWidget()
+        options_grid = QGridLayout(options_widg)
+
+        specific_widg = QWidget()
+        specific_grid = QGridLayout(specific_widg)
+        grid_widgets = (options_widg, specific_widg)
+
+        #add buttons to reveal / hide the whole thing
+        course_btn_ctrl = QPushButton(self)
+        if revealed:
+            course_btn_ctrl.setText("Hide " + text)
+            course_btn_ctrl.clicked.connect(
+                lambda: self.hide_self(True, course_btn_ctrl, grid_widgets, text ) )
+        else:
+            course_btn_ctrl.setText("Reveal " + text)
+            course_btn_ctrl.clicked.connect(
+                lambda: self.hide_self(False, course_btn_ctrl, grid_widgets, text) )
+            for widget in grid_widgets:
+                widget.setHidden(True)
+        specific_widg.setHidden(True)
+
+        #always have the menu buttons
+        for idx, crs in enumerate(options):
+            options_grid.addWidget( self.add_obj_group_button(crs, specific_widg),
+                                    0 + int(idx / 4), idx % 4 )
+
+        vbox.addWidget(course_btn_ctrl)
+        vbox.addWidget(options_widg)
+        vbox.addWidget(specific_widg)
+
+    def hide_self(self, hidden_status, btn, widgets, text):
+        for widget in widgets:
+            widget.setHidden(hidden_status)
+        if hidden_status:
+            btn.setText("Reveal " + text)
+            btn.clicked.connect(
+                lambda: self.hide_self(False, btn, widgets, text ))
+        else:
+            btn.setText("Reveal " + text)
+            btn.clicked.connect(
+                lambda: self.hide_self(True, btn, widgets, text ))
+
+    def add_obj_group_button(self, text, widget, objids = (101, 102)):
+        new_enemy_group = QPushButton(self)
+        new_enemy_group.setText(text)
+        if text in objidlist.keys():
+            objids = objidlist[text]
+        new_enemy_group.clicked.connect(
+            lambda: self.add_obj_buttons(objids, widget) )
+        return new_enemy_group
+
+    def add_obj_buttons(self, objids, widget):
+        widget.setHidden(False)
+        layout = widget.layout()
+        clear_layout(layout)
+        for i, objid in enumerate(objids):
+            new_object_button = QPushButton(self)
+            new_object_button.setText("Add " + OBJECTNAMES[objid])
+            new_object_button.clicked.connect( self.geneditor_add(objid))
+            layout.addWidget(new_object_button, int(i/2), i % 2)
+
+    def geneditor_add(self, obj):
+        gen_editor = self.parent().parent().parent().parent()
+        return lambda: gen_editor.button_add_object( obj )
 
 class MoreButtons(QWidget):
     def __init__(self, parent, option = 0):
         super().__init__(parent)
         #self.parent = parent
+
         self.vbox = QVBoxLayout(self)
-        self.vbox.setContentsMargins(0, 0, 0, 0)
-        self.objgrid = None
 
     def add_label(self, text):
         label = QLabel( text)
@@ -30,27 +111,16 @@ class MoreButtons(QWidget):
             lambda: gen_editor.button_add_from_addi_options(option, obj) )
         self.vbox.addWidget(new_enemy_group)
 
-    def add_obj_group_button(self, text, objids):
-        new_enemy_group = QPushButton(self)
-        new_enemy_group.setText(text)
-        new_enemy_group.clicked.connect(
-            lambda: self.add_obj_buttons(text, objids) )
-        return new_enemy_group
+    def add_course_buttons(self, objgrid, obj, btn, speflayout):
+        obj.is_revealed = True
 
-    def add_obj_buttons(self, text, objids):
-        self.clear_buttons()
-        gen_editor = self.parent().parent().parent()
-        self.add_label("List of Objects for " + text)
-        for objid in objids:
-            new_enemy_group = QPushButton(self)
-            new_enemy_group.setText(str(objid))
-            new_enemy_group.clicked.connect(
-                lambda: gen_editor.button_add_object(objid) )
-            self.vbox.addWidget(new_enemy_group)
+        btn.setText("Hide Course Buttons")
+        btn.clicked.connect(
+            lambda: self.remove_course_buttons(objgrid, obj, btn) )
 
     #where the list of buttons is defined
     def add_buttons(self, obj = None):
-        self.clear_buttons()
+        clear_layout(self.vbox)
 
         if obj is None or isinstance(obj, KMPHeader):
             return
@@ -87,35 +157,19 @@ class MoreButtons(QWidget):
         elif isinstance(obj, MapObjects):
             self.add_label("Objects Actions")
             self.add_button("Auto Route All Objects", "auto_route", obj)
-            self.add_button("Add Generic Object", "add_object", 0)
-            self.add_button("Add Item Box", "add_object", 101)
-            self.add_button("Add group_enemy_c", "add_object", 702)
 
-            self.add_label("Add Specific Object")
-            dummywidget = QWidget()
+            #add constant objects
+            general_groups = ("Gen Use", "Tree", "Enemies", "Audience",
+                              "Flying", "KCL", "Misc Hazards", "-",)
+            cons_options = ButtonSelectPanel("Object Groups", True, general_groups)
+            self.vbox.addWidget(cons_options)
 
-            objgrid = QGridLayout(dummywidget)
-            gen_cate = ("Gen Use", "Tree", "Enemies", "Audience",
-                        "Flying", "KCL", "Misc Hazards", "-",
-                        "Sound", "Flags", "Mii", "Unused")
-            for idx, crs in enumerate(gen_cate):
-                objgrid.addWidget( self.add_obj_group_button(crs, (303, 304)),
-                                        int(idx / 4), idx % 4 )
-            #add by course
             courses = ("LC", "MMM", "MG", "TF", "MC", "CM", "DKSC", "WGM",
                        "DC", "KC", "MT", "GV", "DDR", "MH", "BC", "RR",
                        "rPB", "rYF", "rGV2", "rMR", "rSL", "rSGB", "rDS", "rWS",
                        "rDS", "rBC3", "rDKJP", "rMC", "rMC3", "rPG", "rDKM", "rBC")
-            for idx, crs in enumerate(courses):
-                objgrid.addWidget( self.add_obj_group_button(crs, (303, 304)),
-                                        5 + int(idx / 4), idx % 4 )
-
-            battles = ("BP", "DP", "FS", "CCW", "TD", "rBC4", "rBC3", "rS", "rCL", "rTH")
-            for idx, crs in enumerate(battles):
-                objgrid.addWidget( self.add_obj_group_button(crs, (303, 304)),
-                                        13 + int(idx / 4), idx % 4 )
-
-            self.vbox.addWidget(dummywidget)
+            crs_options = ButtonSelectPanel("Course Groups", False, courses)
+            self.vbox.addWidget(crs_options)
 
         elif isinstance(obj, MapObject):
 
@@ -179,7 +233,7 @@ class MoreButtons(QWidget):
             self.add_button("Assign to Checkpoints Where Closest", "assign_jgpt_ckpt", obj)
 
     def add_buttons_multi(self, objs):
-        self.clear_buttons()
+        clear_layout(self.vbox)
         options= self.check_options(objs)
         #item box fill in - two item box
 
@@ -228,14 +282,3 @@ class MoreButtons(QWidget):
                     valid_objs.append(obj)
         return valid_objs
 
-    def clear_buttons(self):
-        for i in reversed(range(self.vbox.count())):
-            if ( self.vbox.itemAt(i).widget().layout()):
-                layout = self.vbox.itemAt(i).widget().layout()
-                while layout.count():
-                    widget = layout.takeAt(0).widget()
-                    if widget is not None:
-                        widget.setParent(None)
-                self.vbox.itemAt(i).widget().setParent(None)
-            else:
-                self.vbox.itemAt(i).widget().setParent(None)

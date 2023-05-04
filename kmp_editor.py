@@ -1994,6 +1994,8 @@ class GenEditor(QMainWindow):
                 point = libkmp.RoutePoint.new()
                 point.partof = new_route
                 new_route.points.append(point)
+            new_route.points[0].position += Vector3(-500, 0, 0)
+            new_route.points[1].position += Vector3(500, 0, 0)
 
             self.objects_to_be_added.append( [new_route, None, None ]  )
 
@@ -2341,7 +2343,7 @@ class GenEditor(QMainWindow):
                 object.route_obj.used_by.append(object)
 
                 for point in object.route_obj.points:
-                    point.position = point.position + placeobject.position
+                    point.position = point.position + object.position
                     self.action_ground_spec_object(point)
 
         self.pik_control.update_info()
