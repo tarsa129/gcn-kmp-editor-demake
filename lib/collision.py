@@ -208,17 +208,15 @@ class Collision(object):
             else:
                 return result1
 
+    def is_invisible_tri(self, face_mat):
+        return ( face_mat in self.hidden_coltypes) or ( face_mat & 0x1F in self.hidden_colgroups)
+
+
     def _collide(self, triangles, x, y, z, dir_y):
         hit = None
         for i, face in triangles:#face in self.faces:#
-            if isinstance(self.hidden_colgroups, str):
-                self.hidden_colgroups = [int(x) for x in self.hidden_colgroups.split(",")]
-            if isinstance(self.hidden_coltypes, str):
-                self.hidden_coltypes = [int(x) for x in self.hidden_coltypes.split(",")]
-            if len(face) > 3:
-                if ( face[3] in self.hidden_coltypes) \
-                    or ( face[3] & 0x1F in self.hidden_colgroups):
-                    continue
+            if len(face) > 3 and self.is_invisible_tri(face[3]):
+                continue
 
             v1 = face[0]
             v2 = face[1]
@@ -262,6 +260,8 @@ class Collision(object):
         place_at = None
 
         for tri in self.triangles:
+            if self.is_invisible_tri(tri.material):
+                continue
             collision = ray.collide(tri)
 
             if collision is not False:

@@ -902,8 +902,10 @@ class GenEditor(QMainWindow):
                 ",".join(str(t) for t in collision_model.hidden_collision_type_groups)
 
             if self.level_view.collision is not None:
-                self.level_view.collision.hidden_coltypes = self.configuration["editor"]["hidden_collision_types"]
-                self.level_view.collision.hidden_colgroups = self.configuration["editor"]["hidden_collision_type_groups"]
+                hidden_coltypes_str = self.configuration["editor"]["hidden_collision_types"]
+                hidden_colgroups_str = self.configuration["editor"]["hidden_collision_type_groups"]
+                self.level_view.collision.hidden_coltypes = [int(x) for x in hidden_coltypes_str.split(",")]
+                self.level_view.collision.hidden_colgroups = [int(x) for x in hidden_colgroups_str.split(",")]
 
             save_cfg(self.configuration)
             self.update_3d()
@@ -1092,6 +1094,7 @@ class GenEditor(QMainWindow):
 
         #self.pik_control.button_move_object.pressed.connect(self.button_move_objects)
         self.level_view.move_points.connect(self.action_move_objects)
+        self.level_view.move_points_to.connect(self.action_move_objects_to)
         self.level_view.height_update.connect(self.action_change_object_heights)
         self.level_view.create_waypoint.connect(self.action_add_object)
         self.level_view.create_waypoint_3d.connect(self.action_add_object_3d)
@@ -2357,6 +2360,23 @@ class GenEditor(QMainWindow):
         self.pik_control.update_info()
         self.set_has_unsaved_changes(True)
 
+    @catch_exception
+    def action_move_objects_to(self, posx, posy, posz):
+        #get the average position, which is just the pos, huh.
+        #so then that's the 
+        self.level_view.gizmo.move_to_average(self.level_view.selected_positions)
+        orig_avg = self.level_view.gizmo.position.copy()
+        new_avg = Vector3(posx, posz, -posy)
+        diff = new_avg - orig_avg
+        for pos in self.level_view.selected_positions:
+            pos.x = pos.x + diff.x
+            pos.y = pos.y + diff.y
+            pos.z = pos.z + diff.z
+
+            self.level_view.gizmo.move_to_average(self.level_view.selected_positions)
+        self.level_view.do_redraw()
+        self.pik_control.update_info()
+        self.set_has_unsaved_changes(True)
 
     @catch_exception
     def action_change_object_heights(self, deltay):
@@ -2411,8 +2431,6 @@ class GenEditor(QMainWindow):
 
         #C IS FOR "connecting"
         #
-        if self.level_view.mode != MODE_TOPDOWN:
-            return
         if event.key() == Qt.Key_C and len(self.level_view.selected) == 1:
             sel_obj = self.level_view.selected[0]
             if isinstance(sel_obj, Checkpoint):

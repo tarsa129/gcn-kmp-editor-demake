@@ -335,6 +335,7 @@ class Select3D(ClickDragAction):
 
         editor.selectionbox_projected_origin = None
         editor.selectionbox_projected_coords = None
+
         editor.do_redraw()
 
 
@@ -362,6 +363,7 @@ class AddObject3D(ClickAction):
         if place_at is not None:
             #print("placed at", place_at)
             editor.create_waypoint_3d.emit(place_at.x, place_at.z, -place_at.y)
+            editor.position_update.emit(event, (round(place_at.x, 2), round(place_at.y, 2), round(place_at.z, 2)))
         #else:
         #    print("nothing collided, aw")
 
@@ -420,6 +422,15 @@ class Gizmo3DMoveZ(Gizmo3DMoveX):
     def do_delta(self, delta):
         return 0, 0, delta
 
+class Gizmo3DMove(Gizmo3DMoveX):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.axis_name = "middle"
+    def move(self, editor, buttons, event):
+        if editor.gizmo.was_hit["middle"]:
+            #editor.gizmo.set_render_axis(AXIS_X)
+            coords = editor.get_3d_coordinates(event.x(), event.y())
+            editor.move_points_to.emit(coords.x, coords.y, coords.z)
 
 class Gizmo3DRotateY(Gizmo2DRotateY):
     def __init__(self, *args, **kwargs):
@@ -539,7 +550,8 @@ class UserControl(object):
         self.add_action3d(AddObject3D("AddObject3D", "Left"))
         self.add_action3d(Gizmo3DMoveX("Gizmo3DMoveX", "Left"))
         self.add_action3d(Gizmo3DMoveY("Gizmo3DMoveY", "Left"))
-        self.add_action3d(Gizmo3DMoveZ("Gizmo3DMoveZ", "Left"))
+        self.add_action3d(Gizmo3DMoveZ("Gizmo3DMoveZ", "Left")) 
+        self.add_action3d(Gizmo3DMove("Gizmo3DMove", "Left")) 
         self.add_action3d(Gizmo3DRotateX("Gizmo3DRotateX", "Left"))
         self.add_action3d(Gizmo3DRotateY("Gizmo3DRotateY", "Left"))
         self.add_action3d(Gizmo3DRotateZ("Gizmo3DRotateZ", "Left"))
@@ -594,7 +606,7 @@ class UserControl(object):
 
     def handle_move(self, event):
         editor = self._editor_widget
-        
+
         if editor.mode == MODE_TOPDOWN:
             if not editor.connecting_mode:
                 self.handle_move_topdown(event)
@@ -615,8 +627,12 @@ class UserControl(object):
                 else:
                     editor.position_update.emit(event, (round(mapx, 2), None, round(-mapz, 2)))
         else:
+            place_at = editor.get_3d_coordinates(event.x(), event.y())
+            if place_at is not None:
+                editor.position_update.emit(event, (round(place_at.x, 2), round(place_at.z, 2), round(-place_at.y, 2)))
 
-                self.handle_move_3d(event)
+
+            self.handle_move_3d(event)
 
     def handle_press_topdown(self, event):
         editor = self._editor_widget

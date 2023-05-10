@@ -2,8 +2,6 @@ mkdd-master to do list:
 refactor options code to move stuff to libkmp
 
 gobj:
-- manually improve all descriptions / settings / and add default values
-- line drawing for item boxes via "i"
 - support for optional routes
 
 poti:

@@ -87,6 +87,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
     height_update = pyqtSignal(float)
     select_update = pyqtSignal()
     move_points = pyqtSignal(float, float, float)
+    move_points_to = pyqtSignal(float, float, float)
     connect_update = pyqtSignal(int, int)
     create_waypoint = pyqtSignal(float, float)
     create_waypoint_3d = pyqtSignal(float, float, float)
@@ -1744,64 +1745,73 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                                                                  object in select_optimize)
 
         #connections?
-        if self.connecting_mode and self.mode == MODE_TOPDOWN:
+        if self.connecting_mode:
             mouse_pos = self.mapFromGlobal(QCursor.pos())
-            mapx, mapz = self.mouse_coord_to_world_coord(mouse_pos.x(), mouse_pos.y())
             pos1 : Vector3 = self.connecting_start
-            pos2 = Vector3( mapx, 0, -mapz)
-            glLineWidth(5.0)
-            glBegin(GL_LINES)
-            glColor3f(0.0, 0.0, 0.0)
-            glVertex3f(pos1.x, -pos1.z, pos1.y)
-            glVertex3f(pos2.x, -pos2.z, pos1.y)
-            glEnd()
-            self.models.draw_arrow_head(pos1, pos2)
-            if self.connecting_mode == "linedraw":
-                diff = pos2 - pos1
-                for i in range(1, 5):
-                    position = diff * (i/4) + pos1
-                    self.models.render_generic_position_rotation_colored("objects",
-                        position, self.connecting_rotation,
-                        object in select_optimize)
-            
+            if self.mode == MODE_TOPDOWN:
+                mapx, mapz = self.mouse_coord_to_world_coord(mouse_pos.x(), mouse_pos.y())
+                pos2 = Vector3( mapx, 0, -mapz)
+                pos2.y = pos1.y
+            elif self.mode == MODE_3D:
+                pos2 = self.get_3d_coordinates(mouse_pos.x(), mouse_pos.y())
+                pos2 = Vector3(pos2.x, pos2.z, -pos2.y)
+
+            if pos2 is not None:
+                glLineWidth(5.0)
+                glBegin(GL_LINES)
+                glColor3f(0.0, 0.0, 0.0)
+                glVertex3f(pos1.x, -pos1.z, pos1.y)
+                glVertex3f(pos2.x, -pos2.z, pos2.y)
+                glEnd()
+                self.models.draw_arrow_head(pos1, pos2)
+                if self.connecting_mode == "linedraw":
+                    diff = pos2 - pos1
+                    for i in range(1, 5):
+                        position = diff * (i/4) + pos1
+                        self.models.render_generic_position_rotation_colored("objects",
+                            position, self.connecting_rotation,
+                            object in select_optimize)
+
+
 
         self.gizmo.render_scaled(gizmo_scale, is3d=self.mode == MODE_3D, hover_id=gizmo_hover_id)
 
         glDisable(GL_DEPTH_TEST)
-        if self.selectionbox_start is not None and self.selectionbox_end is not None:
-            #print("drawing box")
-            startx, startz = self.selectionbox_start
-            endx, endz = self.selectionbox_end
-            glColor4f(1.0, 0.0, 0.0, 1.0)
-            glLineWidth(2.0)
-            glBegin(GL_LINE_LOOP)
-            glVertex3f(startx, startz, 0)
-            glVertex3f(startx, endz, 0)
-            glVertex3f(endx, endz, 0)
-            glVertex3f(endx, startz, 0)
+        if not self.connecting_mode:
+            if self.selectionbox_start is not None and self.selectionbox_end is not None:
+                #print("drawing box")
+                startx, startz = self.selectionbox_start
+                endx, endz = self.selectionbox_end
+                glColor4f(1.0, 0.0, 0.0, 1.0)
+                glLineWidth(2.0)
+                glBegin(GL_LINE_LOOP)
+                glVertex3f(startx, startz, 0)
+                glVertex3f(startx, endz, 0)
+                glVertex3f(endx, endz, 0)
+                glVertex3f(endx, startz, 0)
 
-            glEnd()
-            glLineWidth(1.0)
+                glEnd()
+                glLineWidth(1.0)
 
-        if self.selectionbox_projected_origin is not None and self.selectionbox_projected_coords is not None:
-            #print("drawing box")
-            origin = self.selectionbox_projected_origin
-            point2, point3, point4 = self.selectionbox_projected_coords
-            glColor4f(1.0, 0.0, 0.0, 1.0)
-            glLineWidth(2.0)
+            if self.selectionbox_projected_origin is not None and self.selectionbox_projected_coords is not None:
+                #print("drawing box")
+                origin = self.selectionbox_projected_origin
+                point2, point3, point4 = self.selectionbox_projected_coords
+                glColor4f(1.0, 0.0, 0.0, 1.0)
+                glLineWidth(2.0)
 
-            point1 = origin
+                point1 = origin
 
-            glBegin(GL_LINE_LOOP)
-            glVertex3f(point1.x, point1.y, point1.z)
-            glVertex3f(point2.x, point2.y, point2.z)
-            glVertex3f(point3.x, point3.y, point3.z)
-            glVertex3f(point4.x, point4.y, point4.z)
-            glEnd()
+                glBegin(GL_LINE_LOOP)
+                glVertex3f(point1.x, point1.y, point1.z)
+                glVertex3f(point2.x, point2.y, point2.z)
+                glVertex3f(point3.x, point3.y, point3.z)
+                glVertex3f(point4.x, point4.y, point4.z)
+                glEnd()
 
-            glLineWidth(1.0)
+                glLineWidth(1.0)
 
-        glEnable(GL_DEPTH_TEST)
+            glEnable(GL_DEPTH_TEST)
         glFinish()
         #now = default_timer() - start
         #print("Frame time:", now, 1/now, "fps")
@@ -1912,6 +1922,22 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
         return Line(pos, dir)
 
+    def get_3d_coordinates(self, mousex, mousey):
+        ray = self.create_ray_from_mouseclick(mousex, mousey)
+        pos2 = None
+
+        if self.collision is not None:
+            pos2 = self.collision.collide_ray(ray)
+
+        if pos2 is None:
+            #print("colliding with plane")
+            plane = Plane.xy_aligned(Vector3(0.0, 0.0, 0.0))
+
+            collision = ray.collide_plane(plane)
+            if collision is not False:
+                pos2, _ = collision
+
+        return pos2
 
 def create_object_type_pixmap(canvas_size: int, directed: bool,
                               colors: 'tuple[tuple[int]]') -> QtGui.QPixmap:
@@ -2061,9 +2087,9 @@ class FilterViewMenu(QMenu):
         self.kartstartpoints = ObjectViewSelectionToggle("Kart Start Points", self, True,
                                                          [colors["StartPoints"]])
 
-        self.enemyroutes = ObjectViewSelectionToggle("Enemy Paths", self, False,
+        self.enemyroutes = ObjectViewSelectionToggle("Enemy Path", self, False,
                                                     [colors["EnemyRoutes"]])
-        self.itemroutes = ObjectViewSelectionToggle("Enemy Paths", self, False,
+        self.itemroutes = ObjectViewSelectionToggle("Item Path", self, False,
                                                     [colors["ItemRoutes"]])
         self.checkpoints = ObjectViewSelectionToggle(
             "Checkpoints", self, False, [colors["CheckpointLeft"], colors["CheckpointRight"]])
