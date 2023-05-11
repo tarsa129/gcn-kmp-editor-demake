@@ -1890,6 +1890,8 @@ class GenEditor(QMainWindow):
             self.level_view.do_redraw()
         elif option == "autocreate_jgpt": #respawns
             self.level_file.create_respawns()
+            respawn_pos = [obj.position for obj in self.level_file.respawnpoints]
+            self.action_ground_objects(respawn_pos)
             self.level_view.do_redraw()
         elif option == "remove_unused": #remove unused object routes
             self.level_file.remove_unused_object_routes()
@@ -2025,13 +2027,14 @@ class GenEditor(QMainWindow):
             return
 
         route_collec = self.level_file.get_route_container(obj)
-        set_speed = False
+        set_speed = 0
         if create:
             if isinstance(obj, (MapObject, Area) ):
                 new_route_group = libkmp.ObjectRoute.new()
+                set_speed = 20
 
             elif isinstance(obj, Camera):
-                set_speed = True
+                set_speed = 30
                 new_route_group = libkmp.CameraRoute.new()
             obj.route_obj = new_route_group
             route_collec.append(new_route_group)
@@ -2041,10 +2044,9 @@ class GenEditor(QMainWindow):
         #create new points around the object
         self.place_points(obj, num, set_speed)
 
-    def place_points(self, obj, num, set_speed = False):
+    def place_points(self, obj, num, set_speed = 0):
         new_point = libkmp.RoutePoint.new()
-        if set_speed:
-            new_point.unk1 = 50
+        new_point.unk1 = set_speed
         self.object_to_be_added = [new_point, obj.route_obj, -1]
 
         left_vector = obj.rotation.get_vectors()[2]
@@ -2053,6 +2055,8 @@ class GenEditor(QMainWindow):
         self.action_add_object(*first_point)
 
         new_point = libkmp.RoutePoint.new()
+        if isinstance(obj, Area):
+            new_point.unk1 = set_speed
         self.object_to_be_added = [new_point, obj.route_obj, -1]
 
         if num > 1:
@@ -2528,8 +2532,11 @@ class GenEditor(QMainWindow):
         self.set_has_unsaved_changes(True)
         self.pik_control.update_info()
 
-    def action_ground_objects(self):
-        for pos in self.level_view.selected_positions:
+    def action_ground_objects(self, positions):
+        selected = (positions is None)
+        if positions is None:
+            self.level_view.selected_positions
+        for pos in positions:
             if self.level_view.collision is None:
                 return None
             height = self.level_view.collision.collide_ray_closest(pos.x, pos.z, pos.y)
@@ -2537,7 +2544,8 @@ class GenEditor(QMainWindow):
                 pos.y = height
 
         self.pik_control.update_info()
-        self.level_view.gizmo.move_to_average(self.level_view.selected_positions)
+        if (selected):
+            self.level_view.gizmo.move_to_average(self.level_view.selected_positions)
         self.set_has_unsaved_changes(True)
         self.level_view.do_redraw()
 

@@ -2732,7 +2732,7 @@ class KMP(object):
         self.respawnpoints.clear()
         for checkgroup in self.checkpoints.groups:
             num_checks = len(checkgroup.points)
-            for i in range(4, num_checks, 8):
+            for i in range(1, num_checks):
                 checkpoint_mid1 = (checkgroup.points[i].start + checkgroup.points[i].end) /2
                 checkpoint_mid2 = (checkgroup.points[i-1].start + checkgroup.points[i-1].end)/2
 
@@ -2742,7 +2742,7 @@ class KMP(object):
                     if j < num_checks:
                         checkgroup.points[j].respawn_obj = respawn_new
 
-                self.rotate_one_respawn(respawn_new)
+                self.rotate_one_respawn(respawn_new, edity=True)
                 self.respawnpoints.append(respawn_new)
 
             #the ones at the end of the group have the same one as the previous
@@ -2810,7 +2810,7 @@ class KMP(object):
                 idx += 1
         return closest, group_idx, point_idx, master_point_idx
 
-    def rotate_one_respawn(self, rsp :JugemPoint):
+    def rotate_one_respawn(self, rsp :JugemPoint, edity = False):
         point, group_idx, pos_idx, point_idx = self.find_closest_enemy_to_rsp(rsp)
         enemy_groups = self.enemypointgroups.groups
 
@@ -2833,8 +2833,13 @@ class KMP(object):
 
         if point_behind_dis < point_ahead_dis:
             pos_ray = point.position - point_behind
+            pos_y = point_behind.y
         else:
             pos_ray = point_ahead - point.position
+            pos_y = point_ahead.y
+
+        if edity:
+            rsp.position.y = pos_y
 
         if pos_ray.x == 0:
             pos_ray.x = 1

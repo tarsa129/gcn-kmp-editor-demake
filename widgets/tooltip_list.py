@@ -60,7 +60,7 @@ objectid = {
     "TMapObjYoshiHeli": "Helicopter from Yoshi Circuit",
     "GeoKuribo": "Goombas",
     "GeoPull": "Creates a force that pulls you towards it. It's the sand pit in Dry Dry Desert",
-    "GeoItemBox": "Regular Item Box",
+    "itembox": "Regular Item Box",
     "GeoF_ItemBox": "Item Box on a path",
     "GeoCannon": "Shoots you towards the desired Respawn ID"
 }

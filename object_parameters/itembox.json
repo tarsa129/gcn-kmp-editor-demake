@@ -6,7 +6,7 @@
         "Disables shadow if set",
         "Unused",
         "Timing lottery",
-        "Additional height, multiplied with unknown number (always 1?).",
+        "Additional height",
         "Unknown"
     ],
     "Assets": [
@@ -31,7 +31,7 @@
         "1: mushroom",
         "",
         "1: mushroom",
-        "1: mushroom",
+        "Multiplied with unknown number (always 1?).",
         "1: mushroom"
     ]
 }
