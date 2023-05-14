@@ -12,4 +12,3 @@ error analyzer
 - checkpoints: make sure that the # of keycps on each split path are balanced
 create dialog for auto generation and auto cleanup
 add option to select x to y points
-szs

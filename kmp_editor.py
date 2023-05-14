@@ -22,7 +22,6 @@ import PyQt5.QtGui as QtGui
 import opengltext
 import py_obj
 
-from lib import bti
 from widgets.editor_widgets import catch_exception
 from widgets.editor_widgets import AddPikObjectWindow
 from widgets.tree_view import LevelDataTreeView
@@ -36,7 +35,6 @@ from widgets.data_editor import load_route_info, load_default_info
 from mkwii_widgets import KMPMapViewer, MODE_TOPDOWN
 from lib.libkmp import *
 import lib.libkmp as libkmp
-from lib.rarc import Archive
 from lib.libkcl import RacetrackCollision
 from lib.model_rendering import TexturedModel, CollisionModel
 from widgets.editor_widgets import ErrorAnalyzer, ErrorAnalyzerButton, LoadingFix
@@ -44,6 +42,7 @@ from widgets.file_select import FileSelect
 from widgets.data_editor_options import routed_cameras
 from PyQt5.QtWidgets import QTreeWidgetItem
 from lib.vectors import Vector3
+from lib.file_system import *
 
 def get_treeitem(root:QTreeWidgetItem, obj):
     for i in range(root.childCount()):
@@ -106,8 +105,7 @@ class GenEditor(QMainWindow):
         self._justupdatingselectedobject = False
 
         self.bco_coll = None
-        self.loaded_archive = None
-        self.loaded_archive_file = None
+        self.root_directory = None
         self.next_checkpoint_start_position = None
 
         self.connect_start = None
@@ -560,8 +558,6 @@ class GenEditor(QMainWindow):
 
         save_file_shortcut = QtWidgets.QShortcut(Qt.CTRL + Qt.Key_S, self.file_menu)
         save_file_shortcut.activated.connect(self.button_save_level)
-        #QtWidgets.QShortcut(Qt.CTRL + Qt.Key_O, self.file_menu).activated.connect(self.button_load_level)
-        #QtWidgets.QShortcut(Qt.CTRL + Qt.Key_Alt + Qt.Key_S, self.file_menu).activated.connect(self.button_save_level_as)
 
         self.file_load_action = QAction("Load", self)
         self.file_load_recent_menu = QMenu("Load Recent", self)
@@ -1267,13 +1263,12 @@ class GenEditor(QMainWindow):
 
     #@catch_exception
     def button_load_level(self, checked=False, filepath=None, add_to_ini=True ):
-        _ = checked
-
+        print(filepath)
         if filepath is None:
             filepath, chosentype = QFileDialog.getOpenFileName(
                 self, "Open File",
                 self.pathsconfig["kmp"],
-                "KMP(*.kmp);;KMP files (*.kmp);;All files (*)",
+                "KMP(*.kmp);;szs files (*.szs);;All files (*)",
                 self.last_chosen_type)
         else:
             chosentype = None
@@ -1286,39 +1281,45 @@ class GenEditor(QMainWindow):
             print("Reset done")
             print("Chosen file type:", chosentype)
 
-            with open(filepath, "rb") as f:
-                try:
-                    kmp_file = KMP.from_file(f)
-                    error_string = kmp_file.fix_file() #will do a popup for 'stuff fixed at load'
+            if chosentype == "szs files (*.szs)" or filepath.endswith(".szs"):
+                self.load_archive_file(filepath, add_to_ini)
+                return
+            else:
+                with open(filepath, "rb") as f:
+                    try:
+                        kmp_file = KMP.from_file(f)
 
-                    if len(error_string) > 0:
-                        initial_errors = LoadingFix(self.level_file, parent=self)
-                        initial_errors.set_text(error_string)
-                        initial_errors.exec_()
-                        initial_errors.deleteLater()
+                        self.setup_kmp_file(kmp_file, filepath, add_to_ini)
+                        self.leveldatatreeview.set_objects(kmp_file)
+                        self.leveldatatreeview.bound_to_group(kmp_file)
+                        self.current_gen_path = filepath
 
-                    self.setup_kmp_file(kmp_file, filepath, add_to_ini)
-                    self.leveldatatreeview.set_objects(kmp_file)
-                    self.leveldatatreeview.bound_to_group(kmp_file)
-                    self.current_gen_path = filepath
+                        filepath_base = os.path.dirname(filepath)
 
-                    filepath_base = os.path.dirname(filepath)
+                        collisionfile = filepath_base+"/course.kcl"
+                        if os.path.exists(collisionfile):
+                            self.load_collision_kcl(collisionfile)
 
-                    collisionfile = filepath_base+"/course.kcl"
-                    if os.path.exists(collisionfile):
-                        self.load_collision_kcl(collisionfile)
-
-                    self.frame_selection(adjust_zoom=True)
-
-                except Exception as error:
-                    print("Error appeared while loading:", error)
-                    traceback.print_exc()
-                    open_error_dialog(str(error), self)
+                        self.frame_selection(adjust_zoom=True)
+                        self.root_directory = None
+                    except Exception as error:
+                        print("Error appeared while loading:", error)
+                        traceback.print_exc()
+                        open_error_dialog(str(error), self)
 
             self.update_3d()
 
-    def setup_kmp_file(self, bol_file, filepath, add_to_ini):
-        self.level_file = bol_file
+    def setup_kmp_file(self, kmp_file, filepath, add_to_ini):
+        error_string = kmp_file.fix_file() #will do a popup for 'stuff fixed at load'
+
+        if len(error_string) > 0:
+            initial_errors = LoadingFix(self.level_file, parent=self)
+            initial_errors.set_text(error_string)
+            initial_errors.exec_()
+            initial_errors.deleteLater()
+
+
+        self.level_file = kmp_file
         self.level_view.level_file = self.level_file
         # self.pikmin_gen_view.update()
         self.level_view.do_redraw()
@@ -1335,23 +1336,51 @@ class GenEditor(QMainWindow):
             save_cfg(self.configuration)
         self.current_gen_path = filepath
 
+    def load_archive_file(self, filepath, add_to_ini=True):
+        clear_temp_folder()
+        os.system(f"wszst extract {filepath} -d lib/szsdump -o" )
+        full_path = os.path.join(os.getcwd(), "lib\szsdump")
+        self.root_directory = Directory.from_dir(full_path)
+
+        kmp_file_obj = self.root_directory.get_file("course.kmp")
+        if kmp_file_obj is not None:
+            kmp_file = KMP.from_file(kmp_file_obj)
+            self.setup_kmp_file(kmp_file, filepath, add_to_ini)
+            self.leveldatatreeview.set_objects(kmp_file)
+            self.leveldatatreeview.bound_to_group(kmp_file)
+
+        kcl_path = os.path.join(os.getcwd(), "lib\szsdump\course.kcl")
+        if os.path.isfile(kcl_path):
+            self.load_collision_kcl(kcl_path)
+
+        self.set_base_window_title(filepath)
+        if add_to_ini:
+            self.pathsconfig["szs"] = filepath
+            self.update_recent_files_list(filepath)
+            save_cfg(self.configuration)
+        self.current_gen_path = filepath
+
+        clear_temp_folder()
+        self.frame_selection(adjust_zoom=True)
+
     @catch_exception_with_dialog
     def button_save_level(self, *args, **kwargs):
         if self.current_gen_path is not None:
-            if self.loaded_archive is not None:
-                assert self.loaded_archive_file is not None
-                root_name = self.loaded_archive.root.name
-                file = self.loaded_archive[root_name + "/" + self.loaded_archive_file]
-                file.seek(0)
+            if self.root_directory is not None:
+                clear_temp_folder()
 
-                self.level_file.write(file)
+                dump_path = os.path.join(os.getcwd(), "lib")
+                kmp_file_obj = self.root_directory.get_file("course.kmp")
+                if kmp_file_obj is not None:
+                    kmp_file_obj.seek(0)
+                    self.level_file.write(kmp_file_obj)
 
-                with open(self.current_gen_path, "wb") as f:
-                    self.loaded_archive.write_arc(f)
+                self.root_directory.extract_to(dump_path)
 
                 self.set_has_unsaved_changes(False)
                 self.statusbar.showMessage("Saved to {0}".format(self.current_gen_path))
-
+                szs_path = dump_path = os.path.join(os.getcwd(), "lib\szsdump")
+                os.system(f"wszst create {szs_path} -d {self.current_gen_path}.szs -o" )
             else:
                 gen_path = self.current_gen_path[:-3] + "backup.kmp"
                 with open(gen_path, "wb") as f:
@@ -1450,7 +1479,6 @@ class GenEditor(QMainWindow):
     def load_collision_kcl(self, filepath):
         kcl_coll = RacetrackCollision()
         faces = []
-
 
         with open(filepath, "rb") as f:
             kcl_coll.load_file(f)
@@ -2532,10 +2560,10 @@ class GenEditor(QMainWindow):
         self.set_has_unsaved_changes(True)
         self.pik_control.update_info()
 
-    def action_ground_objects(self, positions):
+    def action_ground_objects(self, positions=None):
         selected = (positions is None)
         if positions is None:
-            self.level_view.selected_positions
+            positions = self.level_view.selected_positions
         for pos in positions:
             if self.level_view.collision is None:
                 return None
@@ -3375,7 +3403,7 @@ class GenEditor(QMainWindow):
             url = mime_data.urls()[0]
             filepath = url.toLocalFile()
             exten = filepath[filepath.rfind("."):].lower()
-            if exten in [".kmp", ".kcl"]:
+            if exten in (".kmp", ".kcl", ".szs"):
                 event.acceptProposedAction()
 
     def dropEvent(self, event):
@@ -3385,9 +3413,11 @@ class GenEditor(QMainWindow):
             filepath = url.toLocalFile()
             exten = filepath[filepath.rfind("."):].lower()
             if exten == ".kmp":
-                self.button_load_level( False, filepath, add_to_ini = False)
+                self.button_load_level(False, filepath, add_to_ini = False)
             elif exten == ".kcl":
                 self.load_collision_kcl(filepath)
+            if exten == ".szs":
+                self.load_archive_file(filepath, add_to_ini = False)
 
 def find_file(rarc_folder, ending):
     for filename in rarc_folder.files.keys():
