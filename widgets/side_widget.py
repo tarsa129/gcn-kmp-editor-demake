@@ -1,17 +1,8 @@
 from PyQt5 import QtCore, QtWidgets, QtGui
 from widgets.data_editor import choose_data_editor, ObjectEdit, CameraEdit, AreaEdit
 from widgets.more_buttons import MoreButtons
-from lib.libkmp import Area, Camera
+from lib.libkmp import Area, Camera, all_of_same_type
 
-def all_of_same_type(objs):
-    all_same =  all( [ isinstance(x, type(objs[0])) for x in objs])
-    if not (all_same):
-        return False
-    if isinstance(objs[0], Area):
-        types = [obj.type for obj in objs]
-        if 0 in types and not all([type == 0 for type in types]):
-            return False
-    return True
 
 class PikminSideWidget(QtWidgets.QWidget):
     def __init__(self, *args, **kwargs):

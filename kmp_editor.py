@@ -348,7 +348,7 @@ class GenEditor(QMainWindow):
         z = (maxz + minz) / 2
 
         if self.level_view.mode == MODE_TOPDOWN:
-            self.level_view.position = Vector3(x, self.level_view.position.y, -z)
+            self.level_view.position = Vector3(-x, self.level_view.position.y, -z)
 
             if adjust_zoom:
                 if self.level_view.canvas_width > 0 and self.level_view.canvas_height > 0:
@@ -423,9 +423,17 @@ class GenEditor(QMainWindow):
         if self.visibility_menu.replaycameras.is_visible():
             for area in self.level_file.replayareas:
                 extend(area.position)
+            for camera in self.level_file.replayareas.get_cameras():
+                extend(camera.position)
+                for route in self.level_file.replayareas.get_routes():
+                    for point in route.points:
+                        extend(point.position)
         if self.visibility_menu.cameras.is_visible():
             for camera in self.level_file.cameras:
                 extend(camera.position)
+            for route in self.level_file.cameras.get_routes():
+                for point in route.points:
+                    extend(point.position)
         if self.visibility_menu.checkpoints.is_visible():
             for respawn_point in self.level_file.respawnpoints:
                 extend(respawn_point.position)
@@ -2465,21 +2473,24 @@ class GenEditor(QMainWindow):
 
         #C IS FOR "connecting"
         #
-        if event.key() == Qt.Key_C and len(self.level_view.selected) == 1:
+        if event.key() == Qt.Key_C and self.level_view.selected and all_of_same_type(self.level_view.selected):
             sel_obj = self.level_view.selected[0]
             if isinstance(sel_obj, Checkpoint):
-                self.connect_start = self.level_view.selected[0]
+                self.connect_start = [x for x in self.level_view.selected]
                 self.level_view.connecting_mode = "connect"
-                self.level_view.connecting_start = self.connect_start.get_mid()
+                self.level_view.connecting_start = [x.get_mid() for x in self.level_view.selected]
                 self.level_view.connecting_rotation = None
             elif isinstance( sel_obj , (KMPPoint, MapObject, OpeningCamera, Area) ):
-                if isinstance(sel_obj, MapObject) and sel_obj.route_info is None:
-                    return
-                if isinstance(sel_obj, Area) and sel_obj.type not in [0, 3, 4]:
-                    return
-                self.connect_start = self.level_view.selected[0]
+                self.connect_start = []
+                self.level_view.connecting_start = []
+                for obj in self.level_view.selected:
+                    if isinstance(sel_obj, MapObject) and sel_obj.route_info is None:
+                        continue
+                    if isinstance(sel_obj, Area) and sel_obj.type not in [0, 3, 4]:
+                        continue
+                    self.connect_start.append( obj )
+                    self.level_view.connecting_start.append(obj.position)
                 self.level_view.connecting_mode = "connect"
-                self.level_view.connecting_start = self.connect_start.position
         elif event.key() == Qt.Key_B and self.level_view.selected:
             if self.select_start is not None:
                 self.select_start = [x for x in self.level_view.selected]
@@ -3248,103 +3259,107 @@ class GenEditor(QMainWindow):
                 #copy the route, if the route is type 2
                 #place the object
 
-
-
     def handle_connecting(self):
+        obj_type = self.connect_start[0]
         if len(self.level_view.selected) == 0:
             #create a new enemy/item/checkpoint group
-            if isinstance(self.connect_start, KMPPoint):
-
-                to_deal_with = self.level_file.get_to_deal_with(self.connect_start)
-                start_groupind, start_group, start_pointind = to_deal_with.find_group_of_point(self.connect_start)
-                if start_group is None:
-                    print("start group is none, this shouldn't happen", self.connect_start.position)
-                    return
-                if start_group.num_next() == 6:
-                    return
+            if isinstance(obj_type, KMPPoint) and len(self.connect_start) < 7:
+                to_deal_with = self.level_file.get_to_deal_with(obj_type)
                 point_to_add = to_deal_with.get_new_point()
                 group_to_add = to_deal_with.get_new_group()
-                if start_pointind == len(start_group.points) - 1:
-                    to_deal_with.groups.append(group_to_add)
+                for obj in self.connect_start:
+                    start_groupind, start_group, start_pointind = to_deal_with.find_group_of_point(obj)
+                    if start_group is None:
+                        print("start group is none, this shouldn't happen", obj.position)
+                        continue
+                    if start_group.num_next() == 6:
+                        return
+                    if start_pointind == len(start_group.points) - 1:
+                        to_deal_with.groups.append(group_to_add)
 
-                    group_to_add.add_new_prev(start_group)
-                    start_group.add_new_next(group_to_add)
+                        group_to_add.add_new_prev(start_group)
+                        start_group.add_new_next(group_to_add)
 
-                    self.object_to_be_added = [point_to_add, len(to_deal_with.groups) - 1, 0 ]
-                else:
-                    self.split_group( start_group, self.connect_start )
-                    to_deal_with.groups.append(group_to_add)
+                        self.object_to_be_added = [point_to_add, len(to_deal_with.groups) - 1, 0 ]
+                    else:
+                        self.split_group( start_group, obj )
+                        to_deal_with.groups.append(group_to_add)
 
-                    group_to_add.add_new_prev(start_group)
-                    start_group.add_new_next(group_to_add)
+                        group_to_add.add_new_prev(start_group)
+                        start_group.add_new_next(group_to_add)
 
-                    self.object_to_be_added = [point_to_add, len(to_deal_with.groups) - 1, 0 ]
+                        self.object_to_be_added = [point_to_add, len(to_deal_with.groups) - 1, 0 ]
 
-                start_group.remove_next(start_group)
-                start_group.remove_prev(start_group)
+                    start_group.remove_next(start_group)
+                    start_group.remove_prev(start_group)
 
                 self.pik_control.button_add_object.setChecked(True)
                 self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
             #create a new path for the object/camera
-            elif isinstance(self.connect_start, (MapObject, Camera) ):
-                if self.connect_start.route_obj is not None and self.connect_mode == 1:
-                    if isinstance(self.connect_start, MapObject ):
-                        self.button_add_from_addi_options(5, self.connect_start)
-                    elif isinstance(self.connect_start, Camera ):
-                        self.button_add_from_addi_options(5.5, self.connect_start)
+            elif isinstance(obj_type, (MapObject, Camera) ):
+                for obj in self.connect_start:
+                    if obj.route_obj is not None :
+                        if isinstance(obj, MapObject ):
+                            self.button_add_from_addi_options(5, obj)
+                        elif isinstance(obj, Camera ):
+                            self.button_add_from_addi_options(5.5, obj)
 
-                    route_container = self.level_file.get_route_container(self.connect_start)
-                    new_group = route_container[-1]
+                        route_container = self.level_file.get_route_container(obj)
+                        new_group = route_container[-1]
 
-                    self.connect_start.route_obj = new_group
-                    new_group.used_by.append(self.connect_start)
+                        obj.route_obj = new_group
+                        new_group.used_by.append(obj)
 
-                    self.button_add_from_addi_options(6, new_group)
+                        self.button_add_from_addi_options(6, new_group)
         elif len(self.level_view.selected) != 1:
             return
         else: #len(self.level_view.selected) == 1
+            obj_type = self.connect_start[0]
             endpoint = self.level_view.selected[0]
             to_deal_with = None
-            if isinstance(endpoint, KMPPoint) and isinstance(self.connect_start, KMPPoint):
-                if isinstance(endpoint, EnemyPoint) and isinstance(self.connect_start, EnemyPoint):
+            if isinstance(endpoint, KMPPoint) and isinstance(obj_type, KMPPoint):
+                if isinstance(endpoint, EnemyPoint) and isinstance(obj_type, EnemyPoint):
                     to_deal_with = self.level_file.enemypointgroups
-                elif isinstance(endpoint, ItemPoint) and isinstance(self.connect_start, ItemPoint):
+                elif isinstance(endpoint, ItemPoint) and isinstance(obj_type, ItemPoint):
                     to_deal_with = self.level_file.itempointgroups
-                elif isinstance(endpoint, Checkpoint) and isinstance(self.connect_start, Checkpoint):
+                elif isinstance(endpoint, Checkpoint) and isinstance(obj_type, Checkpoint):
                     to_deal_with = self.level_file.checkpoints
 
                 if to_deal_with is not None:
                     self.connect_two_groups(endpoint, to_deal_with)
-            elif isinstance(endpoint, JugemPoint) and isinstance(self.connect_start, Checkpoint):
-                self.connect_start.respawn_obj = endpoint
-            elif isinstance(endpoint, RoutePoint) and isinstance(self.connect_start, (MapObject, Camera)):
-                if isinstance(endpoint.partof, ObjectRoute) and isinstance(self.connect_start, MapObject):
-                    if self.connect_start.route_obj is not None:
-                        self.connect_start.route_obj.used_by.remove(self.connect_start)
-                    self.connect_start.route_obj = endpoint.partof
-                    endpoint.partof.used_by.append(self.connect_start)
-                if isinstance(endpoint.partof, CameraRoute) and isinstance(self.connect_start, Camera):
-                    if self.connect_start.route_obj is not None:
-                        self.connect_start.route_obj.used_by.remove(self.connect_start)
-                    self.connect_start.route_obj = endpoint.partof
-                    endpoint.partof.used_by.append(self.connect_start)
+            elif isinstance(endpoint, JugemPoint) and isinstance(obj_type, Checkpoint):
+                for obj in self.connect_start:
+                    obj.respawn_obj = endpoint
+            elif isinstance(endpoint, RoutePoint) and isinstance(obj_type, (MapObject, Camera)):
+                for obj in self.connect_start:
+                    if isinstance(endpoint.partof, ObjectRoute) and isinstance(obj, MapObject):
+                        if obj.route_obj is not None:
+                            obj.route_obj.used_by.remove(obj)
+                        obj.route_obj = endpoint.partof
+                        endpoint.partof.used_by.append(obj)
+                    if isinstance(endpoint.partof, CameraRoute) and isinstance(obj, Camera):
+                        if obj.route_obj is not None:
+                            obj.route_obj.used_by.remove(obj)
+                        obj.route_obj = endpoint.partof
+                        endpoint.partof.used_by.append(obj)
             elif isinstance(self.connect_start, Area):
-                area : Area = self.connect_start
-                if self.connect_start.type == 0 and isinstance(endpoint, Camera):
-                    old_camera = area.camera
-                    area.camera = endpoint
-                    self.update_camera_used_by(area, old_camera, area.camera )
-                    if not old_camera.used_by:
-                        self.level_file.remove_camera(old_camera)
-                if self.connect_start.type == 3 and isinstance(endpoint, RoutePoint) and isinstance(endpoint.partof, AreaRoute):
-                    old_route = area.route_obj
-                    area.route_obj = endpoint.partof
-                    self.update_route_used_by([area], old_route, area.route_obj)
-                elif self.connect_start.type == 4 and isinstance(endpoint, EnemyPoint):
-                    self.connect_start.enemypoint = endpoint
-            elif isinstance(endpoint, Camera) and isinstance(self.connect_start, Camera):
-                if (endpoint in self.level_file.cameras) and (self.connect_start in self.level_file.cameras):
-                    self.connect_start.nextcam_obj = endpoint
+                for area in self.connect_start:
+                    if area.type == 0 and isinstance(endpoint, Camera):
+                        old_camera = area.camera
+                        area.camera = endpoint
+                        self.update_camera_used_by(area, old_camera, area.camera )
+                        if not old_camera.used_by:
+                            self.level_file.remove_camera(old_camera)
+                    if area.type == 3 and isinstance(endpoint, RoutePoint) and isinstance(endpoint.partof, AreaRoute):
+                        old_route = area.route_obj
+                        area.route_obj = endpoint.partof
+                        self.update_route_used_by([area], old_route, area.route_obj)
+                    elif area.type == 4 and isinstance(endpoint, EnemyPoint):
+                        area.enemypoint = endpoint
+            elif isinstance(endpoint, Camera) and isinstance(obj_type, Camera):
+                for camera in self.connect_start:
+                    if (endpoint in self.level_file.cameras) and (camera in self.level_file.cameras):
+                        camera.nextcam_obj = endpoint
 
     def set_and_start_copying(self):
         #print(self.level_view.selected)

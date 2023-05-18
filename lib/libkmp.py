@@ -11,6 +11,17 @@ from scipy.spatial.transform import Rotation as R
 
 import numpy
 
+def all_of_same_type(objs):
+    all_same =  all( [ isinstance(x, type(objs[0])) for x in objs])
+    if not (all_same):
+        return False
+    if isinstance(objs[0], Area):
+        types = [obj.type for obj in objs]
+        if 0 in types and not all([type == 0 for type in types]):
+            return False
+    return True
+
+
 def read_uint8(f):
     return unpack(">B", f.read(1))[0]
 
