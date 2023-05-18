@@ -102,8 +102,7 @@ class TopdownScroll(ClickDragAction):
             adjusted_dx = d_x
             adjusted_dz = d_y
 
-        editor.offset_x += adjusted_dx
-        editor.offset_z += adjusted_dz
+        editor.position += Vector3(adjusted_dx, 0, adjusted_dz)
         editor.do_redraw()
         self.first_click.x = event.x()
         self.first_click.y = event.y()
@@ -238,13 +237,11 @@ class View3DScroll(ClickDragAction):
 
         forward_vec = Vector3(cos(editor.camera_horiz), sin(editor.camera_horiz), 0)
         forward_move = forward_vec * speed * speedup
-        editor.offset_x += forward_move.x * d_y
-        editor.offset_z += forward_move.y * d_y
+        editor.position += Vector3(forward_move.x * d_y, 0, forward_move.y * d_y)
 
         sideways_vec = Vector3(-sin(editor.camera_horiz), cos(editor.camera_horiz), 0)
         sideways_move = sideways_vec * speed * speedup
-        editor.offset_x += sideways_move.x * d_x
-        editor.offset_z += sideways_move.y * d_x
+        editor.position += Vector3(sideways_move.x * d_x, 0, sideways_move.y * d_x)
 
         editor.do_redraw()
         self.first_click.x = event.x()
@@ -266,14 +263,13 @@ class RotateCamera3D(ClickDragAction):
 
         self.first_click = Vector2(curr_x, curr_y)
 
-        editor.camera_horiz = (editor.camera_horiz - diff_x * (pi / 500)) % (2 * pi)
-        editor.camera_vertical = (editor.camera_vertical - diff_y * (pi / 600))
+        editor.camera_horiz = (editor.camera_horiz - diff_x * (pi / 2500)) % (2 * pi)
+        editor.camera_vertical = (editor.camera_vertical - diff_y * (pi / 3000))
         if editor.camera_vertical > pi / 2.0:
             editor.camera_vertical = pi / 2.0
         elif editor.camera_vertical < -pi / 2.0:
             editor.camera_vertical = -pi / 2.0
 
-        # print(self.camera_vertical, "hello")
         editor.do_redraw()
 
 
@@ -664,6 +660,8 @@ class UserControl(object):
 
     def handle_press_3d(self, event):
         editor = self._editor_widget
+        if editor.preview is not None:
+            editor.preview = None
 
         for key in key_enums.keys():
             if self.buttons.just_pressed(event, key):
@@ -673,6 +671,8 @@ class UserControl(object):
 
     def handle_release_3d(self, event):
         editor = self._editor_widget
+        if editor.preview is not None:
+            return
 
         for key in key_enums.keys():
             if self.buttons.just_released(event, key):
@@ -682,6 +682,8 @@ class UserControl(object):
 
     def handle_move_3d(self, event):
         editor = self._editor_widget
+        if editor.preview is not None:
+            return
 
         for key in key_enums.keys():
             if self.buttons.is_held(event, key):

@@ -30,8 +30,9 @@ from gizmo import Gizmo
 from lib.object_models import ObjectModels
 from editor_controls import UserControl
 #from lib.libpath import Paths
-from lib.libkmp import KMP, KMPPoint
+from lib.libkmp import KMP, KMPPoint, Camera
 import numpy
+from editor_preview import *
 
 ObjectSelectionEntry = namedtuple("ObjectSelectionEntry", ["obj", "pos1", "pos2", "pos3", "rotation"])
 
@@ -45,6 +46,7 @@ MODE_3D = 1
 
 #colors = [(1.0, 0.0, 0.0), (0.0, 0.5, 0.0), (0.0, 0.0, 1.0), (1.0, 1.0, 0.0)]
 colors = [(0.0,191/255.0,255/255.0), (30/255.0,144/255.0,255/255.0), (0.0,0.0,255/255.0), (0.0,0.0,139/255.0)]
+MKW_FRAMERATE = 59.94
 
 with open("lib/color_coding.json", "r") as f:
     colors_json = json.load(f)
@@ -130,8 +132,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
         self.origin_x = self.SIZEX//2
         self.origin_z = self.SIZEY//2
 
-        self.offset_x = 0
-        self.offset_z = 0
+        self.position = Vector3(0, 1000, 0)
 
         self.left_button_down = False
         self.mid_button_down = False
@@ -193,6 +194,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
         self.timer.start()
         self._lastrendertime = 0
         self._lasttime = 0
+        self.preview = None
 
         self._frame_invalid = False
         self._mouse_pos_changed = False
@@ -215,7 +217,6 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
         self.mode = MODE_TOPDOWN
         self.camera_horiz = pi*(1/2)
         self.camera_vertical = -pi*(1/4)
-        self.camera_height = 1000
         self.last_move = None
         self.backgroundcolor = (255, 255, 255, 255)
 
@@ -329,7 +330,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                 self.setContextMenuPolicy(Qt.DefaultContextMenu)
 
             # This is necessary so that the position of the 3d camera equals the middle of the topdown view
-            self.offset_x *= -1
+            self.position.x += 1
             self.do_redraw()
 
     def change_from_3d_to_topdown(self):
@@ -339,8 +340,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
             self.mode = MODE_TOPDOWN
             if self.mousemode == MOUSE_MODE_NONE:
                 self.setContextMenuPolicy(Qt.CustomContextMenu)
-
-            self.offset_x *= -1
+            self.position.x *= -1
             self.do_redraw()
 
 
@@ -361,11 +361,23 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
         #self.logic(timedelta, diff)
 
-        if diff > 1 / 60.0:
+        if diff > 1 / MKW_FRAMERATE:
+            if self.preview is not None:
+                if self.preview.done:
+                    self.preview = None
+                else:
+                    self.preview.advance_frame(diff)
+
+                    self.position = self.preview.position.flip_render()
+                    look_vector = self.preview.view_pos.flip_render() - self.position
+                    self.camera_horiz, self.camera_vertical = look_vector.to_euler()
+                    self.fov = self.preview.zoom
+            else:
+                self.fov = 75
             check_gizmo_hover_id = self._mouse_pos_changed and self.should_check_gizmo_hover_id()
             self._mouse_pos_changed = False
 
-            if self._frame_invalid or check_gizmo_hover_id:
+            if self._frame_invalid or check_gizmo_hover_id or self.preview is not None:
                 self.update()
                 self._lastrendertime = now
                 self._frame_invalid = False
@@ -405,11 +417,11 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
         if diff_x != 0 or diff_y != 0:
             if self.zoom_factor > 1.0:
-                self.offset_x += diff_x * (1.0 + (self.zoom_factor - 1.0) / 2.0)
-                self.offset_z += diff_y * (1.0 + (self.zoom_factor - 1.0) / 2.0)
+                self.position.x += diff_x * (1.0 + (self.zoom_factor - 1.0) / 2.0)
+                self.position.z += diff_y * (1.0 + (self.zoom_factor - 1.0) / 2.0)
             else:
-                self.offset_x += diff_x
-                self.offset_z += diff_y
+                self.position.x += diff_x
+                self.position.z += diff_y
             # self.update()
 
             self.do_redraw()
@@ -454,15 +466,9 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
             diff_height = -1 * speedup * self._wasdscrolling_speed * timedelta
 
         if not forward_move.is_zero() or not sideways_move.is_zero() or diff_height != 0:
-            #if self.zoom_factor > 1.0:
-            #    self.offset_x += diff_x * (1.0 + (self.zoom_factor - 1.0) / 2.0)
-            #    self.offset_z += diff_y * (1.0 + (self.zoom_factor - 1.0) / 2.0)
-            #else:
-            self.offset_x += (forward_move.x + sideways_move.x)
-            self.offset_z += (forward_move.y + sideways_move.y)
-            self.camera_height += diff_height
-            # self.update()
-
+            self.position.x += (forward_move.x + sideways_move.x)
+            self.position.z += (forward_move.y + sideways_move.y)
+            self.position.y += diff_height
             self.do_redraw()
 
     def set_arrowkey_movement(self, up, down, left, right):
@@ -500,8 +506,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
         if not keep_collision:
             # Potentially: Clear collision object too?
             self.level_image = None
-            self.offset_x = 0
-            self.offset_z = 0
+            self.position = Vector3(0, self.position.y, 0)
             self._zoom_factor = 80
 
         self.pikmin_generators = None
@@ -578,8 +583,8 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
         camera_width = width * zf
         camera_height = height * zf
 
-        topleft_x = -camera_width / 2 - self.offset_x
-        topleft_y = camera_height / 2 + self.offset_z
+        topleft_x = -camera_width / 2 - self.position.x
+        topleft_y = camera_height / 2 + self.position.z
 
         relx = mouse_x / width
         rely = mouse_y / height
@@ -598,8 +603,8 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
     #@catch_exception
     def paintGL(self):
         #start = default_timer()
-        offset_x = self.offset_x
-        offset_z = self.offset_z
+        offset_x = self.position.x
+        offset_z = self.position.z
 
         #start = default_timer()
         glClearColor(1.0, 1.0, 1.0, 0.0)
@@ -626,19 +631,18 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
             glMatrixMode(GL_PROJECTION)
             glLoadIdentity()
-            gluPerspective(75, width / height, 256.0, 160000.0)
+            gluPerspective(self.fov, width / height, 256.0, 160000.0)
 
             glMatrixMode(GL_MODELVIEW)
-            glLoadIdentity()
-
+            glLoadIdentity()    
             look_direction = Vector3(cos(self.camera_horiz), sin(self.camera_horiz), sin(self.camera_vertical))
             # look_direction.unify()
             fac = 1.01 - abs(look_direction.z)
             # print(fac, look_direction.z, look_direction)
 
-            gluLookAt(self.offset_x, self.offset_z, self.camera_height,
-                      self.offset_x + look_direction.x * fac, self.offset_z + look_direction.y * fac,
-                      self.camera_height + look_direction.z,
+            gluLookAt(self.position.x, self.position.z, self.position.y,
+                      self.position.x + look_direction.x * fac, self.position.z + look_direction.y * fac,
+                      self.position.y + look_direction.z,
                       0, 0, 1)
 
             self.camera_direction = Vector3(look_direction.x * fac, look_direction.y * fac, look_direction.z)
@@ -650,7 +654,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
         self.mvp_mat = numpy.dot(self.projectionmatrix, self.modelviewmatrix)
         self.modelviewmatrix_inv = numpy.linalg.inv(self.modelviewmatrix)
 
-        campos = Vector3(self.offset_x, self.camera_height, -self.offset_z)
+        campos = Vector3(self.position.x, self.position.y, -self.position.z)
         self.campos = campos
 
         if self.mode == MODE_TOPDOWN:
@@ -1654,7 +1658,10 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                                                                 object.position, object.rotation,
                                                                  object in select_optimize)
                     if object.type in (4, 5):
-                        glColor3f(1.0, 0.0, 1.0)
+                        if object in select_optimize:
+                            glColor3f(1.0, 0.0, 1.0)
+                        else:
+                            glColor3f(0.749, 0.616, 0.467)
                         pos1 = object.position2
                         pos2 = object.position3
                         self.models.draw_sphere(pos1, 300)
@@ -1875,9 +1882,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
         view = self.camera_direction.copy()
         view = view * speed * speedup
 
-        self.offset_x += view.x
-        self.camera_height += view.z
-        self.offset_z += view.y
+        self.position += Vector3(view.x, view.z, view.y)
 
         self.do_redraw()
 
@@ -1906,7 +1911,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
         x /= (width / 2)
         y /= (height / 2)
-        camerapos = Vector3(self.offset_x, self.offset_z, self.camera_height)
+        camerapos = Vector3(self.position.x, self.position.z, self.position.y)
 
         pos = camerapos + view * 1.0 + h * x + v * y
         dir = pos - camerapos
@@ -1938,6 +1943,14 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                 pos2, _ = collision
 
         return pos2
+
+    def preview_opening_cameras(self, cameras, areas=None, enemies=None):
+        if not cameras:
+            return
+        if areas is None:
+            self.preview = OpeningPreview(cameras)
+        self.mode = MODE_3D
+
 
 def create_object_type_pixmap(canvas_size: int, directed: bool,
                               colors: 'tuple[tuple[int]]') -> QtGui.QPixmap:
@@ -2097,7 +2110,7 @@ class FilterViewMenu(QMenu):
                                                        [colors["Respawn"]])
         self.objects = ObjectViewSelectionToggle("Objects", self, True, [colors["Objects"]])
         self.areas = ObjectViewSelectionToggle("Areas", self, True, [colors["Areas"]])
-        self.replaycameras = ObjectViewSelectionToggle("Cameras", self, True, [colors["Camera"]])
+        self.replaycameras = ObjectViewSelectionToggle("ReplayCameras", self, True, [colors["Camera"]])
         self.cameras = ObjectViewSelectionToggle("Cameras", self, True, [colors["Camera"]])
 
         self.cannonpoints = ObjectViewSelectionToggle("Cannon Points", self, True, [colors["Cannons"]])
@@ -2146,3 +2159,4 @@ class FilterViewMenu(QMenu):
                 QMenu.mouseReleaseEvent(self, e)
         except:
             traceback.print_exc()
+

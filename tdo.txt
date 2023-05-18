@@ -1,14 +1,15 @@
-mkdd-master to do list:
-refactor options code to move stuff to libkmp
+working on:
+came - camera viewing
 
-gobj:
-- support for optional routes
-
-came:
-- camera viewing
-
-general:
+next:
+allow multi connect
+gobj - support for optional routes + shared routes
+control to select more points
 error analyzer
-- checkpoints: make sure that the # of keycps on each split path are balanced
-create dialog for auto generation and auto cleanup
+load + collide on gobj collision files
 add option to select x to y points
+create dialog for auto generation and auto cleanup
+brres loading
+
+bugs:
+framing for cameras / anything routed

@@ -111,6 +111,14 @@ class MoreButtons(QWidget):
             lambda: gen_editor.button_add_from_addi_options(option, obj) )
         self.vbox.addWidget(new_enemy_group)
 
+    def add_multi_button(self, text, option, objs):
+        new_enemy_group = QPushButton(self)
+        new_enemy_group.setText(text)
+        gen_editor = self.parent().parent().parent()
+        new_enemy_group.clicked.connect(
+            lambda: gen_editor.button_add_from_addi_options_multi(option, objs) )
+        self.vbox.addWidget(new_enemy_group)
+
     def add_course_buttons(self, objgrid, obj, btn, speflayout):
         obj.is_revealed = True
 
@@ -222,6 +230,8 @@ class MoreButtons(QWidget):
             if not obj.get_type(0):
                 self.add_button("Add Goal Camera", "add_camera", 0)
 
+            self.add_button("Preview Opening Cams (Not Functional)", "preview_opening", obj)
+
         elif isinstance(obj, ObjectContainer) and obj.assoc is JugemPoint:
             self.add_button("v: Add Respawn and Assign to Closest Checkpoints", "add_jgpt", True)
             self.add_button("Auto Respawns (Create from Checkpoints)", "autocreate_jgpt", obj)
@@ -238,16 +248,16 @@ class MoreButtons(QWidget):
         #item box fill in - two item box
 
         #align to x and z should always be options
-        self.add_button("Align on X Axis", "align_x", objs)
-        self.add_button("Align on Z Axis", "align_z", objs)
+        self.add_multi_button("Align on X Axis", "align_x", objs)
+        self.add_multi_button("Align on Z Axis", "align_z", objs)
 
         if 0 in options:
-            self.add_button("Add Item Boxes Between", "aliadd_items_between", options[0])
-            self.add_button("Add Item Boxes Between", "add_items_between_ground", options[0])
+            self.add_multi_button("Add Item Boxes Between", "aliadd_items_between", options[0])
+            self.add_multi_button("Add Item Boxes Between", "add_items_between_ground", options[0])
 
         if 3 in options:
-            self.add_button("Decrease Scale by 5", "dec_enemy_scale", options[3])
-            self.add_button("Increase Scale by 5", "inc_enemy_scale", options[3])
+            self.add_multi_button("Decrease Scale by 5", "dec_enemy_scale", options[3])
+            self.add_multi_button("Increase Scale by 5", "inc_enemy_scale", options[3])
 
     def check_options(self, objs):
         #item box check for fill in

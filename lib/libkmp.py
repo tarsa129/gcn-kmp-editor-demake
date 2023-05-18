@@ -1209,7 +1209,6 @@ class CameraRoute(Route):
         super().__init__()
         self.type = 1
 
-
 class AreaRoute(Route):
     def __init__(self):
         super().__init__()
@@ -2736,19 +2735,11 @@ class KMP(object):
                 checkpoint_mid1 = (checkgroup.points[i].start + checkgroup.points[i].end) /2
                 checkpoint_mid2 = (checkgroup.points[i-1].start + checkgroup.points[i-1].end)/2
 
-                respawn_new = JugemPoint( (checkpoint_mid1 + checkpoint_mid2) / 2 )
-
-                for j in range( i - 4, i + 4):
-                    if j < num_checks:
-                        checkgroup.points[j].respawn_obj = respawn_new
+                respawn_new = JugemPoint( (checkpoint_mid1 * .25) + (checkpoint_mid2 * .75) )
 
                 self.rotate_one_respawn(respawn_new, edity=True)
                 self.respawnpoints.append(respawn_new)
-
-            #the ones at the end of the group have the same one as the previous
-            for i in range( (int)(num_checks / 8), num_checks):
-                checkgroup.points[i].respawn_obj = respawn_new
-
+        self.reassign_respawns()
     def reassign_respawns(self):
         if len(self.checkpoints.groups) == 0:
             return
@@ -3009,18 +3000,11 @@ class KMP(object):
     #cameras
     def remove_unused_cameras(self):
         used = []
-        opening_cams = []
-
         for camera in self.cameras:
             if camera.type == 0:
                 used.append(camera)
 
-        next_cam : Camera = self.cameras.startcam
-        while next_cam is not None and next_cam not in opening_cams:
-            opening_cams.append(next_cam)
-            next_cam = next_cam.nextcam_obj
-
-        used.extend(opening_cams)
+        used.extend(self.get_opening_cams())
 
         #deleting stuff
         for camera in self.cameras:
@@ -3062,9 +3046,6 @@ class KMP(object):
                 #delete the route as well
                 self.replaycameraroutes.remove(cam.route_obj)
 
-
-
-
     def remove_invalid_cameras(self):
         invalid_cams = [camera for camera in self.cameras if camera.type < 0 or camera.type > 9]
         for cam in invalid_cams:
@@ -3081,6 +3062,15 @@ class KMP(object):
         invalid_objs = [obj for obj in self.objects.objects if obj.objectid not in OBJECTNAMES]
         for obj in invalid_objs:
             self.remove_object(obj)
+
+    def get_opening_cams(self):
+        opening_cams = []
+        next_cam : Camera = self.cameras.startcam
+        while next_cam is not None and next_cam not in opening_cams:
+            opening_cams.append(next_cam)
+            next_cam = next_cam.nextcam_obj
+        return opening_cams
+
 with open("lib/mkwiiobjects.json", "r") as f:
     tmp = json.load(f)
     OBJECTNAMES = {}

@@ -129,7 +129,7 @@ class PikminSideWidget(QtWidgets.QWidget):
         self.comment_label.hide()
 
     def set_info_multiple(self, objs, update3d):
-        self.set_buttons(None)
+        self.more_buttons.add_buttons_multi(objs)
         if not objs:
             return
         #print(objs)

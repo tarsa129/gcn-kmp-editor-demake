@@ -66,8 +66,8 @@ def draw_collision(faces):
     if scaleheight == 0:
         scaleheight = 1
 
-    print(len(COLORS))
     lightvec = Vector3(0, 1, -1)
+    
 
     glBegin(GL_TRIANGLES)
 

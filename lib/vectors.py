@@ -1,6 +1,6 @@
 from math import sqrt
 from io import StringIO
-from numpy import array
+from numpy import array, arctan2
 
 
 class Vector3(object):
@@ -86,6 +86,15 @@ class Vector3(object):
 
     def distance_2d(self, other):
         return sqrt( (self.x - other.x) ** 2 + (self.z - other.z) ** 2  )
+
+    def flip_render(self):
+        return Vector3(self.x, self.y, -self.z)
+    
+    def to_euler(self):
+        #flipping the first one flips the thing
+        horiz = arctan2(self.z, self.x)
+        verti = arctan2(self.y, self.z)
+        return horiz, verti
 
 class Vector4(Vector3):
     def __init__(self, x, y, z, w):

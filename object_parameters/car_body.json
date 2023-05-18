@@ -22,6 +22,6 @@
         0,
         0
     ],
-    "Route Info": 2,
+    "Route Info": 3,
     "Description": "Car from Moonview Highway.<br>[[KMP (File Format)#POTI|Route Setting 1]] is used for blinking (1 = Left, 2 = Right)<br>[[KMP (File Format)#POTI|Route Setting 2]] selects the speed (0 or 1)."
 }

@@ -5,6 +5,7 @@ from widgets.data_editor import load_route_info
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import QAction, QMenu
 from PyQt5.QtGui import QIcon
+import widgets.tooltip_list as ttl
 
 class BaseTreeWidgetItem(QTreeWidgetItem):
 
@@ -280,7 +281,8 @@ class ObjectEntry(NamedItem):
         bound_to.widget = self
 
     def update_name(self):
-        text_descrip = get_kmp_name(self.bound_to.objectid)
+        name = get_kmp_name(self.bound_to.objectid)
+        text_descrip = name
         route_info = load_route_info(text_descrip)
         obj : MapObject = self.bound_to
 
@@ -293,6 +295,10 @@ class ObjectEntry(NamedItem):
             text_descrip += " (HAS USELESS ROUTE)"
 
         self.setText(1, text_descrip)
+        if name in ttl.objectid:
+            self.setToolTip(1, ttl.objectid[name])
+        else:
+            self.setToolTip(1, None)
 
 
     def __lt__(self, other):

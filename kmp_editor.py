@@ -348,8 +348,7 @@ class GenEditor(QMainWindow):
         z = (maxz + minz) / 2
 
         if self.level_view.mode == MODE_TOPDOWN:
-            self.level_view.offset_z = -z
-            self.level_view.offset_x = -x
+            self.level_view.position = Vector3(x, self.level_view.position.y, -z)
 
             if adjust_zoom:
                 if self.level_view.canvas_width > 0 and self.level_view.canvas_height > 0:
@@ -369,10 +368,7 @@ class GenEditor(QMainWindow):
                 fac = deltax
             else:
                 fac = 5000
-
-            self.level_view.offset_z = -(z + look.y * fac)
-            self.level_view.offset_x = x - look.x * fac
-            self.level_view.camera_height = y - look.z * fac
+            self.level_view.position = Vector3(x - look.x * fac, y - look.z * fac, -(z + look.y * fac))
 
         self.level_view.do_redraw()
 
@@ -645,25 +641,26 @@ class GenEditor(QMainWindow):
         self.collision_menu.addAction(self.choose_bco_area)
         self.choose_bco_area.setShortcut("Ctrl+K")
 
-        # Misc
-        self.misc_menu = QMenu(self.menubar)
-        self.misc_menu.setTitle("Misc")
+        # ------ View
+        self.view_menu = QMenu(self.menubar)
+        self.view_menu.setTitle("View")
 
         self.frame_action = QAction("Frame Selection/All", self)
         self.frame_action.triggered.connect(
             lambda _checked: self.frame_selection(adjust_zoom=True))
         self.frame_action.setShortcut("F")
 
-        self.misc_menu.aboutToShow.connect(
+        self.view_menu.aboutToShow.connect(
             lambda: self.frame_action.setText(
                 "Frame Selection" if self.level_view.selected_positions else "Frame All"))
+        self.view_menu.addAction(self.frame_action)
 
         self.view_action_group = QtWidgets.QActionGroup(self)
 
         self.change_to_topdownview_action = QAction("Topdown View", self)
         self.view_action_group.addAction(self.change_to_topdownview_action)
         self.change_to_topdownview_action.triggered.connect(self.change_to_topdownview)
-        self.misc_menu.addAction(self.change_to_topdownview_action)
+        self.view_menu.addAction(self.change_to_topdownview_action)
         self.change_to_topdownview_action.setCheckable(True)
         self.change_to_topdownview_action.setChecked(True)
         self.change_to_topdownview_action.setShortcut("Ctrl+1")
@@ -671,7 +668,7 @@ class GenEditor(QMainWindow):
         self.change_to_3dview_action = QAction("3D View", self)
         self.view_action_group.addAction(self.change_to_3dview_action)
         self.change_to_3dview_action.triggered.connect(self.change_to_3dview)
-        self.misc_menu.addAction(self.change_to_3dview_action)
+        self.view_menu.addAction(self.change_to_3dview_action)
         self.change_to_3dview_action.setCheckable(True)
         self.change_to_3dview_action.setShortcut("Ctrl+2")
 
@@ -686,29 +683,32 @@ class GenEditor(QMainWindow):
         self.load_as_3dview.triggered.connect( lambda: self.on_default_view_changed("3dview") )
         if self.editorconfig.get("default_view") not in ("topdownview", "3dview"):
             self.on_default_view_changed("topdownview")
-        self.misc_menu.addMenu(self.choose_default_view)
-        self.misc_menu.addSeparator()
+        self.view_menu.addMenu(self.choose_default_view)
+
+        # --------------- Generation
+        self.generation_menu = QMenu(self.menubar)
+        self.generation_menu.setTitle("Generation")
 
         self.do_generation = QAction("Run Generation")
         self.do_generation.triggered.connect(self.auto_generation)
-        self.misc_menu.addAction(self.do_generation)
+        self.generation_menu.addAction(self.do_generation)
         self.do_generation.setShortcut("Ctrl+3")
 
         self.do_cleanup = QAction("Run Cleanup")
         self.do_cleanup.triggered.connect(self.auto_cleanup)
-        self.misc_menu.addAction(self.do_cleanup)
+        self.generation_menu.addAction(self.do_cleanup)
         self.do_cleanup.setShortcut("Ctrl+4")
 
-        self.misc_menu.addAction(self.frame_action)
         self.analyze_action = QAction("Analyze for common mistakes", self)
         self.analyze_action.triggered.connect(self.analyze_for_mistakes)
-        self.misc_menu.addAction(self.analyze_action)
+        self.generation_menu.addAction(self.analyze_action)
 
         self.menubar.addAction(self.file_menu.menuAction())
         self.menubar.addAction(self.edit_menu.menuAction())
         #self.menubar.addAction(self.visibility_menu.menuAction())
         self.menubar.addAction(self.collision_menu.menuAction())
-        self.menubar.addAction(self.misc_menu.menuAction())
+        self.menubar.addAction(self.view_menu.menuAction())
+        self.menubar.addAction(self.generation_menu.menuAction())
 
         self.setMenuBar(self.menubar)
 
@@ -1016,7 +1016,7 @@ class GenEditor(QMainWindow):
             collision_actions[i].setChecked(option == default_filetype)
 
     def change_to_topdownview(self, checked):
-        if checked:
+        if checked and self.level_view.preview is None:
             self.level_view.change_from_3d_to_topdown()
 
     def change_to_3dview(self, checked):
@@ -1933,6 +1933,8 @@ class GenEditor(QMainWindow):
             self.level_file.remove_unused_respawns()
         elif option == "assign_closest_enemy":
             obj.find_closest_enemypoint()
+        elif option == "preview_opening":
+            self.level_view.preview_opening_cameras(self.level_file.get_opening_cams())
         self.leveldatatreeview.set_objects(self.level_file)
 
     @catch_exception
@@ -3029,6 +3031,11 @@ class GenEditor(QMainWindow):
                 select_linked = QAction("Select Linked", self)
                 select_linked.triggered.connect(lambda: self.select_linked(obj))
                 context_menu.addAction(select_linked)
+
+                preview_cam = QAction("Preview Camera", self)
+                preview_cam.triggered.connect( lambda:
+                    self.level_view.preview_opening_cameras([obj]))
+                context_menu.addAction(preview_cam)
 
             if isinstance(obj, Area) and obj in self.level_file.replayareas:
                 select_linked = QAction("Select Linked", self)

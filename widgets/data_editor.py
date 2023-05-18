@@ -784,6 +784,7 @@ class EnemyPointEdit(DataEditor):
         self.position = self.add_multiple_decimal_input("Position", "position", ["x", "y", "z"],
                                                         -inf, +inf)
         self.scale = self.add_decimal_input("Scale", "scale", -inf, inf)
+        self.scale.setToolTip(ttl.enemypoints["Scale"])
 
         self.enemyaction = self.add_dropdown_input("Enemy Action 1", "enemyaction", ENPT_Setting1)
         self.enemyaction2 = self.add_dropdown_input("Enemy Action 2", "enemyaction2", ENPT_Setting2)
@@ -795,7 +796,8 @@ class EnemyPointEdit(DataEditor):
         obj: EnemyPoint = get_cmn_obj(self.bound_to)
         self.update_vector3("position", obj.position)
 
-        self.scale.setText(str(obj.scale))
+        if obj.scale is not None:
+            self.scale.setText(str(obj.scale))
         if obj.enemyaction  is not None:
             if obj.enemyaction < len(ENPT_Setting1):
                 self.enemyaction.setCurrentIndex(obj.enemyaction)
