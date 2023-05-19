@@ -1,8 +1,5 @@
-working on:
-came - camera viewing
-
-next:
-gobj - support for optional routes + shared routes
+came - camera viewing fixes
+auto ground mode
 control to select more points
 error analyzer
 load + collide on gobj collision files

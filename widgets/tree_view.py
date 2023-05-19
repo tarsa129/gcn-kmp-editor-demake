@@ -286,7 +286,7 @@ class ObjectEntry(NamedItem):
         route_info = load_route_info(text_descrip)
         obj : MapObject = self.bound_to
 
-        if route_info is not None and route_info > -1:
+        if route_info is not None and route_info > 1:
             if obj.route_obj is None:
                 text_descrip += " (NEEDS A ROUTE)"
             else:
@@ -295,10 +295,7 @@ class ObjectEntry(NamedItem):
             text_descrip += " (HAS USELESS ROUTE)"
 
         self.setText(1, text_descrip)
-        if name in ttl.objectid:
-            self.setToolTip(1, ttl.objectid[name])
-        else:
-            self.setToolTip(1, None)
+        self.setToolTip(1, self.bound_to.get_description())
 
 
     def __lt__(self, other):

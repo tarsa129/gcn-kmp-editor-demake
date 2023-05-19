@@ -7,6 +7,7 @@ from collections import OrderedDict
 from io import BytesIO
 from copy import deepcopy
 from scipy.spatial.transform import Rotation as R
+import os
 
 
 import numpy
@@ -1298,7 +1299,7 @@ class MapObject(object):
         self.widget = None
         self.route_info = None
 
-        
+        self.routepoint = None
 
     @classmethod
     def get_empty(cls):
@@ -1372,6 +1373,10 @@ class MapObject(object):
         route = (2 ** 16 - 1) if route == -1 else route + route_start
         f.write(pack(">H", route) )
 
+        special_setting = self.get_routepoint_idx()
+        if special_setting is not None and self.route_obj is not None and self.routepoint in self.route_obj.points:
+            self.userdata[special_setting] = self.route_obj.points.index(self.routepoint)
+
         for i in range(8):
             f.write(pack(">h", self.userdata[i]))
 
@@ -1383,28 +1388,28 @@ class MapObject(object):
 
         route_obj = self.route_obj
         widget = self.widget
+        routepoint = self.routepoint
         self.route_obj = None
         self.widget = None
+        self.routepoint = None
 
         new_object = deepcopy(self)
 
         self.route_obj = route_obj
         self.widget = widget
+        self.routepoint = routepoint
 
         new_object.route_obj = route_obj
+        new_object.routepoint = routepoint
+
 
         return new_object
 
     def has_route(self):
-         from widgets.data_editor import load_route_info
-
-         if self.objectid in OBJECTNAMES:
-            name = OBJECTNAMES[self.objectid]
-            route_info = load_route_info(name)
-            self.route_info = route_info
-
-            return route_info
-         return None
+        json_data = self.load_param_file()
+        if (json_data is not None) and "Route Info" in json_data:
+            return json_data["Route Info"]
+        return None
 
     def set_route_info(self):
         from widgets.data_editor import load_route_info
@@ -1423,6 +1428,30 @@ class MapObject(object):
             if route == self.route_obj:
                 return i
         return -1
+
+    def load_param_file(self):
+        if (self.objectid is None) or (not self.objectid in OBJECTNAMES):
+            return None
+        name = OBJECTNAMES[self.objectid]
+        with open(os.path.join("object_parameters", name+".json"), "r") as f:
+            data = json.load(f)
+        return data
+    def get_route_text(self):
+        json_data = self.load_param_file()
+        if (json_data is not None) and "Route Point Settings" in json_data:
+            return json_data["Route Point Settings"]
+        return None
+    def get_description(self):
+        json_data = self.load_param_file()
+        if (json_data is not None) and "Description" in json_data:
+            return json_data["Description"]
+        return None
+    def get_routepoint_idx(self):
+        json_data = self.load_param_file()
+        if (json_data is not None) and "Route Start Point" in json_data:
+            return json_data["Route Start Point"]
+        return None
+
 
 class MapObjects(object):
     def __init__(self):
@@ -1677,6 +1706,9 @@ class Area(object):
             self.route_obj.used_by.remove(self)
             if len(self.route_obj.used_by) == 0:
                 self.__class__.level_file.arearoutes.remove(self.route_obj)
+
+    def get_route_text(self):
+        return ["Speed", "Rotation (Var 2)"]
 
 class Areas(ObjectContainer):
     def __init__(self):
@@ -1954,6 +1986,8 @@ class Camera(object):
         if self.has_route() and self.route_obj is None:
             self.route_obj = CameraRoute.new(self)
 
+    def get_route_text(self):
+        return ["Speed", None]
 
 class ReplayCamera(Camera):
     @classmethod
@@ -2187,8 +2221,8 @@ class KMP(object):
             assert camera is not None
             yield camera
 
-        for respawnid in self.respawnpoints:
-            assert respawnid is not None
+        for respawn in self.respawnpoints:
+            assert respawn is not None
             yield respawn
 
         for cannon in self.cannonpoints:
@@ -2367,6 +2401,7 @@ class KMP(object):
                 object.route = -1
             elif object.route_info is None:
                 object.route = -1
+
         for i, camera in enumerate(self.cameras):
             if camera.route != -1 and camera.route < len(self.routes):
                 self.routes[camera.route].used_by.append(camera)
@@ -2442,6 +2477,11 @@ class KMP(object):
                     object.route_obj = route
                 for point in route.points:
                     point.partof = route
+
+        for obj in self.objects.objects:
+            special_usersetting = obj.get_routepoint_idx()
+            if (special_usersetting is not None) and obj.userdata[special_usersetting] < len(obj.route_obj.points):
+                obj.routepoint = obj.route_obj.points[obj.userdata[special_usersetting]]
 
         #remove self-linked routes
         for grouped_things in (self.enemypointgroups.groups, self.itempointgroups.groups, self.checkpoints.groups):
@@ -3008,6 +3048,12 @@ class KMP(object):
         self.remove_unused_general_route(self.arearoutes)
         self.reset_general_routes(self.arearoutes)
 
+    def remove_object_route(self, route:Route):
+        pass
+
+    def remove_route_point(self, rp:RoutePoint):
+        pass
+
     #cameras
     def remove_unused_cameras(self):
         used = []
@@ -3062,6 +3108,13 @@ class KMP(object):
         for cam in invalid_cams:
             self.remove_camera(cam)
 
+    def get_opening_cams(self):
+        opening_cams = []
+        next_cam : Camera = self.cameras.startcam
+        while next_cam is not None and next_cam not in opening_cams:
+            opening_cams.append(next_cam)
+            next_cam = next_cam.nextcam_obj
+        return opening_cams
     #objects
     def remove_object(self, obj: MapObject):
         if obj.route_obj is not None:
@@ -3074,13 +3127,7 @@ class KMP(object):
         for obj in invalid_objs:
             self.remove_object(obj)
 
-    def get_opening_cams(self):
-        opening_cams = []
-        next_cam : Camera = self.cameras.startcam
-        while next_cam is not None and next_cam not in opening_cams:
-            opening_cams.append(next_cam)
-            next_cam = next_cam.nextcam_obj
-        return opening_cams
+
 
 with open("lib/mkwiiobjects.json", "r") as f:
     tmp = json.load(f)

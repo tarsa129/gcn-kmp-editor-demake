@@ -25,5 +25,9 @@
         null
     ],
     "Route Info": null,
-    "Description": "Big Wiggler boss used in the Wario's Gold Mine tournament; follows a route.<br>If S2 of the route point = 0002 (S1 needs to be 0000; otherwise, it will try to do different things at the same time and Wiggler's body will glitch out), it will play Wiggler's trick animation once Wiggler gets to the point. See [[BossHanachan]] for more information about its route settings."
+    "Description": "Big Wiggler boss used in the Wario's Gold Mine tournament; follows a route.<br>If S2 of the route point = 0002 (S1 needs to be 0000; otherwise, it will try to do different things at the same time and Wiggler's body will glitch out), it will play Wiggler's trick animation once Wiggler gets to the point. See [[BossHanachan]] for more information about its route settings.",
+    "Route Point Settings":[
+        "See wiiki",
+        "See wiiki"
+    ]
 }

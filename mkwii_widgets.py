@@ -1465,6 +1465,8 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                     if obj.route_obj is not None and obj in select_optimize:
                         routes_to_highlight.add(obj.route_obj)
 
+                routepoints_to_circle = [x.routepoint for x in self.level_file.objects.objects if x in select_optimize]
+
                 objs_to_highlight = set()
 
                 for i, route in enumerate(self.level_file.routes):
@@ -1488,6 +1490,10 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                         if last_point is not None:
                             self.models.draw_arrow_head(last_point.position, point.position)
                         last_point = point
+
+                        if point in routepoints_to_circle:
+                            glColor3f(1.0, 1.0, 0.0)
+                            self.models.draw_sphere(point.position, 300)
                     if selected:
                         glLineWidth(3.0)
 

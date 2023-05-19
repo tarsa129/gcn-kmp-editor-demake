@@ -1,6 +1,6 @@
 {
     "Object Parameters": [
-        "Route start point",
+        "Unused",
         "Speed 0 in 1/60 seconds",
         "Speed 1 in 1/60 seconds",
         "Unused",
@@ -14,7 +14,7 @@
         ".breff/.breft files needed"
     ],
     "Default Values": [
-        31,
+        0,
         30,
         70,
         0,
@@ -23,6 +23,11 @@
         0,
         0
     ],
-    "Route Info": 2,
-    "Description": "Bomb car from Moonview Highway.<br>[[KMP (File Format)#POTI|Route Setting 1]] is used for blinking (1 = Left, 2 = Right).<br>[[KMP (File Format)#POTI|Route Setting 2]] selects the speed (0 or 1)."
+    "Route Info": 3,
+    "Route Start Point": 0,
+    "Description": "Bomb car from Moonview Highway.",
+    "Route Point Settings":[
+        "Blinking (1 = Left, 2 = Right):",
+        "Speed (0 or 1):"
+    ]
 }

@@ -24,5 +24,9 @@
         0
     ],
     "Route Info": 2,
-    "Description": "{{obj-ref|Press}}, ''block.brres'' and {{obj-ref|itembox}} combination from Toad's Factory.<br>Each block follows a route until it reach the press and the press converts it to an item box which continues the route. Route setting 1 is the speed it slows down to (if 0 it uses the speed setting in S1).<br/>Route setting 2:<br/> 0x1: press activates when a block reaches this point<br/>0x2: determines where the item box goes"
+    "Description": "{{obj-ref|Press}}, ''block.brres'' and {{obj-ref|itembox}} combination from Toad's Factory.<br>Each block follows a route until it reach the press and the press converts it to an item box which continues the route.",
+    "Route Point Settings":[
+        "Speed Addition",
+        "Action (1 to press, 2 to determine where item box goes):"
+    ]
 }

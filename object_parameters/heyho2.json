@@ -23,5 +23,9 @@
         null
     ],
     "Route Info": 2,
-    "Description": "Manager of the Shy Guy Ski Lift from DK Summit. Spawns 30 Chairlifts that travel on a route. Route setting 0 removes the Shy Guys. Route setting 1 randomly makes either 0, 1 or 2 randomly colored Shy Guys spawn on the chair. "
+    "Description": "Manager of the Shy Guy Ski Lift from DK Summit. Spawns 30 Chairlifts that travel on a route. Route setting 0 removes the Shy Guys. Route setting 1 randomly makes either 0, 1 or 2 randomly colored Shy Guys spawn on the chair. ",
+    "Route Point Settings":[
+        "Removes Shy Guys",
+        "Makes 0-2 Shy Guys spawn on chair"
+    ]
 }

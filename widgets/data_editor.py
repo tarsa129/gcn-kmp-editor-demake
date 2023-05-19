@@ -16,7 +16,11 @@ from widgets.data_editor_options import *
 
 def set_attr_mult(objs, attr, value):
     for obj in objs:
-        setattr(obj, attr, value)
+        if isinstance(obj, list):
+            for this_obj in obj:
+                setattr(this_obj, attr, value)
+        else:
+            setattr(obj, attr, value)
 def set_subattr_mult(objs, attr, subattr, value):
     for obj in objs:
         setattr( getattr(obj, attr), subattr, value)
@@ -28,13 +32,20 @@ def get_cmn_obj(objs):
     except:
         cmn_obj = deepcopy(objs[0])
 
+    if hasattr(cmn_obj,"route_obj"):
+        cmn_obj.route_obj = [cmn_obj.route_obj]
+    if hasattr(cmn_obj,"partof"):
+        cmn_obj.partof = [cmn_obj.partof]
+
     members = [attr for attr in dir(cmn_obj) if not callable(getattr(cmn_obj, attr)) and not attr.startswith("__")]
     #print(members)
 
     for obj in objs[1:]:
         for member in members:
+            if member in ("route_obj", "partof"):
+                getattr(cmn_obj, member).append(  getattr(obj, member) )
             #print(getattr(obj, member),  getattr(cmn_obj, member))
-            if getattr(cmn_obj, member) is not None and getattr(obj, member) is not None:
+            elif getattr(cmn_obj, member) is not None and getattr(obj, member) is not None:
                 if type( getattr(cmn_obj, member) ) == list:
                     cmn_list = getattr(cmn_obj, member)
                     obj_list = getattr(obj, member)
@@ -50,9 +61,14 @@ def get_cmn_obj(objs):
                 elif getattr(obj, member) != getattr(cmn_obj, member):
                     setattr(cmn_obj, member, None)
 
+    if hasattr(cmn_obj,"route_obj"):
+        cmn_obj.route_obj = list(set(cmn_obj.route_obj ))
+        cmn_obj.route_obj = [x for x in cmn_obj.route_obj if x is not None]
+    if hasattr(cmn_obj,"partof"):
+        cmn_obj.partof = list(set(cmn_obj.partof ))
+        cmn_obj.partof = [x for x in cmn_obj.partof if x is not None]
+
     return cmn_obj
-
-
 
 def load_route_info(objectname):
 
@@ -80,28 +96,14 @@ def load_default_info(objectname):
         print(err, "Default Values not found")
         return None
 
-def load_parameter_names(objectname):
-
-    path = os.path.join("object_parameters", objectname+".json")
-    if os.path.exists(path):
-        with open(path, "r") as f:
-            data = json.load(f)
-            parameter_names = data["Object Parameters"]
-            assets = data["Assets"]
-            route_info = data["Route Info"]
-            if "Tooltips" in data:
-                tooltips = data["Tooltips"]
-            else:
-                tooltips = ""
-            if len(parameter_names) != 8:
-                raise RuntimeError("Not enough or too many parameters: {0} (should be 8)".format(len(parameter_names)))
-            if tooltips != "":
-                return parameter_names, assets, route_info, tooltips
-            else:
-                return parameter_names, assets, route_info, None
-
-    else:
-        return None, None, None, None
+def load_parameter_names(objectid):
+    if (objectid is None) or (not objectid in OBJECTNAMES):
+            return None
+    name = OBJECTNAMES[objectid]
+    path = os.path.join("object_parameters", name+".json")
+    with open(os.path.join("object_parameters", name+".json"), "r") as f:
+        data = json.load(f)
+    return data
 
 class PythonIntValidator(QValidator):
     def __init__(self, min, max, parent):
@@ -927,16 +929,36 @@ class ObjectRoutePointEdit(DataEditor):
     def setup_widgets(self):
         self.position = self.add_multiple_decimal_input("Position", "position", ["x", "y", "z"],
                                                         -inf, +inf)
-        self.unk1 = self.add_integer_input("Setting 1", "unk1",
+        labels = [[], []]
+        obj: RoutePoint = get_cmn_obj(self.bound_to)
+        used_by = []
+        for route in obj.partof:
+            used_by.extend(route.used_by)
+        used_by = list(set(used_by))
+
+        for mapobject in used_by:
+            point_labels = mapobject.get_route_text()
+            if point_labels is not None:
+                if point_labels[0] is not None and not point_labels[0] in labels[0]:
+                    labels[0].append(point_labels[0])
+                if point_labels[1] is not None and not point_labels[1] in labels[1]:
+                    labels[1].append(point_labels[1])
+
+        labels[0] = ", ".join(labels[0]) if labels[0] else "Setting 1"
+        labels[1] = ", ".join(labels[1]) if labels[1] else "Setting 2"
+
+        self.unk1 = self.add_integer_input(labels[0], "unk1",
                                               MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT)
-        self.unk2 = self.add_integer_input("Setting 2", "unk2",
+        self.unk2 = self.add_integer_input(labels[1], "unk2",
                                               MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT)
 
     def update_data(self):
         obj: RoutePoint = get_cmn_obj(self.bound_to)
         self.update_vector3("position", obj.position)
-        self.unk1.setText(str(obj.unk1))
-        self.unk2.setText(str(obj.unk2))
+        if obj.unk1 is not None:
+            self.unk1.setText(str(obj.unk1))
+        if obj.unk2 is not None:
+            self.unk2.setText(str(obj.unk2))
 
 class KMPEdit(DataEditor):
     def setup_widgets(self):
@@ -1041,13 +1063,13 @@ class ObjectEdit(DataEditor):
         new = int(self.objectid_edit.text()) #grab text from the lineedit
         self.update_combobox(new) #use it to update the combobox
         self.update_name(new) #do the main editing
-        self.rename_object_parameters( self.get_objectname(new) )
+        self.rename_object_parameters( new )
 
     def object_id_combo_changed(self):
         new = REVERSEOBJECTNAMES[ self.objectid.currentText() ] #grab id from combobox
         self.update_lineedit(new)
         self.update_name( new )
-        self.rename_object_parameters( self.get_objectname(new) )
+        self.rename_object_parameters( new )
 
     def update_name(self, new):
         for obj in self.bound_to:
@@ -1076,7 +1098,10 @@ class ObjectEdit(DataEditor):
 
     def rename_object_parameters(self, current):
 
-        parameter_names, assets, route_info, tooltips = load_parameter_names(current)
+        json_data = load_parameter_names(current)
+        parameter_names = json_data["Object Parameters"]
+        tooltips = json_data["Tooltips"] if "Tooltips" in json_data else None
+        assets = json_data["Assets"]
 
         if parameter_names is None:
             for i in range(8):
@@ -1150,7 +1175,7 @@ class ObjectEdit(DataEditor):
         self.update_combobox(obj.objectid)
         self.update_lineedit(obj.objectid)
 
-        self.rename_object_parameters( self.get_objectname(obj.objectid) )
+        self.rename_object_parameters( obj.objectid )
 
         self.single.setChecked( obj.single != 0 and obj.single != None)
         self.double.setChecked( obj.double != 0 and obj.double != None)
@@ -1165,14 +1190,16 @@ class ObjectEdit(DataEditor):
                 self.userdata[i][1].setText(text)
 
         obj: Route = obj.route_obj
-        if obj is not None:
-            self.smooth.setCurrentIndex( min(obj.smooth, 1))
-            self.cyclic.setCurrentIndex( min(obj.cyclic, 1))
 
-        self.smooth.setVisible(obj is not None)
-        self.smooth_label.setVisible(obj is not None)
-        self.cyclic.setVisible(obj is not None)
-        self.cyclic_label.setVisible(obj is not None)
+        if len(obj) == 1:
+            self.smooth.setCurrentIndex( min(obj[0].smooth, 1))
+            self.cyclic.setCurrentIndex( min(obj[0].cyclic, 1))
+
+        has_route = len(obj) > 0
+        self.smooth.setVisible(has_route)
+        self.smooth_label.setVisible(has_route)
+        self.cyclic.setVisible(has_route)
+        self.cyclic_label.setVisible(has_route)
 
 class KartStartPointsEdit(DataEditor):
     def setup_widgets(self):

@@ -24,5 +24,9 @@
         0
     ],
     "Route Info": 2,
-    "Description": "Moving Monty Mole from Moo Moo Meadows.<br>Can't be used together with {{obj-ref|choropu2}}.<br>[[KMP (File Format)#POTI|Route Setting 2]]: 0 = Burrow, 1 = Pop out. "
+    "Description": "Moving Monty Mole from Moo Moo Meadows.<br>Can't be used together with {{obj-ref|choropu2}}.",
+    "Route Point Settings":[
+        null,
+        "0 = Burrow, 1 = Pop out:"
+    ]
 }

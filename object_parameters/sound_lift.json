@@ -21,5 +21,9 @@
         null
     ],
     "Route Info": 2,
-    "Description": "Generates a lift sound effect. The range where the sound comes from is controlled by the route, so make use of it.<br>[[KMP (File Format)#POTI|Route Setting 1]] is always 1 in all Nintendo tracks."
+    "Description": "Generates a lift sound effect. The range where the sound comes from is controlled by the route, so make use of it.",
+    "Route Point Settings":[
+        "Always 1",
+        null
+    ]
 }

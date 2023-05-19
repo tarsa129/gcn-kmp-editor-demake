@@ -24,5 +24,9 @@
         0
     ],
     "Route Info": 2,
-    "Description": "Truck from Wario's Gold Mine.<br>[[KMP (File Format)#POTI|Route Setting 1]] changes the speed (if 0 it uses the speed setting in S1).<br/>[[KMP (File Format)#POTI|Route Setting 2]]: 0x0: Normal behavior<br/> 0x1: Truck sways left and right harder and wont change back until the end of the route.<br/> 0x2: Truck sways left and right."
+    "Description": "Truck from Wario's Gold Mine.<br>[[KMP (File Format)#POTI|Route Setting 1]] changes the speed (if 0 it uses the speed setting in S1).<br/>[[KMP (File Format)#POTI|Route Setting 2]]: 0x0: Normal behavior<br/> 0x1: Truck sways left and right harder and wont change back until the end of the route.<br/> 0x2: Truck sways left and right.",
+    "Route Point Settings":[
+        "New Speed",
+        "0 = normal 1 = permanent sway, 2 = point sway"
+    ]
 }

@@ -1911,6 +1911,12 @@ class GenEditor(QMainWindow):
             self.object_to_be_added = [libkmp.RoutePoint.new_partof(obj), group_id, pos_in_grp + 1 ]
             self.pik_control.button_add_object.setChecked(True)
             self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
+        elif option == "add_object_route":
+            new_route_group = libkmp.ObjectRoute()
+            self.level_file.routes.append(new_route_group)
+        elif option == "add_camera_route": #new camera route
+            new_route_group = libkmp.CameraRoute.new()
+            self.level_file.cameraroutes.append(new_route_group)
         elif option == "auto_route_single": #auto route single
             self.auto_route_obj(obj)
         elif option == "auto_route": #auto route group
@@ -3300,9 +3306,9 @@ class GenEditor(QMainWindow):
                 for obj in self.connect_start:
                     if obj.route_obj is not None :
                         if isinstance(obj, MapObject ):
-                            self.button_add_from_addi_options(5, obj)
+                            self.button_add_from_addi_options("add_object_route", obj)
                         elif isinstance(obj, Camera ):
-                            self.button_add_from_addi_options(5.5, obj)
+                            self.button_add_from_addi_options("add_camera_route", obj)
 
                         route_container = self.level_file.get_route_container(obj)
                         new_group = route_container[-1]
@@ -3310,7 +3316,11 @@ class GenEditor(QMainWindow):
                         obj.route_obj = new_group
                         new_group.used_by.append(obj)
 
-                        self.button_add_from_addi_options(6, new_group)
+                        routepoint_setting = obj.get_routepoint_idx()
+                        if routepoint_setting  is not None:
+                            obj.userdata[routepoint_setting] = 0
+
+                        self.button_add_from_addi_options("add_routepoints_end", obj)
         elif len(self.level_view.selected) != 1:
             return
         else: #len(self.level_view.selected) == 1
@@ -3337,6 +3347,8 @@ class GenEditor(QMainWindow):
                             obj.route_obj.used_by.remove(obj)
                         obj.route_obj = endpoint.partof
                         endpoint.partof.used_by.append(obj)
+                        if obj.get_routepoint_idx() is not None:
+                            obj.routepoint = endpoint
                     if isinstance(endpoint.partof, CameraRoute) and isinstance(obj, Camera):
                         if obj.route_obj is not None:
                             obj.route_obj.used_by.remove(obj)

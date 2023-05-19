@@ -25,5 +25,9 @@
         0
     ],
     "Route Info": 2,
-    "Description": "Crab from <small>GBA</small> Shy Guy Beach.<br>[[KMP (File Format)#POTI|Route Setting 1]] sets the time in 1/60 seconds of stop in that point."
+    "Description": "Crab from <small>GBA</small> Shy Guy Beach.",
+    "Route Point Settings":[
+        "Stop time (1/60 sec)",
+        null
+    ]
 }
