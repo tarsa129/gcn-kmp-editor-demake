@@ -1,8 +1,8 @@
 came - camera viewing fixes
-auto ground mode
 control to select more points
 error analyzer
 load + collide on gobj collision files
 add option to select x to y points
+improve json files
 create dialog for auto generation and auto cleanup
 brres loading

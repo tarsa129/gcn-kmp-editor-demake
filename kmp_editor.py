@@ -619,6 +619,12 @@ class GenEditor(QMainWindow):
         self.rotation_mode.setChecked(True)
         self.edit_menu.addAction(self.rotation_mode)
 
+        self.autoground_mode = QAction("Autoground in 2D", self)
+        self.autoground_mode.setCheckable(True)
+        self.autoground_mode.setChecked(False)
+        self.autoground_mode.setShortcut(QtGui.QKeySequence('Ctrl+G'))
+        self.edit_menu.addAction(self.autoground_mode)
+
         self.visibility_menu = mkwii_widgets.FilterViewMenu(self)
         self.visibility_menu.filter_update.connect(self.on_filter_update)
         filters = self.editorconfig["filter_view"].split(",")
@@ -2404,9 +2410,12 @@ class GenEditor(QMainWindow):
 
             self.level_view.gizmo.move_to_average(self.level_view.selected_positions)
 
-        self.level_view.do_redraw()
-        self.pik_control.update_info()
-        self.set_has_unsaved_changes(True)
+        if self.autoground_mode.isChecked():
+            self.action_ground_objects(self.level_view.selected_positions)
+        else:
+            self.level_view.do_redraw()
+            self.pik_control.update_info()
+            self.set_has_unsaved_changes(True)
 
     @catch_exception
     def action_move_objects_to(self, posx, posy, posz):
@@ -3077,8 +3086,6 @@ class GenEditor(QMainWindow):
 
         context_menu.exec(self.sender().mapToGlobal(position))
         context_menu.destroy()
-
-
 
     def action_copy_coords_to_clipboard(self):
         if self.current_coordinates is not None:
