@@ -1352,7 +1352,7 @@ class GenEditor(QMainWindow):
 
     def load_archive_file(self, filepath, add_to_ini=True):
         clear_temp_folder()
-        os.system(f"wszst extract {filepath} -d lib/szsdump -o" )
+        os.system(f"wszst extract '{filepath}' -d lib/szsdump -o" )
         full_path = os.path.join(os.getcwd(), "lib\szsdump")
         self.root_directory = Directory.from_dir(full_path)
 

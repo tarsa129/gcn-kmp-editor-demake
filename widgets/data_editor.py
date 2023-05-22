@@ -1163,7 +1163,8 @@ class ObjectEdit(DataEditor):
 
     def update_lineedit(self, objectid):
         self.objectid_edit.editingFinished.disconnect()
-        self.objectid_edit.setText(str(objectid))
+        if objectid is not None:
+            self.objectid_edit.setText(str(objectid))
         self.objectid_edit.editingFinished.connect(self.object_id_edit_changed)
 
     def update_combobox(self, objectid):
@@ -1179,9 +1180,16 @@ class ObjectEdit(DataEditor):
         clear_layout(self.userdata_layout)
 
         json_data = load_parameter_names(current)
-        parameter_names = json_data["Object Parameters"]
-        tooltips = json_data["Tooltips"] if "Tooltips" in json_data else [None] * 8
-        widgets = json_data["Widgets"] if "Widgets" in json_data else [None] * 8
+        if json_data is None:
+            parameter_names = ["Unknown"] * 8
+            tooltips = [None] * 8
+            widgets = [None] * 8
+            assets = None
+        else:
+            parameter_names = json_data["Object Parameters"]
+            tooltips = json_data["Tooltips"] if "Tooltips" in json_data else [None] * 8
+            widgets = json_data["Widgets"] if "Widgets" in json_data else [None] * 8
+            assets = json_data["Assets"]
         tuples = zip(parameter_names, tooltips, widgets)
 
         for i, (parameter_name, tooltip, widget_type) in enumerate(tuples):
@@ -1196,7 +1204,7 @@ class ObjectEdit(DataEditor):
         if hasattr(self, "in_production") and self.in_production:
             self.set_default_values()
 
-        assets = json_data["Assets"]
+        
         if not assets:
             self.assets.setText("Required Assets: None")
         else:
@@ -1223,10 +1231,8 @@ class ObjectEdit(DataEditor):
             if defaults is not None:
                 defaults = [0 if x is None else x for x in defaults]
                 obj.userdata = defaults.copy()
+                self.update_userdata_widgets(obj.userdata)
 
-                for i in range(8):
-                    if defaults[i] is not None:
-                        self.userdata[i][1].setText(str(obj.userdata[i]))
             else:
                 obj.userdata = [0] * 8
                 for i in range(8):
@@ -1240,7 +1246,8 @@ class ObjectEdit(DataEditor):
         self.update_vector3("scale", obj.scale)
 
         self.update_combobox(obj.objectid)
-        self.update_lineedit(obj.objectid)
+        if self.objectid is not None:
+            self.update_lineedit(obj.objectid)
 
         self.rename_object_parameters( obj.objectid )
 
@@ -1265,9 +1272,11 @@ class ObjectEdit(DataEditor):
         self.smooth_label.setVisible(has_route)
         self.cyclic.setVisible(has_route)
         self.cyclic_label.setVisible(has_route)
-    def update_userdata_widgets(self, obj):
-        for i, widget in enumerate(self.userdata):
-            if widget is None or obj.userdata[i] is None:
+    def update_userdata_widgets(self, obj, values=None):
+        if values is None:
+            values = self.userdata
+        for i, widget in enumerate(values):
+            if widget is None or values[i] is None:
                 continue
             with QSignalBlocker(widget):
                 if isinstance(widget, QtWidgets.QCheckBox):
