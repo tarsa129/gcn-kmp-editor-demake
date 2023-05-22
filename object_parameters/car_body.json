@@ -1,8 +1,8 @@
 {
     "Object Parameters": [
         "Unused",
-        "Speed 0 in 1/60 seconds",
-        "Speed 1 in 1/60 seconds",
+        "Speed 0",
+        "Speed 1",
         "Color",
         "Unknown",
         "Unused",
@@ -27,13 +27,23 @@
     "Description": "Car from Moonview Highway.",
     "Tooltips": [
         "",
+        "In 1/60 seconds",
+        "In 1/60 seconds",
         "",
-        "",
-        "0 = Blue<br>1 = Red<br>2 = Yellow",
         "",
         "",
         "",
         ""
+    ],
+    "Widgets": [
+        null,
+        null,
+        null,
+        ["combobox", {"Blue<": 0, "Red": 1, "Yellow": 2}],
+        null,
+        null,
+        null,
+        null
     ],
     "Route Point Settings":[
         "Blinking (1 = Left, 2 = Right):",

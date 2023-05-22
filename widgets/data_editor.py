@@ -3,7 +3,7 @@ import json
 from copy import copy, deepcopy
 import widgets.tooltip_list as ttl
 
-from PyQt5.QtWidgets import QSizePolicy, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QCheckBox, QLineEdit, QComboBox, QSizePolicy, QColorDialog, QPushButton
+import PyQt5.QtWidgets as QtWidgets
 from PyQt5.QtGui import QIntValidator, QDoubleValidator, QValidator, QColor, QPixmap
 from math import inf
 from lib.libkmp import (EnemyPoint, EnemyPointGroup, CheckpointGroup, Checkpoint, Route, RoutePoint, ItemPoint, ItemPointGroup,
@@ -11,7 +11,7 @@ from lib.libkmp import (EnemyPoint, EnemyPointGroup, CheckpointGroup, Checkpoint
                         CannonPoint, MissionPoint, OBJECTNAMES, REVERSEOBJECTNAMES,
                          Rotation)
 from lib.vectors import Vector3
-from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtCore import pyqtSignal, Qt, QSignalBlocker
 from widgets.data_editor_options import *
 
 def set_attr_mult(objs, attr, value):
@@ -24,6 +24,10 @@ def set_attr_mult(objs, attr, value):
 def set_subattr_mult(objs, attr, subattr, value):
     for obj in objs:
         setattr( getattr(obj, attr), subattr, value)
+
+def set_userdata_mult(objs:list[MapObject], idx, value):
+    for obj in objs:
+        obj.userdata[idx] = value
 
 #make a common thing to find all common, esp if copy is going to be used
 def get_cmn_obj(objs):
@@ -103,9 +107,19 @@ def load_parameter_names(objectid):
             return None
     name = OBJECTNAMES[objectid]
     path = os.path.join("object_parameters", name+".json")
-    with open(os.path.join("object_parameters", name+".json"), "r") as f:
+    with open(path, "r") as f:
         data = json.load(f)
     return data
+
+def clear_layout(layout):
+    while layout.count():
+        child = layout.itemAt(0)
+        if child.widget():
+            child.widget().deleteLater()
+        if child.layout():
+            clear_layout(child.layout())
+            child.layout().deleteLater()
+        layout.takeAt(0)
 
 class PythonIntValidator(QValidator):
     def __init__(self, min, max, parent):
@@ -131,7 +145,7 @@ class PythonIntValidator(QValidator):
         pass
 
 
-class ClickableLabel(QLabel):
+class ClickableLabel(QtWidgets.QLabel):
 
     clicked = pyqtSignal()
 
@@ -163,10 +177,10 @@ class ColorPicker(ClickableLabel):
         self.clicked.connect(self.show_color_dialog)
 
     def show_color_dialog(self):
-        dialog = QColorDialog(self)
-        dialog.setOption(QColorDialog.DontUseNativeDialog, True)
+        dialog = QtWidgets.QColorDialog(self)
+        dialog.setOption(QtWidgets.QColorDialog.DontUseNativeDialog, True)
         if self.with_alpha:
-            dialog.setOption(QColorDialog.ShowAlphaChannel, True)
+            dialog.setOption(QtWidgets.QColorDialog.ShowAlphaChannel, True)
         dialog.setCurrentColor(self.color)
         dialog.currentColorChanged.connect(self.update_color)
         dialog.currentColorChanged.connect(self.color_changed)
@@ -191,7 +205,7 @@ class ColorPicker(ClickableLabel):
         self.setPixmap(pixmap)
 
 
-class DataEditor(QWidget):
+class DataEditor(QtWidgets.QWidget):
     emit_3d_update = pyqtSignal()
 
 
@@ -199,7 +213,7 @@ class DataEditor(QWidget):
         super().__init__(parent)
 
         self.bound_to = bound_to
-        self.vbox = QVBoxLayout(self)
+        self.vbox = QtWidgets.QVBoxLayout(self)
         self.vbox.setContentsMargins(0, 0, 0, 0)
         self.vbox.setSpacing(3)
 
@@ -215,12 +229,12 @@ class DataEditor(QWidget):
         pass
 
     def create_label(self, text):
-        label = QLabel(self)
+        label = QtWidgets.QLabel(self)
         label.setText(text)
         return label
 
     def create_button(self, text):
-        button = QPushButton(self)
+        button = QtWidgets.QPushButton(self)
         button.setText(text)
         return button
 
@@ -230,7 +244,7 @@ class DataEditor(QWidget):
         return label
 
     def create_labeled_widget(self, parent, text, widget):
-        layout = QHBoxLayout()
+        layout = QtWidgets.QHBoxLayout()
         layout.setSpacing(5)
         label = self.create_label(text)
         label.setText(text)
@@ -239,7 +253,7 @@ class DataEditor(QWidget):
         return layout
 
     def create_labeled_widget_ret_both(self, parent, text, widget):
-        layout = QHBoxLayout()
+        layout = QtWidgets.QHBoxLayout()
         layout.setSpacing(5)
         label = self.create_label(text)
         label.setText(text)
@@ -248,13 +262,13 @@ class DataEditor(QWidget):
         return layout, label
 
     def create_labeled_widgets(self, parent, text, widgetlist):
-        layout = QHBoxLayout()
+        layout = QtWidgets.QHBoxLayout()
         layout.setSpacing(5)
         label = self.create_label(text)
         label.setText(text)
         layout.addWidget(label)
         if len(widgetlist) > 1:
-            child_layout = QHBoxLayout()
+            child_layout = QtWidgets.QHBoxLayout()
             child_layout.setSpacing(1)
             child_layout.setContentsMargins(0, 0, 0, 0)
             for widget in widgetlist:
@@ -266,7 +280,7 @@ class DataEditor(QWidget):
 
 
     def create_clickable_widgets(self, parent, text, widgetlist):
-        layout = QHBoxLayout()
+        layout = QtWidgets.QHBoxLayout()
         label = self.create_button(text)
         layout.addWidget(label)
         for widget in widgetlist:
@@ -275,7 +289,7 @@ class DataEditor(QWidget):
 
 
     def add_checkbox(self, text, attribute, off_value, on_value):
-        checkbox = QCheckBox(self)
+        checkbox = QtWidgets.QCheckBox(self)
         layout = self.create_labeled_widget(self, text, checkbox)
 
         def checked(state):
@@ -290,7 +304,7 @@ class DataEditor(QWidget):
         return checkbox
 
     def add_integer_input(self, text, attribute, min_val, max_val):
-        line_edit = QLineEdit(self)
+        line_edit = QtWidgets.QLineEdit(self)
         layout = self.create_labeled_widget(self, text, line_edit)
 
         line_edit.setValidator(PythonIntValidator(min_val, max_val, line_edit))
@@ -309,7 +323,7 @@ class DataEditor(QWidget):
         return line_edit
 
     def add_integer_input_hideable(self, text, attribute, min_val, max_val):
-        line_edit = QLineEdit(self)
+        line_edit = QtWidgets.QLineEdit(self)
         layout, label = self.create_labeled_widget_ret_both(self, text, line_edit)
 
         line_edit.setValidator(PythonIntValidator(min_val, max_val, line_edit))
@@ -334,7 +348,7 @@ class DataEditor(QWidget):
         return line_edit, label
 
     def add_integer_input_index(self, text, attribute, index, min_val, max_val):
-        line_edit = QLineEdit(self)
+        line_edit = QtWidgets.QLineEdit(self)
         layout = self.create_labeled_widget(self, text, line_edit)
 
         line_edit.setValidator(QIntValidator(min_val, max_val, self))
@@ -353,7 +367,7 @@ class DataEditor(QWidget):
         return label, line_edit
 
     def add_decimal_input(self, text, attribute, min_val, max_val):
-        line_edit = QLineEdit(self)
+        line_edit = QtWidgets.QLineEdit(self)
         layout = self.create_labeled_widget(self, text, line_edit)
 
         line_edit.setValidator(QDoubleValidator(min_val, max_val, 6, self))
@@ -370,8 +384,69 @@ class DataEditor(QWidget):
 
         return line_edit
 
+    def add_types_widget_index(self, layout, text, attribute, index, widget_type):
+        # Certain widget types will be accompanied with arguments.
+        if isinstance(widget_type, (list, tuple)):
+            widget_type, *widget_type_args = widget_type
+
+        def set_value(value, index=index):
+            getattr(self.bound_to, attribute)[index] = value
+
+        if widget_type == "checkbox":
+            widget = QtWidgets.QCheckBox()
+            widget.stateChanged.connect(lambda state: set_userdata_mult(self.bound_to, index, int(bool(state))))
+        elif widget_type == "combobox":
+            widget = QtWidgets.QComboBox()
+            policy = widget.sizePolicy()
+            policy.setHorizontalPolicy(QtWidgets.QSizePolicy.Expanding)
+            widget.setSizePolicy(policy)
+            widget.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToMinimumContentsLengthWithIcon)
+            for key, value in widget_type_args[0].items():
+                widget.addItem(key, value)
+            widget.currentIndexChanged.connect(
+                lambda index: set_value(widget.itemData(index)))
+        else:
+            widget = QtWidgets.QLineEdit()
+            widget.setValidator(QIntValidator(MIN_SIGNED_SHORT, MAX_SIGNED_SHORT))
+            widget.textChanged.connect(lambda text: set_value(int(text)))
+
+        layout.addLayout(self.create_labeled_widget(None, text, widget))
+
+        return widget
+
+    def add_types_widget_index(self, layout, text, attribute, index, widget_type):
+        # Certain widget types will be accompanied with arguments.
+        if isinstance(widget_type, (list, tuple)):
+            widget_type, *widget_type_args = widget_type
+
+        def set_value(value, index=index):
+            for obj in self.bound_to:
+                getattr(obj, attribute)[index] = value
+
+        if widget_type == "checkbox":
+            widget = QtWidgets.QCheckBox()
+            widget.stateChanged.connect(lambda state: set_value(int(bool(state))))
+        elif widget_type == "combobox":
+            widget = QtWidgets.QComboBox()
+            policy = widget.sizePolicy()
+            policy.setHorizontalPolicy(QtWidgets.QSizePolicy.Expanding)
+            widget.setSizePolicy(policy)
+            widget.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToMinimumContentsLengthWithIcon)
+            for key, value in widget_type_args[0].items():
+                widget.addItem(key, value)
+            widget.currentIndexChanged.connect(
+                lambda index: set_value(widget.itemData(index)))
+        else:
+            widget = QtWidgets.QLineEdit()
+            widget.setValidator(QIntValidator(MIN_SIGNED_SHORT, MAX_SIGNED_SHORT))
+            widget.textChanged.connect(lambda text: set_value(int(text)))
+
+        layout.addLayout(self.create_labeled_widget(None, text, widget))
+
+        return widget
+
     def add_text_input(self, text, attribute, maxlength):
-        line_edit = QLineEdit(self)
+        line_edit = QtWidgets.QLineEdit(self)
         layout = self.create_labeled_widget(self, text, line_edit)
 
         line_edit.setMaxLength(maxlength)
@@ -387,7 +462,7 @@ class DataEditor(QWidget):
         return line_edit
 
     def add_text_input_return_both(self, text, attribute, maxlength):
-        line_edit = QLineEdit(self)
+        line_edit = QtWidgets.QLineEdit(self)
         layout = self.create_labeled_widget(self, text, line_edit)
 
         line_edit.setMaxLength(maxlength)
@@ -404,7 +479,7 @@ class DataEditor(QWidget):
 
     def add_dropdown_input(self, text, attribute, keyval_dict, return_both = False):
         #create the combobox
-        combobox = QComboBox(self)
+        combobox = QtWidgets.QComboBox(self)
         for val in keyval_dict:
             if val != "INVALID":
                 combobox.addItem(val)
@@ -418,7 +493,7 @@ class DataEditor(QWidget):
             if tt_dict is not None and combobox.currentText() == defaultitem:
                 combobox.setToolTip(tt_dict[defaultitem])
         policy = combobox.sizePolicy()
-        policy.setHorizontalPolicy(QSizePolicy.Expanding)
+        policy.setHorizontalPolicy(QtWidgets.QSizePolicy.Expanding)
         combobox.setSizePolicy(policy)
 
         max_value = max( keyval_dict.values()  )
@@ -453,7 +528,7 @@ class DataEditor(QWidget):
         return combobox
 
     def add_dropdown_lineedit_input(self, text, attribute, keyval_dict, min_val, max_val):
-        combobox = QComboBox(self)
+        combobox = QtWidgets.QComboBox(self)
         for val in keyval_dict:
             combobox.addItem(val)
 
@@ -473,7 +548,7 @@ class DataEditor(QWidget):
         combobox.currentTextChanged.connect(item_selected)
 
         #create the lineedit
-        line_edit = QLineEdit(self)
+        line_edit = QtWidgets.QLineEdit(self)
         line_edit.setValidator(PythonIntValidator(min_val, max_val, line_edit))
 
         def input_edited():
@@ -493,7 +568,7 @@ class DataEditor(QWidget):
     def add_multiple_integer_input(self, text, attribute, subattributes, min_val, max_val):
         line_edits = []
         for subattr in subattributes:
-            line_edit = QLineEdit(self)
+            line_edit = QtWidgets.QLineEdit(self)
 
             if max_val <= MAX_UNSIGNED_BYTE:
                 line_edit.setMaximumWidth(90)
@@ -514,7 +589,7 @@ class DataEditor(QWidget):
     def add_multiple_decimal_input(self, text, attribute, subattributes, min_val, max_val, return_both = False):
         line_edits = []
         for subattr in subattributes:
-            line_edit = QLineEdit(self)
+            line_edit =QtWidgets. QLineEdit(self)
 
             line_edit.setValidator(QDoubleValidator(min_val, max_val, 6, self))
 
@@ -533,7 +608,7 @@ class DataEditor(QWidget):
         line_edits = []
         fieldlist = getattr(self.bound_to, attribute)
         for i in range(len(fieldlist)):
-            line_edit = QLineEdit(self)
+            line_edit = QtWidgets.QLineEdit(self)
             line_edit.setMaximumWidth(30)
 
             line_edit.setValidator(QIntValidator(min_val, max_val, self))
@@ -550,7 +625,7 @@ class DataEditor(QWidget):
     def add_color_input(self, text, attribute, subattributes, min_val, max_val):
         line_edits = []
         for subattr in subattributes:
-            line_edit = QLineEdit(self)
+            line_edit = QtWidgets.QLineEdit(self)
 
             if max_val <= MAX_UNSIGNED_BYTE:
                 line_edit.setMaximumWidth(90)
@@ -623,7 +698,7 @@ class DataEditor(QWidget):
 
         angle_edits = [] #these are the checkboxes
         for attr in ("x", "y", "z"):
-            line_edit = QLineEdit(self)
+            line_edit = QtWidgets.QLineEdit(self)
             validator = QDoubleValidator(-360.0, 360.0, 9999, self)
             validator.setNotation(QDoubleValidator.StandardNotation)
             line_edit.setValidator(validator)
@@ -1002,7 +1077,7 @@ class KMPEdit(DataEditor):
         obj = self.bound_to
 
 
-        color_dia = QColorDialog(self)
+        color_dia = QtWidgets.QColorDialog(self)
         #color_dia.setCurrentColor( QColor(curr_color.r, curr_color.g, curr_color.b, curr_color.a) )
 
         color = color_dia.getColor()
@@ -1034,12 +1109,9 @@ class ObjectEdit(DataEditor):
         self.double = self.add_checkbox("Enable in two player mode", "double", 0, 1)
         self.triple = self.add_checkbox("Enable in three/four player mode", "triple", 0, 1)
 
-        self.userdata = []
-        for i in range(8):
-            self.userdata.append(
-                self.add_integer_input_index("Obj Data {0}".format(i+1), "userdata", i,
-                                             MIN_SIGNED_SHORT, MAX_SIGNED_SHORT)
-            )
+        self.userdata = [None] * 8
+        self.userdata_layout = QtWidgets.QVBoxLayout()
+        self.vbox.addLayout(self.userdata_layout)
 
         self.objectid.currentTextChanged.connect(self.object_id_combo_changed)
         self.objectid_edit.editingFinished.connect(self.object_id_edit_changed)
@@ -1060,7 +1132,7 @@ class ObjectEdit(DataEditor):
         self.assets = self.add_label("Required Assets: Unknown")
         self.assets.setWordWrap(True)
         hint = self.assets.sizePolicy()
-        hint.setVerticalPolicy(QSizePolicy.Minimum)
+        hint.setVerticalPolicy(QtWidgets.QSizePolicy.Minimum)
         self.assets.setSizePolicy(hint)
 
     def object_id_edit_changed(self):
@@ -1101,44 +1173,34 @@ class ObjectEdit(DataEditor):
         self.objectid.currentTextChanged.connect(self.object_id_combo_changed)
 
     def rename_object_parameters(self, current):
+        for i in range(8):
+            self.userdata[i] = None
+        clear_layout(self.userdata_layout)
 
         json_data = load_parameter_names(current)
         parameter_names = json_data["Object Parameters"]
-        tooltips = json_data["Tooltips"] if "Tooltips" in json_data else None
-        assets = json_data["Assets"]
+        tooltips = json_data["Tooltips"] if "Tooltips" in json_data else [None] * 8
+        widgets = json_data["Widgets"] if "Widgets" in json_data else [None] * 8
+        tuples = zip(parameter_names, tooltips, widgets)
 
-        if parameter_names is None:
-            for i in range(8):
-                self.userdata[i][0].setText("Obj Data {0}".format(i+1))
-                self.userdata[i][0].setVisible(True)
-                self.userdata[i][1].setVisible(True)
-                self.userdata[i][1].setToolTip('')
-            self.assets.setText("Required Assets: Unknown")
+        for i, (parameter_name, tooltip, widget_type) in enumerate(tuples):
+            if parameter_name == "Unused":
+                continue
 
-        else:
-            for i in range(8):
-                if parameter_names[i] == "Unused":
-                    self.userdata[i][0].setVisible(False)
-                    self.userdata[i][1].setVisible(False)
-                    """
-                    if self.bound_to.userdata[i] != 0:
-                        Warning("Parameter with index {0} in object {1} is marked as Unused but has value {2}".format(
-                            i, current, self.bound_to.userdata[i]
-                        ))"""
-                else:
-                    self.userdata[i][0].setVisible(True)
-                    self.userdata[i][1].setVisible(True)
-                    self.userdata[i][0].setText(parameter_names[i])
-                    self.userdata[i][1].setToolTip('')
-                    if tooltips is not None:
-                        self.userdata[i][1].setToolTip(tooltips[i])
-            if len(assets) == 0:
-                self.assets.setText("Required Assets: None")
-            else:
-                self.assets.setText("Required Assets: {0}".format(", ".join(assets)))
+            widget = self.add_types_widget_index(self.userdata_layout, parameter_name, 'userdata',
+                                                 i, widget_type)
+            widget.setToolTip(tooltip)
+            self.userdata[i] = widget
 
         if hasattr(self, "in_production") and self.in_production:
             self.set_default_values()
+
+        assets = json_data["Assets"]
+        if not assets:
+            self.assets.setText("Required Assets: None")
+        else:
+            self.assets.setText("Required Assets: {0}".format(", ".join(assets)))
+
     def set_default_values(self):
 
         objs = self.bound_to
@@ -1189,9 +1251,7 @@ class ObjectEdit(DataEditor):
             self.in_production = load_defaults
             self.set_default_values()
         else:
-            for i in range(8):
-                text = str(obj.userdata[i]) if obj.userdata[i] is not None else ""
-                self.userdata[i][1].setText(text)
+            self.update_userdata_widgets(obj)
 
         obj: Route = obj.route_obj
 
@@ -1204,6 +1264,18 @@ class ObjectEdit(DataEditor):
         self.smooth_label.setVisible(has_route)
         self.cyclic.setVisible(has_route)
         self.cyclic_label.setVisible(has_route)
+    def update_userdata_widgets(self, obj):
+        for i, widget in enumerate(self.userdata):
+            if widget is None or obj.userdata[i] is None:
+                continue
+            with QSignalBlocker(widget):
+                if isinstance(widget, QtWidgets.QCheckBox):
+                    widget.setChecked(bool(obj.userdata[i]))
+                elif isinstance(widget, QtWidgets.QComboBox):
+                    index = widget.findData(obj.userdata[i])
+                    widget.setCurrentIndex(index if index != -1 else 0)
+                elif isinstance(widget, QtWidgets.QLineEdit):
+                    widget.setText(str(obj.userdata[i]))
 
 class KartStartPointsEdit(DataEditor):
     def setup_widgets(self):
