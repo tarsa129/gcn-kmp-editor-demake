@@ -1553,26 +1553,19 @@ class GenEditor(QMainWindow):
         else:
             if hasattr(self.leveldatatreeview.currentItem(), 'bound_to'):
                 obj = self.leveldatatreeview.currentItem().bound_to
-
         if obj is not None:
             add_something = True
             #add points to group at current position
             if isinstance(obj, KMPPoint):
-                self.button_add_from_addi_options( 11, obj)
+                self.button_add_from_addi_options( "new_enemy_points", obj)
             elif isinstance(obj, PointGroups):
-                self.button_add_from_addi_options( 0, obj )
-            elif isinstance(obj, ObjectContainer) and obj.assoc == ObjectRoute:
-                self.button_add_from_addi_options( 5 )
-                self.button_add_from_addi_options( 6, self.level_file.routes[-1] )
-            elif isinstance(obj, ObjectContainer) and obj.assoc == CameraRoute:
-                self.button_add_from_addi_options( 5.5 )
-                self.button_add_from_addi_options( 6, self.level_file.cameraroutes[-1] )
+                self.button_add_from_addi_options( "add_enemygroup", obj )
             elif isinstance(obj, RoutePoint):
-                self.button_add_from_addi_options( 15, obj)
+                self.button_add_from_addi_options( "add_routepoints", obj)
             elif isinstance(obj, ObjectContainer) and obj.assoc == JugemPoint:
-                self.button_add_from_addi_options( 9, True)
+                self.button_add_from_addi_options( "add_jgpt", True)
             elif isinstance(obj, MapObject) and obj.has_route():
-                self.button_add_from_addi_options( 6, obj)
+                self.button_add_from_addi_options( "add_routepoints_end", obj)
             else:
                 print('nothing caught')
                 add_something = False

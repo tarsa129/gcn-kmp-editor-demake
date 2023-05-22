@@ -27,6 +27,8 @@ def set_subattr_mult(objs, attr, subattr, value):
 
 #make a common thing to find all common, esp if copy is going to be used
 def get_cmn_obj(objs):
+    if isinstance(objs[0], (KartStartPoints, Cameras)):
+        return objs[0]
     try:
         cmn_obj = objs[0].copy()
     except:
@@ -902,8 +904,10 @@ class CheckpointEdit(DataEditor):
         if obj.end.z is not None:
             self.end[1].setText(str(round(obj.end.z, 3)))
 
-        self.lapcounter.setChecked(obj.lapcounter != 0)
-        self.type.setChecked(obj.type != 0)
+        if obj.lapcounter is not None:
+            self.lapcounter.setChecked(obj.lapcounter != 0)
+        if obj.type is not None:
+            self.type.setChecked(obj.type != 0)
 
         self.update_checkpoint_types()
 
