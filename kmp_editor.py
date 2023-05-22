@@ -2568,7 +2568,11 @@ class GenEditor(QMainWindow):
         if self.rotation_mode.isChecked():
             middle = self.level_view.gizmo.position
 
+            moved_positions = []
             for position in self.level_view.selected_positions:
+                if position in moved_positions:
+                    continue
+                moved_positions.append(position)
                 diff = position - middle
                 diff.y = 0.0
 

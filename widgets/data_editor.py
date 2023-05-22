@@ -336,8 +336,10 @@ class DataEditor(QtWidgets.QWidget):
 
             if "." in attribute:
                 sub_obj, attr = attribute.split('.')
-                if self.bound_to.route_obj is not None:
-                    set_attr_mult( self.bound_to.route_obj.points[0], attr, val)
+                cmn_obj = get_cmn_obj(self.bound_to)
+                if cmn_obj.route_obj:
+                    points = [x.points[0] for x in cmn_obj.route_obj]
+                    set_attr_mult( points, attr, val)
             else:
                 set_attr_mult(self.bound_to, attribute, val)
 
@@ -506,12 +508,11 @@ class DataEditor(QtWidgets.QWidget):
             else:
                 val = max_value + 1
             #print("selected", item)
-            com_obj = get_cmn_obj(self.bound_to)
             if "." in attribute:
                 sub_obj, attr = attribute.split('.')
-                set_attr_mult( [getattr(com_obj, sub_obj)], attr, val)
+                set_subattr_mult(self.bound_to, sub_obj, attr, val)
             else:
-                set_attr_mult([com_obj], attribute, val)
+                set_attr_mult(self.bound_to, attribute, val)
 
             if tt_dict is not None and item in tt_dict:
                 combobox.setToolTip(tt_dict[item])
@@ -1362,14 +1363,15 @@ class AreaEdit(DataEditor):
         self.setting2.setText(str(obj.setting2))
 
         obj: Route = obj.route_obj
-        if obj is not None:
+        if len(obj) == 1:
             self.smooth.setCurrentIndex( min(obj.smooth, 1))
             self.cyclic.setCurrentIndex( min(obj.cyclic, 1))
 
-        self.smooth.setVisible(obj is not None)
-        self.smooth_label.setVisible(obj is not None)
-        self.cyclic.setVisible(obj is not None)
-        self.cyclic_label.setVisible(obj is not None)
+        has_route = len(obj) > 0
+        self.smooth.setVisible(has_route)
+        self.smooth_label.setVisible(has_route)
+        self.cyclic.setVisible(has_route)
+        self.cyclic_label.setVisible(has_route)
 
         self.set_settings_visible()
 
@@ -1440,7 +1442,6 @@ class CameraEdit(DataEditor):
             self.route_unk1_label.setVisible(False)
 
 
-        self.type.currentIndexChanged.connect(self.update_name)
         self.type.currentTextChanged.connect(self.update_name)
 
     def update_data(self):
@@ -1471,23 +1472,24 @@ class CameraEdit(DataEditor):
         self.camduration.setText(str(obj.camduration))
 
         obj: Route = obj.route_obj
-        if obj is not None:
-            self.smooth.setCurrentIndex( min(obj.smooth, 1))
-            self.cyclic.setCurrentIndex( min(obj.cyclic, 1))
+        if len(obj) == 1:
+            self.smooth.setCurrentIndex( min(obj[0].smooth, 1))
+            self.cyclic.setCurrentIndex( min(obj[0].cyclic, 1))
 
-            if obj.points:
-                self.route_unk1.setText( str( obj.points[0].unk1  ))
-                self.route_unk2.setText( str( obj.points[0].unk2  ))
+            if obj[0].points:
+                self.route_unk1.setText( str( obj[0].points[0].unk1  ))
+                self.route_unk2.setText( str( obj[0].points[0].unk2  ))
 
-        self.smooth.setVisible(obj is not None)
-        self.smooth_label.setVisible(obj is not None)
-        self.cyclic.setVisible(obj is not None)
-        self.cyclic_label.setVisible(obj is not None)
+        has_route = len(obj) > 0
+        self.smooth.setVisible(has_route)
+        self.smooth_label.setVisible(has_route)
+        self.cyclic.setVisible(has_route)
+        self.cyclic_label.setVisible(has_route)
 
-        self.route_unk1.setVisible(obj is not None)
-        self.route_unk1_label.setVisible(obj is not None)
-        self.route_unk2.setVisible(obj is not None)
-        self.route_unk2_label.setVisible(obj is not None)
+        self.route_unk1.setVisible(has_route)
+        self.route_unk1_label.setVisible(has_route)
+        self.route_unk2.setVisible(has_route)
+        self.route_unk2_label.setVisible(has_route)
 
 class RespawnPointEdit(DataEditor):
     def setup_widgets(self):

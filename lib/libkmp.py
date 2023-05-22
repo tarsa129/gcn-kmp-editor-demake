@@ -1127,7 +1127,7 @@ class Route(object):
             route.points.append(point1)
 
             point2 = RoutePoint.new()
-            point2.position = obj.position + Vector3(500, 0, 0)
+            point2.position = obj.position + Vector3(2000, 0, 0)
             route.points.append(point2)
 
             route.used_by.append(obj)
