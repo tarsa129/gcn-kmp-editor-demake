@@ -165,7 +165,10 @@ class ErrorAnalyzer(QDialog):
         #check enemy poitns
         if len(kmp.enemypointgroups.groups) == 0:
             write_line("You need at least one enemy point group!")
-        #check selfed inked
+        else:
+            for group in kmp.enemypointgroups.groups:
+                if len(group.points) == 1 and (group in group.next or group in group.prev):
+                    write_line("There is a self-linked enemy group. Oh no!")
         #check for unreachable groups
 
         #check for empty (and used!) routes

@@ -1955,6 +1955,10 @@ class GenEditor(QMainWindow):
             obj.find_closest_enemypoint()
         elif option == "preview_opening":
             self.level_view.preview_opening_cameras(self.level_file.get_opening_cams())
+        elif option == "preview_replay":
+            self.level_view.preview_replay_cameras(
+                self.level_file.replayareas(), self.level_file.enemypointgroups()
+            )
         self.leveldatatreeview.set_objects(self.level_file)
 
     @catch_exception

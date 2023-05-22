@@ -194,6 +194,7 @@ class MoreButtons(QWidget):
         elif isinstance(obj, ReplayAreas):
             self.add_button("Add Area/Stationary Cam", "add_rarea_stat", obj)
             self.add_button("Add Area/Stationary Cam", "add_rarea_rout", obj)
+            self.add_button("Preview Cameras", "add_rarea_rout", obj)
 
         elif isinstance(obj, Areas):
             self.add_button("Add Environment Effect Area", "add_area_gener", 1)

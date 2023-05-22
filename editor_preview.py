@@ -15,8 +15,7 @@ def make_spline(path, i, c0, c1, c2, c3):
     return Vector3(x, y, z)
 
 class PreviewParams(object):
-    def __init__(self, cameras) -> None:
-        self.cameras = cameras
+    def __init__(self) -> None:
         self.curr_cam = 0
         self.duration = 1
 
@@ -28,7 +27,6 @@ class PreviewParams(object):
 
         self.done = False
 
-        self.setup_cam(0)
 
     def next_cam(self):
         self.view_prog = 0
@@ -37,8 +35,7 @@ class PreviewParams(object):
         self.path_point = 0
         self.path_speed = 0
 
-    def setup_cam(self, idx):
-        cam:Camera = self.cameras[idx]
+    def setup_cam(self, cam:Camera):
         self.zoom = cam.fov.start
         self.duration = cam.camduration
 
@@ -94,7 +91,9 @@ class PreviewParams(object):
 
 class OpeningPreview(PreviewParams):
     def __init__(self, cameras) -> None:
-        super().__init__(cameras)
+        super().__init__()
+        self.cameras = cameras
+        self.setup_cam(self.cameras[0])
 
     def advance_frame(self, delta):
         if self.duration <= 0:
@@ -118,7 +117,7 @@ class OpeningPreview(PreviewParams):
         if self.curr_cam == len(self.cameras):
             self.done = True
         else:
-            self.setup_cam(self.curr_cam)
+            self.setup_cam(self.cameras[self.curr_cam])
 
     def get_lookat(self, delta, cam:Camera):
         self.view_prog += delta * cam.viewspeed * 100 / MKW_FRAMERATE
@@ -126,9 +125,46 @@ class OpeningPreview(PreviewParams):
         self.view_pos = lerp(cam.position2, cam.position3, ratio)
 
 class ReplayPreview(PreviewParams):
-    def __init__(self, cameras, areas:Areas, enemies:EnemyPointGroups) -> None:
-        super().__init__(cameras)
+    def __init__(self, areas:Areas, enemies:EnemyPointGroups) -> None:
+        super().__init__()
         self.areas = areas
+
         self.enemies = enemies
         self.enemypoint = enemies[0].points[0]
         self.enemyspeed = 45
+
+    def advance_frame(self, delta):
+        #advance player
+
+        cam:Camera = self.cameras[self.curr_cam]
+        self.advance_zoom(delta, cam)
+        self.get_lookat(delta, cam)
+
+        if cam.route_obj is not None:
+            if cam.route_obj.smooth == 1:
+                self.position = self.next_pos_smooth(delta, cam)
+            else:
+                self.position = self.next_pos_verbatim(delta, cam)
+
+    def get_lookat(self, delta, enemy1, enemy2):
+        self.view_prog += delta * self.enemyspeed * 100 / MKW_FRAMERATE
+        ratio = self.view_prog / enemy2.distance(enemy1)
+        self.view_pos = lerp(enemy1, enemy2, ratio)
+        self.view_pos += Vector3(0, 200, 0)
+
+    def check_area(self, area:Area, position:Vector3):
+        if diff.y < 0 or diff.y > area.scale.y * 100 * 100:
+            return False
+        
+        if area.shape == 0:
+            diff = position - area.position
+            if diff.x > abs(area.scale.x * 50 * 100):
+                return False
+            if diff.z > abs(area.scale.z * 50 * 100):
+                return False
+        else:
+            pass
+        return True
+
+    def find_area(self):
+        found_areas = [area for area in self.areas if self.check_area(area, self.enemypoint)]

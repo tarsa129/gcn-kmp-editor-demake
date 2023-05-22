@@ -632,8 +632,8 @@ class DataEditor(QWidget):
 
         def change_angle():
             newup = Vector3(*[float(v.text()) for v in angle_edits])
-
-            self.bound_to.rotation = Rotation.from_euler(newup)
+            for obj in self.bound_to:
+                obj.rotation = Rotation.from_euler(newup)
 
             self.update_rotation(*angle_edits)
 

@@ -1951,13 +1951,17 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
         return pos2
 
-    def preview_opening_cameras(self, cameras, areas=None, enemies=None):
+    def preview_opening_cameras(self, cameras):
         if not cameras:
             return
-        if areas is None:
-            self.preview = OpeningPreview(cameras)
+        self.preview = OpeningPreview(cameras)
         self.mode = MODE_3D
 
+    def preview_replay_cameras(self, areas, enemies):
+        if not areas:
+            return
+        self.preview = ReplayPreview(areas, enemies)
+        self.mode = MODE_3D
 
 def create_object_type_pixmap(canvas_size: int, directed: bool,
                               colors: 'tuple[tuple[int]]') -> QtGui.QPixmap:

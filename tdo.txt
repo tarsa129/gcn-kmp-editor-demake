@@ -1,5 +1,4 @@
-came - camera viewing fixes
-control to select more points
+came - camera viewing fixes + replay
 error analyzer
 load + collide on gobj collision files
 add option to select x to y points
