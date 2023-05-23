@@ -180,10 +180,8 @@ class MoreButtons(QWidget):
             self.vbox.addWidget(crs_options)
 
         elif isinstance(obj, MapObject):
-
-            route_stuff = obj.route_info
-
-            if route_stuff:
+            route_info = obj.has_route()
+            if route_info is not None and route_info > 0:
                 self.add_button("v: Add Points to End of Route", "add_routepoints_end", obj)
                 self.add_button("Auto Route", "auto_route_single", obj)
                 self.add_button("Copy and Place Current Object (Same Route)", "generic_copy", obj.copy())
@@ -194,7 +192,7 @@ class MoreButtons(QWidget):
         elif isinstance(obj, ReplayAreas):
             self.add_button("Add Area/Stationary Cam", "add_rarea_stat", obj)
             self.add_button("Add Area/Stationary Cam", "add_rarea_rout", obj)
-            self.add_button("Preview Cameras", "add_rarea_rout", obj)
+            self.add_button("Preview Cameras", "preview_replay", obj)
 
         elif isinstance(obj, Areas):
             self.add_button("Add Environment Effect Area", "add_area_gener", 1)

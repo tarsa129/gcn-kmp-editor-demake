@@ -1,7 +1,11 @@
 came - camera viewing fixes + replay
+completely break reliance on lists of routes
+better copying + camera splitting (only based on usage)
+improve json files
+add arrow keys for "next point" in route
 error analyzer
 load + collide on gobj collision files
 add option to select x to y points
-improve json files
+
 create dialog for auto generation and auto cleanup
 brres loading

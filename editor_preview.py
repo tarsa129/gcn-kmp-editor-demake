@@ -126,19 +126,37 @@ class OpeningPreview(PreviewParams):
 
 class ReplayPreview(PreviewParams):
     def __init__(self, areas:Areas, enemies:EnemyPointGroups) -> None:
+
         super().__init__()
         self.areas = areas
+        self.area : Area = None
 
         self.enemies = enemies
-        self.enemypoint = enemies[0].points[0]
-        self.enemyspeed = 45
+        self.enemypoint = enemies.groups[0].points[0]
+        self.enemyspeed = 450
+
+        self.lap = 0
 
     def advance_frame(self, delta):
         #advance player
+        self.get_lookat(delta, self.enemypoint)
+        if self.done:
+            return
 
-        cam:Camera = self.cameras[self.curr_cam]
+        #get area for camera
+        player_pos = self.view_pos - Vector3(0, 200, 0)
+        if self.area is None or not self.area.check(player_pos):
+            new_area = self.find_area(player_pos)
+            self.area = new_area if new_area is not None else self.area
+            if self.area is not None:
+                super().next_cam()
+                self.setup_cam(self.area.camera)
+
+        if self.area is None:
+            return
+
+        cam:Camera = self.area.camera
         self.advance_zoom(delta, cam)
-        self.get_lookat(delta, cam)
 
         if cam.route_obj is not None:
             if cam.route_obj.smooth == 1:
@@ -146,25 +164,34 @@ class ReplayPreview(PreviewParams):
             else:
                 self.position = self.next_pos_verbatim(delta, cam)
 
-    def get_lookat(self, delta, enemy1, enemy2):
+    def get_lookat(self, delta, enemy1:EnemyPoint) -> Vector3:
+        enemy2 = self.get_next_enemy(enemy1)
+        if enemy2 is None:
+            self.done = True
+            return None
+
         self.view_prog += delta * self.enemyspeed * 100 / MKW_FRAMERATE
-        ratio = self.view_prog / enemy2.distance(enemy1)
-        self.view_pos = lerp(enemy1, enemy2, ratio)
+        ratio = self.view_prog / enemy2.position.distance(enemy1.position)
+        if ratio > 1:
+            self.enemypoint = enemy2
+            self.view_prog = 0
+        self.view_pos = lerp(enemy1.position, enemy2.position, ratio)
         self.view_pos += Vector3(0, 200, 0)
 
-    def check_area(self, area:Area, position:Vector3):
-        if diff.y < 0 or diff.y > area.scale.y * 100 * 100:
-            return False
-        
-        if area.shape == 0:
-            diff = position - area.position
-            if diff.x > abs(area.scale.x * 50 * 100):
-                return False
-            if diff.z > abs(area.scale.z * 50 * 100):
-                return False
-        else:
-            pass
-        return True
+    def get_next_enemy(self, enemy1:EnemyPoint) -> EnemyPoint:
+        group_idx, group, point_idx = self.enemies.find_group_of_point(enemy1)
+        if point_idx < len(group.points) - 1:
+            return group.points[point_idx + 1]
+        group_idx = self.lap % group.num_next()
+        if group.nextgroup[group_idx] in self.enemies.groups:
+            return group.nextgroup[group_idx].points[0]
+        return None
 
-    def find_area(self):
-        found_areas = [area for area in self.areas if self.check_area(area, self.enemypoint)]
+    def find_area(self, position) -> Area:
+        found_areas = [area for area in self.areas if area.check(position)]
+        print(found_areas, position)
+        if found_areas:
+        #get area with highest priority
+            found_areas.sort(key = lambda area: area.priority)
+            return found_areas[0]
+        return None

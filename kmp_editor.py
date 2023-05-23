@@ -1182,6 +1182,7 @@ class GenEditor(QMainWindow):
             else:
                 self.level_view.selected_positions.append(point.position)
         self.update_3d()
+        self.select_from_3d_to_treeview()
         self.action_update_info()
 
     def delete_all_of_group(self, item):
@@ -1224,7 +1225,8 @@ class GenEditor(QMainWindow):
         self.level_view.selected_rotations = [mapobject.rotation for mapobject in to_select]
 
         self.update_3d()
-        self.pik_control.reset_info()
+        self.select_from_3d_to_treeview()
+        self.action_update_info()
 
     def remove_all_points(self, pointgroups : PointGroups):
         pointgroups.remove_all()
@@ -1950,7 +1952,7 @@ class GenEditor(QMainWindow):
             self.level_view.preview_opening_cameras(self.level_file.get_opening_cams())
         elif option == "preview_replay":
             self.level_view.preview_replay_cameras(
-                self.level_file.replayareas(), self.level_file.enemypointgroups()
+                self.level_file.replayareas, self.level_file.enemypointgroups
             )
         self.leveldatatreeview.set_objects(self.level_file)
 
@@ -2511,7 +2513,7 @@ class GenEditor(QMainWindow):
             if isinstance(sel_obj, MapObject):
                 self.connect_start = sel_obj
                 self.level_view.connecting_mode = "linedraw"
-                self.level_view.connecting_start = self.connect_start.position
+                self.level_view.connecting_start = [self.connect_start.position]
                 self.level_view.connecting_rotation = self.connect_start.rotation
             pass
     def keyReleaseEvent(self, event: QtGui.QKeyEvent):
@@ -3246,7 +3248,7 @@ class GenEditor(QMainWindow):
 
     def handle_linedraw(self):
         if isinstance(self.connect_start, MapObject):
-            pos1 : Vector3 = self.level_view.connecting_start
+            pos1 : Vector3 = self.level_view.connecting_start[0]
             pos2 = Vector3(*self.current_coordinates)
             if pos2.y is None:
                 pos2.y = pos1.y

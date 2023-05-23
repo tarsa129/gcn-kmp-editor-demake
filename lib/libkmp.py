@@ -80,24 +80,18 @@ def write_padding(f, multiple):
         pos = i % len(PADDING)
         f.write(PADDING[pos:pos + 1])
 
-class Rotation(object):
+class Rotation(Vector3):
     def __init__(self, x, y, z):
-        self.mtx = ndarray(shape=(4,4), dtype=float, order="F")
-        self.x = x % 360
-        self.y = y % 360
-        self.z = z % 360
+        super().__init__(x, y, z)
 
     def rotate_around_x(self, degrees):
         self.x += degrees * rotation_constant
-        self.x = self.x % 360
 
     def rotate_around_y(self, degrees):
         self.y += degrees * rotation_constant
-        self.y = self.y % 360
 
     def rotate_around_z(self, degrees):
         self.z += degrees  * rotation_constant
-        self.z += self.z % 360
 
     def get_rotation_matrix( self ):
 
@@ -155,8 +149,11 @@ class Rotation(object):
         mtx[3][3] = 1.0
 
         left = Vector3(-mtx[0][0], mtx[0][2], mtx[0][1])
-        up = Vector3(-mtx[2][0], mtx[2][2], mtx[2][1])
+        left.normalize()
+        #up = Vector3(-mtx[2][0], mtx[2][2], mtx[2][1])
         forward = Vector3(-mtx[1][0], mtx[1][2], mtx[1][1])
+        forward.normalize()
+        up = forward.cross(left) * -1
 
         return forward, up, left
 
@@ -1709,6 +1706,24 @@ class Area(object):
 
     def get_route_text(self):
         return ["Speed", "Rotation (Var 2)"]
+
+    def check(self, pos:Vector3):
+        forward, up, left = self.rotation.get_vectors()
+        diff = pos - self.position
+        dotVec = Vector3( left.dot(diff), up.dot(diff), forward.dot(diff) )
+        scale = Vector3(self.scale.x * 5000, self.scale.y * 10000, self.scale.z * 5000)
+        if scale.y < dotVec.y or dotVec.y < 0:
+            return False
+        if self.shape == 1: #cylinder
+            if (scale.x ** 2 < (dotVec.x ** 2 + dotVec.z ** 2)):
+                return False
+        else: #box
+            if (scale.x < dotVec.x) or (dotVec.x < -scale.x):
+                return False
+            if (scale.z < dotVec.z) or (dotVec.z < -scale.z):
+                return False
+        return True
+
 
 class Areas(ObjectContainer):
     def __init__(self):

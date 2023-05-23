@@ -1140,13 +1140,13 @@ class ObjectEdit(DataEditor):
         new = int(self.objectid_edit.text()) #grab text from the lineedit
         self.update_combobox(new) #use it to update the combobox
         self.update_name(new) #do the main editing
-        self.rename_object_parameters( new )
+        self.rename_object_parameters( new, True )
 
     def object_id_combo_changed(self):
         new = REVERSEOBJECTNAMES[ self.objectid.currentText() ] #grab id from combobox
         self.update_lineedit(new)
         self.update_name( new )
-        self.rename_object_parameters( new )
+        self.rename_object_parameters( new, True )
 
     def update_name(self, new):
         for obj in self.bound_to:
@@ -1174,7 +1174,7 @@ class ObjectEdit(DataEditor):
         self.objectid.setCurrentIndex(index)
         self.objectid.currentTextChanged.connect(self.object_id_combo_changed)
 
-    def rename_object_parameters(self, current):
+    def rename_object_parameters(self, current, load_defaults=False):
         for i in range(8):
             self.userdata[i] = None
         clear_layout(self.userdata_layout)
@@ -1201,10 +1201,9 @@ class ObjectEdit(DataEditor):
             widget.setToolTip(tooltip)
             self.userdata[i] = widget
 
-        if hasattr(self, "in_production") and self.in_production:
+        if load_defaults:
             self.set_default_values()
 
-        
         if not assets:
             self.assets.setText("Required Assets: None")
         else:
@@ -1231,7 +1230,7 @@ class ObjectEdit(DataEditor):
             if defaults is not None:
                 defaults = [0 if x is None else x for x in defaults]
                 obj.userdata = defaults.copy()
-                self.update_userdata_widgets(obj.userdata)
+                self.update_userdata_widgets(obj)
 
             else:
                 obj.userdata = [0] * 8
@@ -1256,7 +1255,6 @@ class ObjectEdit(DataEditor):
         self.triple.setChecked( obj.triple != 0 and obj.triple != None)
 
         if load_defaults:
-            self.in_production = load_defaults
             self.set_default_values()
         else:
             self.update_userdata_widgets(obj)
@@ -1274,18 +1272,19 @@ class ObjectEdit(DataEditor):
         self.cyclic_label.setVisible(has_route)
     def update_userdata_widgets(self, obj, values=None):
         if values is None:
-            values = self.userdata
-        for i, widget in enumerate(values):
-            if widget is None or values[i] is None:
+            values = obj.userdata
+        for i, value in enumerate(values):
+            widget = self.userdata[i]
+            if widget is None or value is None:
                 continue
             with QSignalBlocker(widget):
                 if isinstance(widget, QtWidgets.QCheckBox):
-                    widget.setChecked(bool(obj.userdata[i]))
+                    widget.setChecked(bool(value))
                 elif isinstance(widget, QtWidgets.QComboBox):
-                    index = widget.findData(obj.userdata[i])
+                    index = widget.findData(value)
                     widget.setCurrentIndex(index if index != -1 else 0)
                 elif isinstance(widget, QtWidgets.QLineEdit):
-                    widget.setText(str(obj.userdata[i]))
+                    widget.setText(str(value))
 
 class KartStartPointsEdit(DataEditor):
     def setup_widgets(self):
