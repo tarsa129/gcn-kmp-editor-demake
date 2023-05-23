@@ -27,24 +27,14 @@ class PreviewParams(object):
 
         self.done = False
 
-
-    def next_cam(self):
-        self.view_prog = 0
-        self.zoom_prog = 0
-        self.path_prog = 0
-        self.path_point = 0
-        self.path_speed = 0
-
     def setup_cam(self, cam:Camera):
         self.zoom = cam.fov.start
-        self.duration = cam.camduration
-
-        self.view_start = cam.position2.copy()
-        self.view_pos = cam.position2.copy()
-        self.view_dist = cam.position3.distance(cam.position2)
+        self.zoom_prog = 0
 
         if cam.route_obj is not None:
             self.path_speed = cam.route_obj.points[0].unk1
+            self.path_prog = 0
+            self.path_point = 0
 
         self.position = cam.position.copy()
 
@@ -112,12 +102,17 @@ class OpeningPreview(PreviewParams):
         self.duration -= delta * MKW_FRAMERATE
 
     def next_cam(self):
-        super().next_cam()
+        self.view_prog = 0
         self.curr_cam += 1
         if self.curr_cam == len(self.cameras):
             self.done = True
         else:
             self.setup_cam(self.cameras[self.curr_cam])
+
+    def setup_cam(self, cam: Camera):
+        super().setup_cam(cam)
+        self.duration = cam.camduration
+        self.view_pos = cam.position2.copy()
 
     def get_lookat(self, delta, cam:Camera):
         self.view_prog += delta * cam.viewspeed * 100 / MKW_FRAMERATE
@@ -133,7 +128,7 @@ class ReplayPreview(PreviewParams):
 
         self.enemies = enemies
         self.enemypoint = enemies.groups[0].points[0]
-        self.enemyspeed = 450
+        self.enemyspeed = 900
 
         self.lap = 0
 
@@ -149,7 +144,6 @@ class ReplayPreview(PreviewParams):
             new_area = self.find_area(player_pos)
             self.area = new_area if new_area is not None else self.area
             if self.area is not None:
-                super().next_cam()
                 self.setup_cam(self.area.camera)
 
         if self.area is None:
@@ -169,12 +163,14 @@ class ReplayPreview(PreviewParams):
         if enemy2 is None:
             self.done = True
             return None
-
         self.view_prog += delta * self.enemyspeed * 100 / MKW_FRAMERATE
         ratio = self.view_prog / enemy2.position.distance(enemy1.position)
         if ratio > 1:
             self.enemypoint = enemy2
+            if self.enemypoint == self.enemies.groups[0].points[0]:
+                self.lap += 1
             self.view_prog = 0
+       
         self.view_pos = lerp(enemy1.position, enemy2.position, ratio)
         self.view_pos += Vector3(0, 200, 0)
 
@@ -189,9 +185,11 @@ class ReplayPreview(PreviewParams):
 
     def find_area(self, position) -> Area:
         found_areas = [area for area in self.areas if area.check(position)]
-        print(found_areas, position)
         if found_areas:
         #get area with highest priority
             found_areas.sort(key = lambda area: area.priority)
             return found_areas[0]
         return None
+    
+    def setup_cam(self, cam: Camera):
+        super().setup_cam(cam)

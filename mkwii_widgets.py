@@ -1045,6 +1045,10 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                 self.models.render_player_position_colored(kartpos, valid in self.selected, p)
             p += 1"""
 
+        if self.preview is not None:
+            glColor3f(0.0, 0.0, 0.0)
+            self.models.draw_sphere(self.preview.view_pos, 600)
+
         #do rendering of the points
         if self.level_file is not None:
             selected = self.selected
