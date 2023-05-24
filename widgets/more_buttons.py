@@ -180,8 +180,8 @@ class MoreButtons(QWidget):
             self.vbox.addWidget(crs_options)
 
         elif isinstance(obj, MapObject):
-            route_info = obj.has_route()
-            if route_info is not None and route_info > 0:
+            route_info = obj.route_info()
+            if route_info:
                 self.add_button("v: Add Points to End of Route", "add_routepoints_end", obj)
                 self.add_button("Auto Route", "auto_route_single", obj)
                 self.add_button("Copy and Place Current Object (Same Route)", "generic_copy", obj.copy())
@@ -195,15 +195,16 @@ class MoreButtons(QWidget):
             self.add_button("Preview Cameras", "preview_replay", obj)
 
         elif isinstance(obj, Areas):
-            self.add_button("Add Environment Effect Area", "add_area_gener", 1)
-            self.add_button("Add BFG Swapper Area", "add_area_gener", 2)
-            self.add_button("Add Moving Road Area With Route", "add_area_gener", 3)
-            self.add_button("Add Destination Point Area", "add_area_gener", 4)
-            self.add_button("Add Minimap Control Area", "add_area_gener", 5)
+            self.add_button("Add Environment Effect", "add_area_gener", 1)
+            self.add_button("Add BFG Swapper", "add_area_gener", 2)
+            self.add_button("Add Moving Road With Route", "add_area_gener", 3)
+            self.add_button("Add Destination Point", "add_area_gener", 4)
+            self.add_button("Add Minimap Control", "add_area_gener", 5)
             self.add_button("Add BBLM Swapper", "add_area_gener", 6)
-            self.add_button("Add Flying Boos Area", "add_area_gener", 7)
-            self.add_button("Add Object Grouper/Unloading Areas", "add_area_objs", obj)
-            self.add_button("Add Fall Boundary Area", "add_area_gener", 10)
+            self.add_button("Add Flying Boos", "add_area_gener", 7)
+            self.add_button("Add Object Grouper", "add_area_gener", 8)
+            self.add_button("Add Object Unloading", "add_area_gener", 9)
+            self.add_button("Add Fall Boundary", "add_area_gener", 10)
 
         elif isinstance(obj, Area):
             area : Area = obj
@@ -216,7 +217,7 @@ class MoreButtons(QWidget):
 
         elif isinstance(obj, OpeningCamera):
 
-            if obj.has_route():
+            if obj.route_info():
                 self.add_button("Copy and Place Camera (New Route)", "generic_copy_routed", obj.copy())
             else:
                 self.add_button("Copy and Place Camera", "generic_copy", obj.copy())
@@ -250,10 +251,6 @@ class MoreButtons(QWidget):
         self.add_multi_button("Align on X Axis", "align_x", objs)
         self.add_multi_button("Align on Z Axis", "align_z", objs)
 
-        if 0 in options:
-            self.add_multi_button("Add Item Boxes Between", "aliadd_items_between", options[0])
-            self.add_multi_button("Add Item Boxes Between", "add_items_between_ground", options[0])
-
         if 3 in options:
             self.add_multi_button("Decrease Scale by 5", "dec_enemy_scale", options[3])
             self.add_multi_button("Increase Scale by 5", "inc_enemy_scale", options[3])
@@ -261,9 +258,6 @@ class MoreButtons(QWidget):
     def check_options(self, objs):
         #item box check for fill in
         options = {}
-        item_boxes = self.check_objects(objs, (MapObject), "objectid", 101)
-        if len(item_boxes) == 2:
-            options[0] = item_boxes
 
         checkpoints = self.check_objects(objs, (Checkpoint))
         if len(checkpoints) > 0 :

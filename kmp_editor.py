@@ -402,11 +402,7 @@ class GenEditor(QMainWindow):
                 for item_path_point in item_path.points:
                     extend(item_path_point.position)
         if self.visibility_menu.objects.is_visible():
-            for object_route in self.level_file.routes:
-                for object_route_point in object_route.points:
-                    extend(object_route_point.position)
-        if self.visibility_menu.cameras.is_visible():
-            for object_route in self.level_file.cameraroutes:
+            for object_route in self.level_file.objects.get_routes():
                 for object_route_point in object_route.points:
                     extend(object_route_point.position)
         if self.visibility_menu.checkpoints.is_visible():
@@ -1279,7 +1275,6 @@ class GenEditor(QMainWindow):
 
     #@catch_exception
     def button_load_level(self, checked=False, filepath=None, add_to_ini=True ):
-        print(filepath)
         if filepath is None:
             filepath, chosentype = QFileDialog.getOpenFileName(
                 self, "Open File",
@@ -1566,7 +1561,7 @@ class GenEditor(QMainWindow):
                 self.button_add_from_addi_options( "add_routepoints", obj)
             elif isinstance(obj, ObjectContainer) and obj.assoc == JugemPoint:
                 self.button_add_from_addi_options( "add_jgpt", True)
-            elif isinstance(obj, MapObject) and obj.has_route():
+            elif isinstance(obj, MapObject) and obj.route_info():
                 self.button_add_from_addi_options( "add_routepoints_end", obj)
             else:
                 print('nothing caught')
@@ -1634,12 +1629,6 @@ class GenEditor(QMainWindow):
                 self.level_file.enemypointgroups.groups.append(obj)
             elif isinstance(obj, libkmp.CheckpointGroup):
                 self.level_file.checkpoints.groups.append(obj)
-            elif isinstance(obj, libkmp.Route):
-                if obj.type == 0:
-                    self.level_file.routes.append(obj)
-                elif obj.type == 1:
-                    self.level_file.cameraroutes.append(obj)
-
             self.object_to_be_added = None
             self.pik_control.button_add_object.setChecked(False)
             self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_NONE)
@@ -1690,14 +1679,13 @@ class GenEditor(QMainWindow):
         if self.object_to_be_added is not None:
             thing_added = self.object_to_be_added[0]
             if isinstance( thing_added, RoutePoint ) and isinstance( thing_added.partof, CameraRoute):
-                group : Route =  self.level_file.cameraroutes[ self.object_to_be_added[1] ]
                 #if you created a new route from scratch
+                group = thing_added.partof
                 if self.points_added == len(group.points) and self.points_added > 0:
                     for point in group.points[:-1]:
                         point.unk1 = 50
 
         self.points_added = 0
-        self.objects_to_be_added = None
         self.object_to_be_added = None
 
     #this is the function that the new side buttons calls
@@ -1706,7 +1694,6 @@ class GenEditor(QMainWindow):
         self.points_added = 0
         self.pik_control.button_add_object.setChecked(False)
         self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_NONE)
-        self.objects_to_be_added = None
         self.object_to_be_added = None
 
         if option == "add_enemygroup": #add an empty enemy group
@@ -1714,7 +1701,6 @@ class GenEditor(QMainWindow):
             if len(to_deal_with.groups) != 1 or len(to_deal_with.groups[0].points) != 0:
                 to_deal_with.add_new_group()
             self.button_add_from_addi_options(1, to_deal_with.groups[-1])
-
         elif option == 1: #adding an enemy point to a group, the group is obj
             to_deal_with = self.level_file.get_to_deal_with(obj)
             thing_to_add = to_deal_with.get_new_point()
@@ -1740,17 +1726,12 @@ class GenEditor(QMainWindow):
             self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
         elif option == "generic_copy":   #generic copy
             #self.addobjectwindow_last_selected_category = 6
-            self.objects_to_be_added = []
             self.pik_control.button_add_object.setChecked(True)
             self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
 
             self.obj_to_copy = obj
             self.copy_current_obj(False)
         elif option == "generic_copy_routed":  #copy with new route
-
-            self.objects_to_be_added = []
-            self.object_to_be_added = None
-
             new_route = self.level_file.get_route_for_obj(obj)
             if obj.route_obj is not None :
                 for point in obj.route_obj.points:
@@ -1764,27 +1745,24 @@ class GenEditor(QMainWindow):
                     point.partof = new_route
                     new_route.points.append(point)
 
-            self.objects_to_be_added.append( [new_route, None, None ]  )
-
             if isinstance(obj, libkmp.Camera):
-                new_camera = libkmp.OpeningCamera.default()
-                self.objects_to_be_added.append( [new_camera, None, None ]  )
+                new_camera = obj.copy()
+                new_camera.route_obj = new_route
+                self.object_to_be_added = [new_camera, None, True ]
 
             elif isinstance(obj, libkmp.MapObject):
                 new_object = obj.copy()
-                self.objects_to_be_added.append( [new_object, None, None ]  )
+                new_object.route_obj = new_route
+                self.object_to_be_added = [new_object, None, True ]
 
             self.pik_control.button_add_object.setChecked(True)
             self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
 
-            self.object_to_be_added = None
         elif option == "add_routepoints_end": #add route point to end of route
             if obj.route_obj is None:
-                route_collec = self.level_file.get_route_container(obj)
                 new_route = self.level_file.get_route_for_obj(obj)
                 obj.route_obj = new_route
                 new_route.used_by = [obj]
-                route_collec.append(new_route)
 
             new_point = libkmp.RoutePoint.new()
             new_point.partof = obj
@@ -1797,13 +1775,6 @@ class GenEditor(QMainWindow):
             self.object_to_be_added = [libkmp.Area.default(obj), None, None ]
             self.pik_control.button_add_object.setChecked(True)
             self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
-        elif option == "add_area_objs": #add new type 8/9 areas
-            self.objects_to_be_added = []
-            self.objects_to_be_added.append( [libkmp.Area.default(8), None, None ]  )
-            self.objects_to_be_added.append( [libkmp.Area.default(9), None, None ]  )
-            self.object_to_be_added = None
-            self.pik_control.button_add_object.setChecked(True)
-            self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
         elif option == "add_camera":  #add new camera with route
 
             if obj == 0:
@@ -1813,8 +1784,6 @@ class GenEditor(QMainWindow):
                 return
 
             if obj in routed_cameras:
-                self.objects_to_be_added = []
-                self.object_to_be_added = None
 
                 new_route = libkmp.CameraRoute.new()
 
@@ -1825,11 +1794,10 @@ class GenEditor(QMainWindow):
                         point.unk1 = 50
                     new_route.points.append(point)
 
-                #self.addobjectwindow_last_selected_category = 8
-                self.objects_to_be_added.append( [new_route, None, None ]  )
-                self.objects_to_be_added.append( [libkmp.OpeningCamera.default(obj), None, None ] )
+                new_camera = libkmp.OpeningCamera.default(obj)
+                new_camera.route_obj = new_route
+                self.object_to_be_added = [new_camera, None, None ]
             else:
-                self.objects_to_be_added = None
                 self.object_to_be_added = [libkmp.OpeningCamera.default(obj), None, None ]
 
             self.pik_control.button_add_object.setChecked(True)
@@ -1839,8 +1807,6 @@ class GenEditor(QMainWindow):
             self.object_to_be_added = [rsp, obj, None ]
             self.pik_control.button_add_object.setChecked(True)
             self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
-        elif option == "merge_groups": #merge enemy/item/route
-            obj.merge_groups()
         elif option == "new_enemy_points": #new enemy point here
             #find its position in the enemy point group
             to_deal_with = self.level_file.get_to_deal_with(obj)
@@ -1856,7 +1822,6 @@ class GenEditor(QMainWindow):
             self.pik_control.button_add_object.setChecked(True)
             self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
         elif option == "add_rarea_rout": #area camera route add
-            self.objects_to_be_added = []
             new_area = libkmp.Area.default()
             new_camera = libkmp.ReplayCamera.default(2)
             new_route = libkmp.CameraRoute.new()
@@ -1867,57 +1832,36 @@ class GenEditor(QMainWindow):
                 new_route.points.append(point)
             new_route.points[0].unk1 = 30
 
-            self.objects_to_be_added.append( [new_route, None, None ]  )
-            self.objects_to_be_added.append( [new_camera, None, None ]  )
-            self.objects_to_be_added.append( [new_area, None, None ]  )
-
+            new_camera.route_obj = new_route
+            new_area.camera = new_camera
+            self.object_to_be_added = [new_area, None, None ]
 
             self.pik_control.button_add_object.setChecked(True)
             self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
 
             self.object_to_be_added = None
         elif option == "add_rarea_stat": #area camera add
-            self.objects_to_be_added = []
             new_area = libkmp.Area.default()
             new_camera = libkmp.ReplayCamera.default(1)
+            new_area.camera = new_camera
 
-            self.objects_to_be_added.append( [new_camera, None, None ]  )
-            self.objects_to_be_added.append( [new_area, None, None ]  )
+            self.object_to_be_added = [new_area, None, None ]
 
             self.pik_control.button_add_object.setChecked(True)
             self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
-
-            self.object_to_be_added = None
         elif option == "copy_area_camera":
             self.object_to_be_added = [obj, None, None ]
             self.pik_control.button_add_object.setChecked(True)
             self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
-            self.objects_to_be_added = None
         elif option == "add_routepoints": #add new route point here - 15
-            group_id = -1
             pos_in_grp = -1
-            idx = 0
 
+            group = obj.partof
+            pos_in_grp = group.points.index(obj)
 
-            route_container = self.level_file.get_route_container(obj.partof)
-
-            for group_idx, group in enumerate(route_container):
-                for point_idx, point in enumerate(group.points):
-                    if point is obj:
-                        group_id = group_idx
-                        pos_in_grp = point_idx
-                        break
-
-
-            self.object_to_be_added = [libkmp.RoutePoint.new_partof(obj), group_id, pos_in_grp + 1 ]
+            self.object_to_be_added = [libkmp.RoutePoint.new_partof(obj), group, pos_in_grp + 1 ]
             self.pik_control.button_add_object.setChecked(True)
             self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
-        elif option == "add_object_route":
-            new_route_group = libkmp.ObjectRoute()
-            self.level_file.routes.append(new_route_group)
-        elif option == "add_camera_route": #new camera route
-            new_route_group = libkmp.CameraRoute.new()
-            self.level_file.cameraroutes.append(new_route_group)
         elif option == "auto_route_single": #auto route single
             self.auto_route_obj(obj)
         elif option == "auto_route": #auto route group
@@ -1935,9 +1879,6 @@ class GenEditor(QMainWindow):
             self.level_file.create_respawns()
             respawn_pos = [obj.position for obj in self.level_file.respawnpoints]
             self.action_ground_objects(respawn_pos)
-            self.level_view.do_redraw()
-        elif option == "remove_unused": #remove unused object routes
-            self.level_file.remove_unused_object_routes()
             self.level_view.do_redraw()
         elif option == "copy_enemy_item": #copy enemy to item
             self.level_file.copy_enemy_to_item()
@@ -1980,30 +1921,6 @@ class GenEditor(QMainWindow):
                     else:
                         object.position.z = mean_x
 
-        elif option == "add_items_between":
-            added_item_boxes = []
-            diff_vector = objs[1].position - objs[0].position
-            diff_angle = Vector3( *objs[1].rotation.get_euler()) - Vector3( *objs[0].rotation.get_euler())
-
-            for i in range(1, 4):
-                default_item_box = libkmp.MapObject.default_item_box()
-                default_item_box.position = objs[0].position + diff_vector * ( i / 4.0)
-                default_item_box.rotation = Rotation.from_euler(Vector3( *objs[0].rotation.get_euler()) + diff_angle * ( i / 4.0) )
-
-                self.level_file.objects.objects.append(default_item_box)
-                added_item_boxes.append(default_item_box)
-
-            self.leveldatatreeview.set_objects(self.level_file)
-            return added_item_boxes
-        elif option == "add_items_between_ground":
-            to_ground = self.button_add_from_addi_options_multi(0, objs)
-            for obj in to_ground:
-                self.action_ground_spec_object(obj)
-            return
-        elif option == 1: #currently unused
-            for obj in objs:
-                if isinstance(obj, MapObject) and obj.route_info is not None:
-                    pass
         elif option == "dec_enemy_scale": #decrease scale
             for obj in objs:
                 obj.scale = max(0, obj.scale - 5)
@@ -2016,51 +1933,22 @@ class GenEditor(QMainWindow):
 
     @catch_exception
     def button_add_object(self, objid):
-        obj = libkmp.MapObject.new(objid)
-        obj_name = libkmp.OBJECTNAMES[objid]
+        obj:MapObject = libkmp.MapObject.new(objid)
 
-        route_info = load_route_info(obj_name)
-        default_params = load_default_info(obj_name)
-        if default_params:
-            defaults = [0 if x is None else deepcopy(x) for x in default_params]
-            obj.userdata = deepcopy(defaults)
+        route_info = obj.get_single_json_val("Route Info")
         if route_info == 2:
-            self.objects_to_be_added = []
-            self.object_to_be_added = None
-
-            self.objects_to_be_added.append( [obj, None, None ] )
-
+            self.level_file.create_route_for_obj(obj)
             new_route = self.level_file.get_route_for_obj(obj)
-            for i in range(2):
-                point = libkmp.RoutePoint.new()
-                point.partof = new_route
-                new_route.points.append(point)
-            new_route.points[0].position += Vector3(-500, 0, 0)
-            new_route.points[1].position += Vector3(500, 0, 0)
+            obj.route_obj = new_route
 
-            self.objects_to_be_added.append( [new_route, None, None ]  )
-
-        else:
-            self.object_to_be_added = [obj, None, None ]
+        self.object_to_be_added = [obj, None, None ]
 
         self.pik_control.button_add_object.setChecked(True)
         self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
 
     def auto_route_obj(self, obj):
-        #do object route
-        route_collec = self.level_file.get_route_container(obj)
-        if isinstance(obj, MapObject):
-            route_data = load_route_info(get_kmp_name(obj.objectid))
-        elif isinstance(obj, Camera):
-            if obj.has_route() :
-                route_data = 2
-            else:
-                route_data = -1
-        elif isinstance(obj, Area):
-            if obj.type == 3:
-                route_data = 2
-            else:
-                route_data = -1
+
+        route_data = obj.route_info()
 
         if route_data == 2:
             if obj.route_obj is None:
@@ -2075,7 +1963,6 @@ class GenEditor(QMainWindow):
         if num == 0:
             return
 
-        route_collec = self.level_file.get_route_container(obj)
         set_speed = 0
         if create:
             if isinstance(obj, (MapObject, Area) ):
@@ -2086,7 +1973,6 @@ class GenEditor(QMainWindow):
                 set_speed = 30
                 new_route_group = libkmp.CameraRoute.new()
             obj.route_obj = new_route_group
-            route_collec.append(new_route_group)
 
         if create:
             obj.route_obj.used_by.append(obj)
@@ -2114,26 +2000,29 @@ class GenEditor(QMainWindow):
 
     @catch_exception
     def action_add_object(self, x, z):
-
-        if self.object_to_be_added is None and self.objects_to_be_added is not None:
-            self.action_add_objects(x, z)
+        y = 0
+        object, group, position = self.object_to_be_added
+        #if self.editorconfig.getboolean("GroundObjectsWhenAdding") is True:
+        if isinstance(object, libkmp.Checkpoint):
+            y = object.start.y
         else:
-            y = 0
-            object, group, position = self.object_to_be_added
-            #if self.editorconfig.getboolean("GroundObjectsWhenAdding") is True:
-            if isinstance(object, libkmp.Checkpoint):
-                y = object.start.y
-            else:
-                if self.level_view.collision is not None:
-                    y_collided = self.level_view.collision.collide_ray_downwards(x, z)
-                    if y_collided is not None:
-                        y = y_collided
+            if self.level_view.collision is not None:
+                y_collided = self.level_view.collision.collide_ray_downwards(x, z)
+                if y_collided is not None:
+                    y = y_collided
 
-            self.action_add_object_3d(x, y, z)
+        self.action_add_object_3d(x, y, z)
 
     @catch_exception
     def action_add_object_3d(self, x, y, z):
+
         object, group, position = self.object_to_be_added
+        #for routed stuff, have it so that the last thing (position) is "deepcopy route"
+        #this will assume that the points in the route should be moved so that they are centered
+
+        #for camed stuff (areas only), the second one is the camera - whether to copy or not
+
+        #the thing setting the stuff does NOT change the used_by
         if position is not None and position < 0:
             position = 99999999 # this forces insertion at the end of the list
 
@@ -2178,10 +2067,7 @@ class GenEditor(QMainWindow):
                 placeobject = object.copy()
             except:
                 placeobject = deepcopy(object)
-            placeobject.position.x = x
-            placeobject.position.y = y
-            placeobject.position.z = z
-
+            placeobject.position = Vector3(x, y, z)
 
             if isinstance(object, (libkmp.EnemyPoint, ItemPoint) ):
                 # For convenience, create a group if none exists yet.
@@ -2196,203 +2082,50 @@ class GenEditor(QMainWindow):
                 if to_deal_with.num_total_points() == 255:
                     self.button_stop_adding()
             elif isinstance(object, libkmp.RoutePoint):
-                route_container = self.level_file.get_route_container(object.partof)
-                if isinstance(group, Route):
-                    placeobject.partof = group
-                    group.points.insert(position + self.points_added, placeobject)
-                else:
-                    placeobject.partof = route_container[group]
-                    route_container[group].points.insert(position + self.points_added, placeobject)
+                placeobject.partof = group
+                group.points.insert(position + self.points_added, placeobject)
                 self.points_added += 1
             elif isinstance(object, libkmp.MapObject):
                 self.level_file.objects.objects.append(placeobject)
-                placeobject.set_route_info()
-                if placeobject.route_obj is not None:
-                    placeobject.route_obj.used_by.append(placeobject)
             elif isinstance(object, libkmp.KartStartPoint):
                 self.level_file.kartpoints.positions.append(placeobject)
-                if len(self.level_file.kartpoints.positions) == 1:
-                    #copy over the thing
-                    placeobject.pole_position = self.level_file.pole_position
-                    placeobject.start_squeeze = self.level_file.start_squeeze
             elif isinstance(object, libkmp.JugemPoint):
                 self.level_file.respawnpoints.append(placeobject)
                 if group:
                     self.level_file.reassign_one_respawn(placeobject)
                 self.level_file.rotate_one_respawn(placeobject)
-            elif isinstance(object, libkmp.Area):
+            elif isinstance(placeobject, libkmp.Area):
                 if placeobject.type == 0:
                     self.level_file.replayareas.append(placeobject)
                     if placeobject.camera is not None:
                         placeobject.camera.used_by.append(placeobject)
+                        placeobject.camera.position = object.position + Vector3(3000, 2000, 0)
+                        if placeobject.camera.route_obj is not None:
+                            object.route_obj.points[0].position = placeobject.camera
+                            object.route_obj.points[1].position = placeobject.camera.position + Vector3( 0, 0, -3500)
                 else:
                     self.level_file.areas.append(placeobject)
                     if placeobject.type == 3:
                         self.auto_route_obj(placeobject)
-                        self.object_to_be_added = [object, group, position]
                     elif placeobject.type == 4:
                         placeobject.find_closest_enemypoint()
                         #assign to closest enemypoint
             elif isinstance(object, libkmp.OpeningCamera):
                 self.level_file.cameras.append(placeobject)
-            elif isinstance(object, libkmp.ReplayCamera):
-                self.level_file.replaycameras.append(placeobject)
             else:
                 raise RuntimeError("Unknown object type {0}".format(type(object)))
+
+            if hasattr(placeobject, "route_obj") and placeobject.route_obj is not None:
+                placeobject.route_obj.used_by.append(placeobject)
+                if position:
+                    for point in placeobject.route_obj.points:
+                        point.position += placeobject.position
+
             self.level_view.do_redraw()
             self.leveldatatreeview.set_objects(self.level_file)
             self.set_has_unsaved_changes(True)
 
             self.select_tree_item_bound_to(placeobject)
-
-    @catch_exception
-    def action_add_objects(self, x, z):
-        y = 0
-        if self.level_view.collision is not None:
-            y_collided = self.level_view.collision.collide_ray_downwards(x, z)
-            if y_collided is not None:
-                y = y_collided
-
-        self.action_add_objects_3d(x, y, z)
-
-    @catch_exception
-    def action_add_objects_3d(self, x, y, z):
-
-        #areas should be grounded and place at the position
-        #cameras should be +3000 on x, +3000 on y
-        #routes should be +3500 on x, +3000 on y
-
-        #place all down as normal, and then do adjustments
-
-
-        placed_objects = []
-
-        added_area = -1
-        for object, group, position in self.objects_to_be_added:
-            if isinstance(object, libkmp.Area):
-                added_area = object.type
-
-        for object, group, position in self.objects_to_be_added:
-
-            if position is not None and position < 0:
-                position = 99999999 # this forces insertion at the end of the list
-
-            if isinstance(object, libkmp.Checkpoint):
-                if len(self.last_position_clicked) == 1:
-                    placeobject = deepcopy(object)
-
-                    x1, y1, z1 = self.last_position_clicked[0]
-                    placeobject.start = Vector3(x1, y1, z1)
-                    placeobject.end = Vector3(x, y, z)
-
-                    self.last_position_clicked = []
-                    self.level_file.checkpoints.groups[group].points.insert(position + self.points_added, placeobject)
-                    self.points_added += 1
-                    self.level_view.do_redraw()
-                    self.set_has_unsaved_changes(True)
-                    self.leveldatatreeview.set_objects(self.level_file)
-                else:
-                    self.last_position_clicked = [(x, y, z)]
-
-            else:
-                try:
-                    placeobject = object.copy()
-                except:
-                    placeobject = deepcopy(object)
-                placed_objects.append(placeobject)
-
-                if hasattr(placeobject, "position"):
-                    placeobject.position = Vector3(x, y, z)
-
-                if isinstance(object, (libkmp.EnemyPoint, libkmp.ItemPoint)):
-                    to_deal_with = self.level_file.get_to_deal_with(object)
-                    to_deal_with.groups[group].points.insert(position + self.points_added, placeobject)
-                    self.points_added += 1
-                    if to_deal_with.num_total_points() == 255:
-                        self.button_stop_adding()
-
-                elif isinstance(object, libkmp.RoutePoint):
-                    route_container = self.level_file.get_route_container(object.partof)
-                    if isinstance(group, Route):
-                        placeobject.partof = group
-                        group.points.insert(position + self.points_added, placeobject)
-                    else:
-                        placeobject.partof = route_container[group]
-                        route_container[group].points.insert(position + self.points_added, placeobject)
-                    self.points_added += 1
-                elif isinstance(object, libkmp.MapObject):
-                    self.level_file.objects.objects.append(placeobject)
-                elif isinstance(object, libkmp.KartStartPoint):
-                    self.level_file.kartpoints.positions.append(placeobject)
-                elif isinstance(object, libkmp.JugemPoint):
-                    self.level_file.respawnpoints.append(placeobject)
-                    if group:
-                        self.level_file.reassign_one_respawn(object)
-                elif isinstance(object, libkmp.Area):
-                    if object.type == 0:
-                        self.level_file.replayareas.append(placeobject)
-                    else:
-                        self.level_file.areas.append(placeobject)
-                elif isinstance(object, libkmp.OpeningCamera):
-                    self.level_file.cameras.append(placeobject)
-                elif isinstance(object, libkmp.ReplayCamera):
-                    self.level_file.replaycameras.append(placeobject)
-                elif isinstance(object, Route):
-                    if added_area == 0:
-                        self.level_file.replaycameraroutes.append(placeobject)
-                    else:
-                        route_container = self.level_file.get_route_container(object)
-                        route_container.append(placeobject)
-                else:
-                    raise RuntimeError("Unknown object type {0}".format(type(object)))
-
-        for object in placed_objects:
-            if isinstance(object, libkmp.OpeningCamera):
-                object.position.y += 1000
-                if object.type in routed_cameras:
-                    object.route_obj = self.level_file.cameraroutes[-1]
-                    object.route_obj.used_by.append(object)
-                    for point in object.route_obj.points:
-                        point.position = point.position + object.position
-                        self.action_ground_spec_object(point)
-            if isinstance(object, libkmp.ReplayCamera):
-                object.position.y += 1000
-                object.position.x += 3000
-                if object.type in routed_cameras:
-                    object.route_obj = self.level_file.replaycameraroutes[-1]
-                    object.route_obj.used_by.append(object)
-
-                    object.route_obj.points[0].position = object.position
-                    object.route_obj.points[1].position = Vector3( object.position.x, object.position.y, object.position.z - 3500)
-            if isinstance(object, libkmp.Area):
-                if object.type == 0:
-                    object.camera = self.level_file.replaycameras[-1]
-                    self.level_file.replaycameras[-1].used_by.append(object)
-                elif object.type == 3:
-                    object.route_obj =self.level_file.routes[-1]
-                    object.route_obj.used_by.append(object)
-                    for point in object.route_obj.points:
-                        point.position = point.position + object.position
-                        self.action_ground_spec_object(point)
-                elif object.type == 9:
-                    object.position.z += 300
-            if isinstance(object, Route):
-
-                for point in object.points:
-                    self.action_ground_spec_object(point)
-            if isinstance(object, libkmp.MapObject):
-
-                object.route_obj = self.level_file.routes[-1]
-                object.route_obj.used_by.append(object)
-
-                for point in object.route_obj.points:
-                    point.position = point.position + object.position
-                    self.action_ground_spec_object(point)
-
-        self.pik_control.update_info()
-        self.level_view.do_redraw()
-        self.leveldatatreeview.set_objects(self.level_file)
-        self.set_has_unsaved_changes(True)
 
     @catch_exception
     def action_move_objects(self, deltax, deltay, deltaz):
@@ -2419,7 +2152,7 @@ class GenEditor(QMainWindow):
     @catch_exception
     def action_move_objects_to(self, posx, posy, posz):
         #get the average position, which is just the pos, huh.
-        #so then that's the 
+        #so then that's the
         self.level_view.gizmo.move_to_average(self.level_view.selected_positions)
         orig_avg = self.level_view.gizmo.position.copy()
         new_avg = Vector3(posx, posz, -posy)
@@ -2498,7 +2231,7 @@ class GenEditor(QMainWindow):
                 self.connect_start = []
                 self.level_view.connecting_start = []
                 for obj in self.level_view.selected:
-                    if isinstance(sel_obj, MapObject) and sel_obj.route_info is None:
+                    if isinstance(sel_obj, MapObject) and sel_obj.route_info() == 0:
                         continue
                     if isinstance(sel_obj, Area) and sel_obj.type not in [0, 3, 4]:
                         continue
@@ -2627,7 +2360,6 @@ class GenEditor(QMainWindow):
                 self.level_file.itempointgroups.remove_point(obj)
 
             elif isinstance(obj, libkmp.RoutePoint):
-                #route_container = self.level_file.get_route_container(obj.partof)
                 #do not allow used route to fall under 2 points
                 not_used = not obj.partof.used_by
                 not_used |= all( (x in self.level_view.selected) for x in obj.partof.used_by )
@@ -2635,11 +2367,12 @@ class GenEditor(QMainWindow):
                     obj.partof.points.remove(obj)
 
                     if len(obj.partof.points) == 0:
-                        route_container = self.level_file.get_route_container(obj.partof)
-
                         for object in obj.partof.used_by:
                             object.route_obj = None
-                        route_container.remove(obj.partof)
+                #see if a route point is used
+                for mapobject in self.level_file.objects.objects:
+                    if mapobject.routepoint == obj:
+                        mapobject.reassign_routepoint()
 
             elif isinstance(obj, libkmp.Checkpoint):
                 self.level_file.checkpoints.remove_point(obj)
@@ -2663,11 +2396,8 @@ class GenEditor(QMainWindow):
                 self.level_file.remove_group(obj)
 
             elif isinstance(obj, libkmp.Route):
-                route_container = self.level_file.get_route_container(obj)
-
                 for object in obj.used_by:
                     object.route_obj = None
-                route_container.remove(obj)
 
         self.level_view.selected = []
         self.level_view.selected_positions = []
@@ -2731,15 +2461,16 @@ class GenEditor(QMainWindow):
                 obj.partof = None
             if hasattr(obj, 'route_obj'):
                 object_to_routeobj[obj] = obj.route_obj
-                obj.route = obj.set_route( self.level_file.cameras.get_routes() + self.level_file.replayareas.get_routes()  )
+                route_collec = self.level_file.get_route_collec_for(obj)
+                obj.route = obj.set_route( route_collec  )
                 obj.route_obj = None
             if hasattr(obj, 'enemypoint'):
                 object_to_enemypoint[obj] = obj.enemypoint
-                obj.enemypointid = obj.set_enemypointid()
+                obj.enemypointid = obj.set_enemypointid(self.level_file.enemypointgroups)
                 obj.enemypoint = None
             if hasattr(obj, 'camera'):
                 object_to_camera[obj] = obj.camera
-                obj.cameraid = obj.set_camera()
+                obj.cameraid = obj.set_camera(self.level_file.replayareas.get_cameras())
                 obj.camera = None
 
             if hasattr(obj, '__dict__'):
@@ -2798,43 +2529,38 @@ class GenEditor(QMainWindow):
         if isinstance(selected_obj, libkmp.Route):
             target_route = selected_obj
         elif isinstance(selected_obj, libkmp.RoutePoint):
-            for route in self.level_file.routes:
+            for route in self.level_file.objects.get_routes():
                 if selected_obj in route.points:
                     target_route = route
                     break
-            for route in self.level_file.cameraroutes:
+            for route in self.level_file.cameras.get_routes():
                 if selected_obj in route.points:
                     target_route = route
                     break
-
+            for route in self.level_file.replayareas.get_routes():
+                if selected_obj in route.points:
+                    target_route = route
+                    break
+            for route in self.level_file.areas.get_routes():
+                if selected_obj in route.points:
+                    target_route = route
+                    break
         added = []
 
         for obj in copied_objects:
-            if isinstance(obj, libkmp.Route):
-                obj.used_by = []
-                route_container = self.level_file.get_route_container(obj.partof)
-                route_container.append(obj)
-                for point in obj.points:
-                    point.partof = obj
-
             # Objects in group objects.
-            elif isinstance(obj, libkmp.KMPPoint):
+            if isinstance(obj, libkmp.KMPPoint):
                 to_deal_with = self.level_file.get_to_deal_with(obj)
                 if target_path is None:
                     if not self.level_file.enemypointgroups.groups:
                         self.level_file.enemypointgroups.groups.append(libkmp.EnemyPointGroup.new())
                     target_path = self.level_file.enemypointgroups.groups[-1]
 
-
                 target_path.points.append(obj)
 
             elif isinstance(obj, libkmp.RoutePoint):
                 if target_route is None:
-                    if not self.level_file.routes:
-                        new_route = self.level_file.get_route_for_obj(obj)
-                        route_container = self.level_file.get_route_container(new_route)
-                        route_container.append(new_route)
-                    target_route = self.level_file.routes[-1]
+                    target_route = self.level_file.get_route_for_obj(obj)
 
                 if target_route is not None:
                     obj.partof = target_route
@@ -2843,8 +2569,8 @@ class GenEditor(QMainWindow):
             # Autonomous objects.
             elif isinstance(obj, libkmp.MapObject):
                 self.level_file.objects.objects.append(obj)
-                if obj.route != -1:
-                    obj.route_obj = self.level_file.routes[obj.route]
+                if obj.route > -1:
+                    obj.route_obj = self.level_file.get_route_collec_for(obj)[obj.route]
             elif isinstance(obj, libkmp.KartStartPoint):
                 self.level_file.kartpoints.positions.append(obj)
             elif isinstance(obj, libkmp.JugemPoint):
@@ -2853,11 +2579,19 @@ class GenEditor(QMainWindow):
             elif isinstance(obj, libkmp.Area):
                 if obj.type == 0:
                     self.level_file.replayareas.append(obj)
+                    if obj.cameraid > -1:
+                        obj.camera = self.level_file.replayareas.get_cameras()[obj.cameraid]
                 else:
                     self.level_file.areas.append(obj)
+                    if obj.type == 3 and obj.route > -1:
+                        obj.route_obj = self.level_file.get_route_collec_for(obj)[obj.route]
+                    elif obj.type ==4 and obj.enemypointid > -1:
+                        obj.enemypoint = self.level_file.enemypointgroups.get_point_from_index[obj.enemypointid]
             elif isinstance(obj, libkmp.Camera):
                 obj.used_by = []
                 self.level_file.cameras.append(obj)
+                if obj.type == 3 and obj.route > -1:
+                    obj.route_obj = self.level_file.get_route_collec_for(obj)[obj.route]
             elif isinstance(obj, libkmp.CannonPoint):
                 max_cannon_id = -1
                 for point in self.level_file.cannonpoints:
@@ -2921,15 +2655,6 @@ class GenEditor(QMainWindow):
                         child = self.leveldatatreeview.checkpointgroups.child(i)
                         item = get_treeitem(child, currentobj)
 
-                        if item is not None:
-                            break
-
-                elif False and isinstance(currentobj, libkmp.RoutePoint):
-
-                    to_look_through = self.leveldatatreeview.objectroutes if isinstance(currentobj.partof, libkmp.ObjectRoute) else self.leveldatatreeview.cameraroutes
-                    for i in range(to_look_through.childCount()):
-                        child = to_look_through.child(i)
-                        item = get_treeitem(child, currentobj)
                         if item is not None:
                             break
 
@@ -3261,8 +2986,8 @@ class GenEditor(QMainWindow):
                 self.action_ground_spec_object(new_copy)
 
                 #deal with route:
-                self.auto_route_obj(new_copy)
-                if new_copy.route_obj:
+                if self.connect_start.route_obj:
+                    self.level_file.create_route_for_obj(new_copy, True, )
                     new_route = new_copy.route_obj.copy()
                     new_route.used_by.append(new_copy)
                     for i, point in enumerate(new_copy.route_obj.points):
@@ -3270,7 +2995,6 @@ class GenEditor(QMainWindow):
                         new_route.points[i].position = new_copy.position + offset
                         self.action_ground_spec_object(point)
                     new_copy.route_obj = new_route
-                    self.level_file.routes.append(new_route)
                 self.level_file.objects.objects.append(new_copy)
                 #copy the route, if the route is type 2
                 #place the object
@@ -3313,24 +3037,16 @@ class GenEditor(QMainWindow):
                 self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
             #create a new path for the object/camera
             elif isinstance(obj_type, (MapObject, Camera) ):
+                new_route = self.level_file.get_route_for_obj(obj_type)
                 for obj in self.connect_start:
-                    if obj.route_obj is not None :
-                        if isinstance(obj, MapObject ):
-                            self.button_add_from_addi_options("add_object_route", obj)
-                        elif isinstance(obj, Camera ):
-                            self.button_add_from_addi_options("add_camera_route", obj)
+                    if obj.route_info():
+                        obj.route_obj = new_route
+                        new_route.used_by.append(obj)
+                    routepoint_setting = obj.get_routepoint_idx()
+                    if routepoint_setting is not None:
+                        obj.userdata[routepoint_setting] = 0
 
-                        route_container = self.level_file.get_route_container(obj)
-                        new_group = route_container[-1]
-
-                        obj.route_obj = new_group
-                        new_group.used_by.append(obj)
-
-                        routepoint_setting = obj.get_routepoint_idx()
-                        if routepoint_setting  is not None:
-                            obj.userdata[routepoint_setting] = 0
-
-                        self.button_add_from_addi_options("add_routepoints_end", obj)
+                    self.button_add_from_addi_options("add_routepoints_end", obj)
         elif len(self.level_view.selected) != 1:
             return
         else: #len(self.level_view.selected) == 1
@@ -3379,9 +3095,12 @@ class GenEditor(QMainWindow):
                     elif area.type == 4 and isinstance(endpoint, EnemyPoint):
                         area.enemypoint = endpoint
             elif isinstance(endpoint, Camera) and isinstance(obj_type, Camera):
+                opening_cams = self.level_file.get_opening_cams()
+                end_in_seq = endpoint in opening_cams
                 for camera in self.connect_start:
                     if (endpoint in self.level_file.cameras) and (camera in self.level_file.cameras):
-                        camera.nextcam_obj = endpoint
+                        if not((camera in opening_cams) and end_in_seq):
+                            camera.nextcam_obj = endpoint
 
     def set_and_start_copying(self):
         #print(self.level_view.selected)
@@ -3391,41 +3110,29 @@ class GenEditor(QMainWindow):
             self.copy_current_obj()
 
     def copy_current_obj(self, new_route = True):
-        if self.obj_to_copy is not None:
-            self.object_to_be_added = None
+        if self.obj_to_copy is None:
+            return
+        self.object_to_be_added = None
 
-            map_check = isinstance(self.obj_to_copy, MapObject) and self.obj_to_copy.route_info is not None
-            cam_check = isinstance(self.obj_to_copy, Camera) and self.obj_to_copy.type in routed_cameras
-            area_check = isinstance(self.obj_to_copy, Area) and self.obj_to_copy.type == 3
-            #if isinstance(self.obj_to_copy, libkmp.MapObject) and self.obj_to_copy.route_info == 2:
-            if new_route and ( map_check or cam_check or area_check):
+        map_check = isinstance(self.obj_to_copy, MapObject) and self.obj_to_copy.route_info() > 0
+        cam_check = isinstance(self.obj_to_copy, Camera) and self.obj_to_copy.route_info() > 0
+        area_check = isinstance(self.obj_to_copy, Area) and self.obj_to_copy.route_info() > 0
+        if new_route and ( map_check or cam_check or area_check):
+            new_route = self.level_file.get_route_for_obj(self.obj_to_copy)
 
-                self.objects_to_be_added = []
-                new_route = self.level_file.get_route_for_obj(self.obj_to_copy)
-                route_container = self.level_file.get_route_container(self.obj_to_copy)
-
-                if self.obj_to_copy.route_obj is not None :
-                    for point in self.obj_to_copy.route_obj .points:
-                        new_point = libkmp.RoutePoint.new()
-                        new_point.partof = new_route
-                        new_point.position = point.position - self.obj_to_copy.position
-                        new_route.points.append(new_point)
-                else:
-                    for i in range(2):
-                        point = libkmp.RoutePoint.new()
-                        new_point.partof = new_route
-                        new_route.points.append(point)
-
-                self.objects_to_be_added.append( [new_route, None, None ]  )
-                new_object = self.obj_to_copy.copy()
-                self.objects_to_be_added.append( [new_object, None, None ]  )
-
+            if self.obj_to_copy.route_obj is not None :
+                self.level_file.create_route_for_obj(self.obj_to_copy, True, self.obj_to_copy.route_obj.points)
             else:
-                self.object_to_be_added = [self.obj_to_copy, None, None ]
-            self.pik_control.button_add_object.setChecked(True)
-            self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
-        #will use self.obj_to_copy
+                self.level_file.create_route_for_obj(self.obj_to_copy, True, None)
 
+            new_object = self.obj_to_copy.copy()
+            new_object.route_obj = new_route
+            self.object_to_be_added = [new_object, None, None ]
+
+        else:
+            self.object_to_be_added = [self.obj_to_copy, None, None ]
+        self.pik_control.button_add_object.setChecked(True)
+        self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
 
     def auto_generation(self):
         self.level_file.auto_generation()

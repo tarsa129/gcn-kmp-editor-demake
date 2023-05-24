@@ -1,11 +1,24 @@
-came - camera viewing fixes + replay
-completely break reliance on lists of routes
-better copying + camera splitting (only based on usage)
+bugfixes / refactorings / better ways to handle stuff:
+remove used_by?
+make camera types 1 and 2 a "route optional" camera
+edit camera / area types boxes
+create routes for objects when switching ids
+
+updates:
 improve json files
-add arrow keys for "next point" in route
 error analyzer
+came - camera viewing fixes + replay (all types of cameras)
+
+new features:
+add arrow keys for "next point" in route
 load + collide on gobj collision files
 add option to select x to y points
-
 create dialog for auto generation and auto cleanup
 brres loading
+
+notes:
+have it so that all objects can have a route_obj
+BUT, it only gets showed / saved if the object is routed
+
+add check to see if people actually add at least two route points
+

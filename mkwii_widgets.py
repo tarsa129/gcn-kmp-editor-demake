@@ -681,12 +681,12 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
             pixels = glReadPixels(mouse_pos.x(), self.canvas_height - mouse_pos.y(), 1, 1, GL_RGB, GL_UNSIGNED_BYTE)
             gizmo_hover_id = pixels[2]
 
-        objectroutes = []
+        objectroutes = self.level_file.objects.get_routes()
         cameraroutes = self.level_file.cameras.get_routes()
         replaycameraroutes = self.level_file.replayareas.get_routes()
-        arearoutes = []
+        arearoutes = self.level_file.areas.get_routes()
 
-        replaycameras = []
+        replaycameras = self.level_file.replayareas.get_cameras()
 
         #print(self.gizmo.position, campos)
         vismenu: FilterViewMenu = self.visibility_menu
@@ -775,7 +775,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
                 if vismenu.objects.is_selectable():
                     i = 0
-                    for route in self.level_file.routes:
+                    for route in objectroutes:
                         for obj in route.points:
                             objlist.append(
                                 ObjectSelectionEntry(obj=obj,
@@ -845,7 +845,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                 if vismenu.areas.is_selectable():
 
                     i = 0
-                    for route in self.level_file.arearoutes:
+                    for route in arearoutes:
                         for obj in route.points:
                             objlist.append(
                                 ObjectSelectionEntry(obj=obj,
@@ -874,7 +874,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                         (vismenu.kartstartpoints.is_selectable(), self.level_file.kartpoints.positions),
                         (vismenu.areas.is_selectable(), self.level_file.areas),
                         (vismenu.replaycameras.is_selectable(), self.level_file.replayareas),
-                        (vismenu.replaycameras.is_selectable(), self.level_file.replaycameras),
+                        (vismenu.replaycameras.is_selectable(), replaycameras),
                         (vismenu.respawnpoints.is_selectable(), self.level_file.respawnpoints),
                         (vismenu.cannonpoints.is_selectable(), self.level_file.cannonpoints),
                         (vismenu.missionsuccesspoints.is_selectable(), self.level_file.missionpoints)
@@ -1473,7 +1473,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
                 objs_to_highlight = set()
 
-                for i, route in enumerate(self.level_file.routes):
+                for i, route in enumerate(objectroutes):
 
                     selected = route in routes_to_highlight
 
@@ -1603,25 +1603,24 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
                 #render cameras
                 cameras_to_circle = [ area.camera for area in self.level_file.replayareas if (area in select_optimize)  ]
-                for object in self.level_file.replaycameras:
-                    for i, object in enumerate(self.level_file.replaycameras):
+                for i, object in enumerate(replaycameras):
 
-                        self.models.render_generic_position_rotation_colored("camera",
-                                                                    object.position, object.rotation,
-                                                                    object in select_optimize)
+                    self.models.render_generic_position_rotation_colored("camera",
+                                                                object.position, object.rotation,
+                                                                object in select_optimize)
 
-                        if object in cameras_to_circle:
-                            glColor3f(0.0, 0.0, 1.0)
-                            self.models.draw_sphere(object.position, 600)
+                    if object in cameras_to_circle:
+                        glColor3f(0.0, 0.0, 1.0)
+                        self.models.draw_sphere(object.position, 600)
 
-                        if object in select_optimize and object.type == 4:
-                            glColor3f(0.0, 1.0, 0.0)
-                            self.models.draw_sphere(object.position3, 300)
-                            glColor3f(1.0, 0.0, 0.0)
-                            self.models.draw_sphere(object.position2, 300)
+                    if object in select_optimize and object.type == 4:
+                        glColor3f(0.0, 1.0, 0.0)
+                        self.models.draw_sphere(object.position3, 300)
+                        glColor3f(1.0, 0.0, 0.0)
+                        self.models.draw_sphere(object.position2, 300)
 
-                routes_to_highlight = [camera.route_obj for camera in self.level_file.replaycameras if camera in select_optimize]
-                routes_to_circle = [camera.route_obj for camera in self.level_file.replaycameras if camera in cameras_to_circle]
+                routes_to_highlight = [camera.route_obj for camera in replaycameras if camera in select_optimize]
+                routes_to_circle = [camera.route_obj for camera in replaycameras if camera in cameras_to_circle]
                 for i, route in enumerate(replaycameraroutes):
                     selected = route in routes_to_highlight
 

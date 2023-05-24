@@ -740,9 +740,7 @@ class DataEditor(QtWidgets.QWidget):
                 if hasattr(obj.widget, "parent") and obj.widget.parent() is not None:
                     obj.widget.parent().sort()
                 obj.widget.setSelected(True)
-            if isinstance(obj, MapObject):
-                obj.set_route_info()
-            elif isinstance(obj, Camera):
+            if isinstance(obj, Camera):
                 obj.handle_route_change()
 
     def update_vector3(self, attr, vec):
@@ -761,8 +759,6 @@ def create_setter_list(lineedit, bound_to, attribute, index):
         mainattr[index] = int(text)
 
     return input_edited
-
-
 
 def create_setter(lineedit, bound_to, attribute, subattr, update3dview, isFloat):
     if isFloat:

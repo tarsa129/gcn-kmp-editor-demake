@@ -5,7 +5,7 @@
   "FirstItemPoint": [0.5, 0.35, 0.35, 1.0],
 
   "AreaRoutes":   [0.0, 0.0, 1.0, 1.0],
-  "CameraRoutes": [0.8, 0.0, 0.8, 1.0],
+  "CameraRoutes": [0.349, 0.316, 0.267, 1.0],
   "UnusedRoutes": [0.7, 0.7, 0.7, 1.0],
   "CheckpointLeft": [1.0, 0.0, 0.0, 1.0],
   "CheckpointRight": [0.1, 0.1, 0.8, 1.0],

@@ -419,14 +419,10 @@ class LevelDataTreeView(QTreeWidget):
         self.respawnpoints = self._add_group("Respawn Points")
 
         self.objects = self._add_group("Objects", ObjectGroupObjects)
-        #self.objectroutes = self._add_group("Object Paths")
 
         self.areas = self._add_group("Areas")
         self.replayareas = self._add_group("Replay Cameras")
         self.cameras = self._add_group("Cameras")
-        #self.cameraroutes = self._add_group("Camera Paths")
-        #self.cameras.set_name()
-
         self.cannons = self._add_group("Cannon Points")
         self.missions = self._add_group("Mission Success Points")
 
@@ -532,8 +528,6 @@ class LevelDataTreeView(QTreeWidget):
         self.enemyroutes.remove_children()
         self.itemroutes.remove_children()
         self.checkpointgroups.remove_children()
-        #self.objectroutes.remove_children()
-        #self.cameraroutes.remove_children()
         self.objects.remove_children()
         self.kartpoints.remove_children()
         self.areas.remove_children()
@@ -562,42 +556,8 @@ class LevelDataTreeView(QTreeWidget):
         # Preserve the expansion state of the top-level items that can have nested groups.
         enemyroutes_expansion_states = self._get_expansion_states(self.enemyroutes)
         checkpointgroups_expansion_states = self._get_expansion_states(self.checkpointgroups)
-        #routes_expansion_states = self._get_expansion_states(self.objectroutes)
-        #routes_expansion_states = self._get_expansion_states(self.cameraroutes)
 
         self.reset()
-        """
-        for group in kmpdata.enemypointgroups.groups:
-            group_item = EnemyPointGroup(self.enemyroutes, group)
-
-            for point in group.points:
-                point_item = EnemyRoutePoint(group_item, "Enemy Route Point", point)
-
-        for group in kmpdata.itempointgroups.groups:
-            group_item = ItemPointGroup(self.itemroutes, group)
-
-            for point in group.points:
-                point_item = ItemRoutePoint(group_item, "Item Route Point", point)
-
-        for group in kmpdata.checkpoints.groups:
-            group_item = CheckpointGroup(self.checkpointgroups, group)
-
-            for point in group.points:
-                point_item = Checkpoint(group_item, "Checkpoint", point)
-
-        for route in kmpdata.routes:
-            route_item = ObjectPointGroup(self.objectroutes, route)
-
-            for point in route.points:
-                point_item = ObjectRoutePoint(route_item, "Object route point", point)
-
-        for route in kmpdata.cameraroutes:
-            route_item = CameraPointGroup(self.cameraroutes, route)
-
-            for point in route.points:
-                point_item = CameraRoutePoint(route_item, "Camera route point", point)
-
-        """
 
         for object in kmpdata.objects.objects:
             object_item = ObjectEntry(self.objects, "Object", object)
@@ -623,8 +583,6 @@ class LevelDataTreeView(QTreeWidget):
         self._set_expansion_states(self.enemyroutes, enemyroutes_expansion_states)
         self._set_expansion_states(self.itemroutes, enemyroutes_expansion_states)
         self._set_expansion_states(self.checkpointgroups, checkpointgroups_expansion_states)
-        #self._set_expansion_states(self.objectroutes, routes_expansion_states)
-        #self._set_expansion_states(self.cameraroutes, routes_expansion_states)
 
         # And restore previous selection.
         if selected_item_indexes:
@@ -656,8 +614,6 @@ class LevelDataTreeView(QTreeWidget):
         self.enemyroutes.bound_to = levelfile.enemypointgroups
         self.itemroutes.bound_to = levelfile.itempointgroups
         self.checkpointgroups.bound_to = levelfile.checkpoints
-        #self.objectroutes.bound_to = levelfile.routes
-        #self.cameraroutes.bound_to = levelfile.cameraroutes
         self.objects.bound_to = levelfile.objects
         self.kartpoints.bound_to = levelfile.kartpoints
         levelfile.kartpoints.widget = self.kartpoints

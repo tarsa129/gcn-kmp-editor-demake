@@ -185,8 +185,8 @@ class ErrorAnalyzer(QDialog):
 
         # Validate path id in objects
         for object in kmp.objects.objects:
-            if object.route_info is not None and object.route_obj is None:
-                write_line("Map object {0} needs a route.".format( get_kmp_name(object.objectid)))
+            if object.route_info() > 0 and object.route_obj is None:
+                write_line("Object {0} needs a route.".format( get_kmp_name(object.objectid)))
         # Check camera indices in areas
         for i, area in enumerate(kmp.replayareas):
             if area.camera is None:
