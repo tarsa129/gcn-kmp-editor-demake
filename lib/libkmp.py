@@ -8,6 +8,7 @@ from io import BytesIO
 from copy import deepcopy
 from scipy.spatial.transform import Rotation as R
 import os
+from collections import defaultdict
 
 
 import numpy
@@ -1113,21 +1114,18 @@ class Route(object):
         self.smooth = 0
         self.cyclic = 0
 
-        self.used_by = []
-
     @classmethod
     def new(cls, obj = None):
         route = cls ()
         if obj is not None:
             point1 = RoutePoint.new()
-            point1.position = obj.position
+            point1.position = obj.position.copy()
             route.points.append(point1)
 
             point2 = RoutePoint.new()
             point2.position = obj.position + Vector3(2000, 0, 0)
             route.points.append(point2)
 
-            route.used_by.append(obj)
         return route
 
     def copy(self):
@@ -1160,10 +1158,6 @@ class Route(object):
             new_route.points = self.points
         new_route.smooth = self.smooth
         new_route.cyclic = self.cyclic
-        if deep_copy:
-            new_route.used_by = []
-        else:
-            new_route.used_by = self.used_by
 
         return new_route
 
@@ -1210,21 +1204,23 @@ class Route(object):
 class ObjectRoute(Route):
     def __init__(self):
         super().__init__()
-        self.type = 0
 
 class CameraRoute(Route):
     def __init__(self):
         super().__init__()
-        self.type = 1
 
 class AreaRoute(Route):
     def __init__(self):
         super().__init__()
-        self.type = 2
 
     @classmethod
     def new(cls):
         return cls()
+
+class ReplayCameraRoute(Route):
+     def __init__(self):
+        super().__init__()
+
 
 # Section 4
 # Route point for use with routes from section 3
@@ -1747,18 +1743,7 @@ class Areas(ObjectContainer):
     def get_type(self, area_type):
         return [area for area in self if area.type == area_type]
 
-    def remove_area(self, area : Area):
-        if area.camera is not None:
-            self.camera.used_by.remove(self)
-            if len(self.camera.used_by) == 0:
-                #delete the camera
-                self.remove_camera(self.camera)
 
-        if area.route_obj is not None:
-            self.route_obj.used_by.remove(self)
-            if len(self.route_obj.used_by) == 0:
-                self.level_file.arearoutes.remove(self.route_obj)
-        self.remove(area)
 
     def remove_invalid(self):
         invalid_areas = [area for area in self if area.type < 0 or area.type > 10]
@@ -1849,7 +1834,6 @@ class Camera(object):
         self.camduration = 0
 
         self.widget = None
-        self.used_by = []
 
     @classmethod
     def new(cls):
@@ -1911,27 +1895,21 @@ class Camera(object):
         nextcam_obj = self.nextcam_obj
         route_obj = self.route_obj
         widget = self.widget
-        used_by = self.used_by
 
         self.nextcam_obj = None
         self.route_obj = None
         self.widget = None
-        self.used_by = None
-
         new_camera = deepcopy(self)
 
         self.nextcam_obj = nextcam_obj
         self.route_obj = route_obj
         self.widget = widget
-        self.used_by = used_by
 
         new_camera.nextcam_obj = nextcam_obj
         if copyroute:
             new_camera.route_obj = route_obj.copy()
-            new_camera.route_obj.used_by.append(new_camera)
         else:
             new_camera.route_obj = route_obj
-            route_obj.used_by.append(new_camera)
 
 
         return new_camera
@@ -2395,42 +2373,55 @@ class KMP(object):
 
     def fix_file(self):
         return_string = ""
-
+        #change to be a map or something
         """take care of routes for objects/camera/areas"""
         #set all the used by stuff for routes
+
+        routes_used_by = {}
+
+        def add_to_map(dict, key, value):
+            curr_val = dict.get(key, [])
+            curr_val.append(value)
+            dict[key] = curr_val
+
         for object in self.objects.objects:
             if object.route_info() > 0:
                 if object.route > -1 and object.route < len(self.routes):
-                    self.routes[object.route].used_by.append(object)
+                    route = self.routes[object.route]
+                    add_to_map(routes_used_by, route, object)
                 elif object.route >= len(self.routes):
                     return_string += "Object {0} references route {1}, which does not exist. The reference will be removed.\n".format(get_kmp_name(object.objectid), object.route)
 
         for i, camera in enumerate(self.cameras):
             if camera.route != -1 and camera.route < len(self.routes):
-                self.routes[camera.route].used_by.append(camera)
+                route = self.routes[camera.route]
+                add_to_map(routes_used_by, route, camera)
             elif camera.route >= len(self.routes):
                 return_string += "Camera {0} references route {1}, which does not exist. The reference will be removed.\n".format(i, camera.route)
 
+        cameras_used_by = {}
         for i, area in enumerate(self.areas):
             if area.type == 0:
                 if area.cameraid != -1 and area.cameraid < len(self.cameras):
-                    self.cameras[area.cameraid].used_by.append(area)
+                    camera = self.routes[area.cameraid]
+                    add_to_map(cameras_used_by, camera, area)
                 elif area.cameraid >= len(self.cameras):
                     return_string += "Area {0} references camera {1}, which does not exist. The reference will be removed.\n".format(i, area.cameraid)
                     area.cameraid = -1
             elif area.type == 3:
                 if area.route != -1 and area.route < len(self.routes):
-                    self.routes[area.route].used_by.append(area)
+                    route = self.routes[area.route]
+                    add_to_map(routes_used_by, route, area)
                 elif area.route >= len(self.routes):
                     return_string += "Area {0} references route {1}, which does not exist. The reference will be removed.\n".format(i, area.route)
 
         #copy routes as necessary
         to_split = []
-        for i, route in enumerate(self.routes):
+        for i, (route, value) in enumerate(routes_used_by.items()):
             has_object = False
             has_camera = False
             has_area = False
-            for object in route.used_by:
+            for object in value:
                 if isinstance(object, MapObject):
                     has_object = True
                 elif isinstance(object, Camera):
@@ -2448,14 +2439,13 @@ class KMP(object):
             for objs in (cameras_usedby, objects_usedby, areas_usedby):
                 if objs:
                     new_route = route.copy()
-                    new_route.used_by = objs
-                    self.routes.append(new_route)
-            self.routes.remove(route)
+                    routes_used_by[new_route].extend(objs)
+            routes_used_by.clear(route)
 
         #set route_obj and partof
-        for route in self.routes:
-            for object in route.used_by:
-                object.route_obj = route
+        for i, (route, value) in enumerate(routes_used_by.items()):
+            for obj in value:
+                obj.route_obj = route
             for point in route.points:
                 point.partof = route
 
@@ -2551,7 +2541,6 @@ class KMP(object):
             new_camera = ReplayCamera.new(1)
             new_camera.position = area.position + Vector3(2000, 0, 0)
             area.camera = new_camera
-            new_camera.used_by = new_camera
 
         self.cameras.to_opening()
 
@@ -2948,6 +2937,8 @@ class KMP(object):
             group.nextgroup = [self.itempointgroups.groups[next] for next in group.nextgroup]
 
     def get_route_for_obj(self, obj):
+        if isinstance(obj, (ReplayCameraRoute, ReplayCamera)):
+            return ReplayCameraRoute()
         if isinstance(obj, (CameraRoute, Camera) ):
             return CameraRoute()
         elif isinstance(obj, (AreaRoute, Area)):
@@ -2956,6 +2947,8 @@ class KMP(object):
             return ObjectRoute()
 
     def create_route_for_obj(self, obj, add_points=False, points_to_diff=None):
+        if obj.route_info() < 1 or obj.route_obj is not None:
+            return
         obj.route_obj = self.get_route_for_obj(obj)
         if add_points and points_to_diff:
             for point in points_to_diff:
@@ -2970,30 +2963,11 @@ class KMP(object):
                 obj.route_obj.points.append(point)
             obj.route_obj.points[0].position += obj.rotation.get_vectors[2] * 500
             obj.route_obj.points[1].position += obj.rotation.get_vectors[2] * -500
-        if isinstance(obj, (Area, Camera)):
+        if add_points and isinstance(obj, (Area, Camera)):
             for point in obj.route_obj.points[:-1]:
                 point.unk1 = 30
             if isinstance(obj, Area):
                 obj.route_obj.points[1].unk1 = 30
-
-    def remove_unused_general_route(self, container):
-        to_remove = []
-        for i, route in enumerate(container):
-            if len(route.used_by) == 0:
-                to_remove.append(i)
-        to_remove.sort()
-        to_remove.reverse()
-        for rem_index in to_remove:
-            container.pop(rem_index)
-
-    def remove_unused_object_routes(self):
-        self.remove_unused_general_route(self.routes)
-
-    def remove_object_route(self, route:Route):
-        pass
-
-    def remove_route_point(self, rp:RoutePoint):
-        pass
 
     #cameras
     def remove_unused_cameras(self):
@@ -3007,8 +2981,6 @@ class KMP(object):
         #deleting stuff
         for camera in self.cameras:
             if not camera in used:
-                if camera.route_obj is not None:
-                    camera.route_obj.used_by.remove(camera)
                 self.cameras.remove(camera)
 
     def remove_camera(self, cam : Camera):
@@ -3025,11 +2997,8 @@ class KMP(object):
 
             self.cameras.remove(cam)
         elif isinstance(cam, ReplayCamera):
-            for area in cam.used_by:
+            for area in self.camera_used_by(cam):
                 area.camera = None
-
-        if cam.route_obj is not None:
-            cam.route_obj.used_by.remove(cam)
 
     def remove_invalid_cameras(self):
         invalid_cams = [camera for camera in self.cameras if camera.type < 0 or camera.type > 9]
@@ -3045,9 +3014,6 @@ class KMP(object):
         return opening_cams
     #objects
     def remove_object(self, obj: MapObject):
-        if obj.route_obj is not None:
-            obj.route_obj.used_by.remove(obj)
-
         self.objects.objects.remove(obj)
 
     def remove_invalid_objects(self):
@@ -3057,14 +3023,37 @@ class KMP(object):
 
     #grabbing functions
     def get_route_collec_for(self, obj):
-        if isinstance(obj, Area):
+        if isinstance(obj, (Area, AreaRoute)):
             return self.areas.get_routes()
-        elif isinstance(obj, MapObject):
+        elif isinstance(obj, (MapObject, ObjectRoute)):
             return self.objects.get_routes()
-        elif isinstance(obj, Camera):
-            return self.cameras.get_routes()
-        elif isinstance(obj, ReplayCamera):
+        elif isinstance(obj, (ReplayCamera, ReplayCameraRoute)):
             return self.replayareas.get_routes()
+        elif isinstance(obj, (Camera, CameraRoute)):
+            return self.cameras.get_routes()
+
+    def route_used_by(self, route: Route):
+        collec = self.objects.objects
+        if isinstance(route, AreaRoute):
+            return self.areas
+        elif isinstance(route, ReplayCameraRoute):
+            return self.replayareas.get_cameras()
+        elif isinstance(route, CameraRoute):
+            return self.cameras
+        return [x for x in collec if x.route_obj == route]
+
+    def camera_used_by(self, camera: ReplayCamera):
+        return [x for x in self.replayareas if x.camera == camera]
+
+    def remove_area(self, area: Area):
+        if area.type == 0:
+            self.replayareas.remove(area)
+            if area.camera is not None and not self.camera_used_by(area.camera):
+                self.remove_camera(area.camera)
+        else:
+            self.areas.remove(area)
+
+        
 
 with open("lib/mkwiiobjects.json", "r") as f:
     tmp = json.load(f)

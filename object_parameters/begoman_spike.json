@@ -1,13 +1,13 @@
 {
     "Object Parameters": [
-        "ID (1-based), used in begoman_manager to control when they appear",
-        "The radius of the 1st ring in which the topman is allowed to roam in. ",
-        "Time in frames from the start of the race until the topman will switch from the 1st ring to the 2nd ring.",
-        "The radius of the 2nd ring in which the topman is allowed to roam in. ",
-        "Time in frames from the start of the race until the topman will switch from the 2nd ring to the 3rd ring.",
-        "The radius of the 3rd ring in which the topman is allowed to roam in. ",
-        "Time in frames from the start of the race until the topman will switch from the 3rd ring to the 4th ring.",
-        "The radius of the 4th ring in which the topman is allowed to roam in. "
+        "ID, used in begoman_manager to control when they appear",
+        "1st ring roaming radius",
+        "Time from the start of the race until the topman will switch from the 1st ring to the 2nd ring.",
+        "2nd ring roaming radius",
+        "Time from the start of the race until the topman will switch from the 2nd ring to the 3rd ring.",
+        "3rd ring roaming radius",
+        "Time from the start of the race until the topman will switch from the 3rd ring to the 4th ring.",
+        "4th ring roaming radius"
     ],
     "Assets": [
         ".brres file needed",
@@ -24,5 +24,15 @@
         9100
     ],
     "Route Info": null,
-    "Description": "Topman from Galaxy Colosseum; object not used in any track. To appear, it (or they) must be the first object of section [[KMP#GOBJ|GOBJ]]. They appear to not obey [[KCL flag#Wall (0x0C)|wall collision]]. Note that the rings are hardcoded to have their centre at (0,0).<br>Only works on slots [[Slot#3.1|3.1]], [[Slot#4.2|4.2]], [[Slot#6.2|6.2]], [[Slot#7.1|7.1]], and Galaxy Colosseum."
+    "Description": "Topman from Galaxy Colosseum; object not used in any track. To appear, it (or they) must be the first object of section [[KMP#GOBJ|GOBJ]]. They appear to not obey [[KCL flag#Wall (0x0C)|wall collision]]. Note that the rings are hardcoded to have their centre at (0,0).<br>Only works on slots <a href=\"https://wiki.tockdom.com/wiki/Slot#3.1\">3.1</a>, <a href=\"https://wiki.tockdom.com/wiki/Slot#4.2\">4.2</a>, <a href=\"https://wiki.tockdom.com/wiki/Slot#6.2\">6.2</a>, <a href=\"https://wiki.tockdom.com/wiki/Slot#7.1\">7.1</a>, and Galaxy Colosseum.",
+    "Tooltips": [
+        "1-based",
+        "",
+        "In frames",
+        "",
+        "In frames",
+        "",
+        "In frames",
+        ""
+    ]
 }

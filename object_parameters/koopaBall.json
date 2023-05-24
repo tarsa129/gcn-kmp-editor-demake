@@ -1,6 +1,6 @@
 {
     "Object Parameters": [
-        "Unknown",
+        "Unused",
         "Unused",
         "Unused",
         "Unused",
@@ -14,7 +14,7 @@
         ".breff/.breft files needed"
     ],
     "Default Values": [
-        100,
+        0,
         0,
         0,
         0,

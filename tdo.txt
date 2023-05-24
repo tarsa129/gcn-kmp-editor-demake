@@ -8,8 +8,10 @@ updates:
 improve json files
 error analyzer
 came - camera viewing fixes + replay (all types of cameras)
+render with scale
 
 new features:
+handle boos automatically + handle that enemy point switching thing
 add arrow keys for "next point" in route
 load + collide on gobj collision files
 add option to select x to y points

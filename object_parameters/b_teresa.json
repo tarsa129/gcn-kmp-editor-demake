@@ -23,5 +23,5 @@
         null
     ],
     "Route Info": null,
-    "Description": "Flying Boos from SNES Ghost Valley 2 controlled by [[AREA type#AREA type 0x07 (flying Boos)|AREA type 07]], using exactly one object.<br>Object's location doesn't matter, Boos are always viewed when players enter in related AREA."
+    "Description": "Flying Boos from SNES Ghost Valley 2 controlled by AREA type 07, using exactly one object.<br>Object's location doesn't matter, Boos are always viewed when players enter in related AREA."
 }

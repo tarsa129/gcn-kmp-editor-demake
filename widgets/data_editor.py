@@ -208,10 +208,8 @@ class ColorPicker(ClickableLabel):
 class DataEditor(QtWidgets.QWidget):
     emit_3d_update = pyqtSignal()
 
-
     def __init__(self, parent, bound_to):
         super().__init__(parent)
-
         self.bound_to = bound_to
         self.vbox = QtWidgets.QVBoxLayout(self)
         self.vbox.setContentsMargins(0, 0, 0, 0)
@@ -248,6 +246,7 @@ class DataEditor(QtWidgets.QWidget):
         layout.setSpacing(5)
         label = self.create_label(text)
         label.setText(text)
+        label.setOpenExternalLinks(True)
         layout.addWidget(label)
         layout.addWidget(widget)
         return layout
@@ -278,7 +277,6 @@ class DataEditor(QtWidgets.QWidget):
             layout.addWidget(widgetlist[0])
         return layout, label
 
-
     def create_clickable_widgets(self, parent, text, widgetlist):
         layout = QtWidgets.QHBoxLayout()
         label = self.create_button(text)
@@ -286,7 +284,6 @@ class DataEditor(QtWidgets.QWidget):
         for widget in widgetlist:
             layout.addWidget(widget)
         return layout
-
 
     def add_checkbox(self, text, attribute, off_value, on_value):
         checkbox = QtWidgets.QCheckBox(self)
@@ -991,6 +988,7 @@ class CheckpointEdit(DataEditor):
 
     def update_name(self):
         super().update_name()
+
 class ObjectRouteEdit(DataEditor):
     def setup_widgets(self):
         self.smooth = self.add_dropdown_input("Sharp/Smooth motion", "smooth", POTI_Setting1)
@@ -1008,9 +1006,9 @@ class ObjectRoutePointEdit(DataEditor):
         labels = [[], []]
         obj: RoutePoint = get_cmn_obj(self.bound_to)
         used_by = []
+        kmp_file = self.parent().parent().parent().level_file
         for route in obj.partof:
-            used_by.extend(route.used_by)
-        used_by = list(set(used_by))
+            used_by.extend(kmp_file.route_used_by(route))
 
         for mapobject in used_by:
             point_labels = mapobject.get_route_text()
@@ -1125,6 +1123,13 @@ class ObjectEdit(DataEditor):
         if (inthemaking):
             self.set_default_values()
 
+        self.description = self.add_label("")
+        self.description.setWordWrap(True)
+        self.description.setOpenExternalLinks(True)
+        hint = self.description.sizePolicy()
+        hint.setVerticalPolicy(QtWidgets.QSizePolicy.Minimum)
+        self.description.setSizePolicy(hint)
+
 
         self.assets = self.add_label("Required Assets: Unknown")
         self.assets.setWordWrap(True)
@@ -1186,6 +1191,7 @@ class ObjectEdit(DataEditor):
             tooltips = json_data["Tooltips"] if "Tooltips" in json_data else [None] * 8
             widgets = json_data["Widgets"] if "Widgets" in json_data else [None] * 8
             assets = json_data["Assets"]
+            description = json_data["Description"]
         tuples = zip(parameter_names, tooltips, widgets)
 
         for i, (parameter_name, tooltip, widget_type) in enumerate(tuples):
@@ -1199,6 +1205,11 @@ class ObjectEdit(DataEditor):
 
         if load_defaults:
             self.set_default_values()
+
+        if not description:
+            self.description.setText("")
+        else:
+            self.description.setText(description)
 
         if not assets:
             self.assets.setText("Required Assets: None")

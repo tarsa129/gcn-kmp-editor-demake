@@ -21,5 +21,5 @@
         null
     ],
     "Route Info": null,
-    "Description": "Object used in tournaments (Daisy Circuit and <small>SNES</small> Battle Course 4).<br>Can be used to place an item directly onto the track; they will not show up in Time Trials.<br>You must not place more than 11 of these in a track; otherwise, your track will freeze or hang in online play."
+    "Description": "Object used in tournaments (Daisy Circuit and <small>SNES</small> Battle Course 4).<br>Can be used to place an item directly onto the track; they will not show up in Time Trials.<br>You must not place more than 10 of these in a track; otherwise, your track will freeze or hang in online play."
 }

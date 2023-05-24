@@ -191,7 +191,7 @@ class MoreButtons(QWidget):
 
         elif isinstance(obj, ReplayAreas):
             self.add_button("Add Area/Stationary Cam", "add_rarea_stat", obj)
-            self.add_button("Add Area/Stationary Cam", "add_rarea_rout", obj)
+            self.add_button("Add Area/Routed Cam", "add_rarea_rout", obj)
             self.add_button("Preview Cameras", "preview_replay", obj)
 
         elif isinstance(obj, Areas):

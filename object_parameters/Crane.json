@@ -1,8 +1,8 @@
 {
     "Object Parameters": [
         "Unused",
-        "Amplitude of the motion (in game units)",
-        "Period of the motion (in 1/60s)",
+        "Period of the motion",
+        "Amplitude of the motion",
         "Time before starting",
         "Unused",
         "Unused",
@@ -24,5 +24,15 @@
         0
     ],
     "Route Info": null,
-    "Description": "Crane platform Toad's Factory. Slot [[Slot#1.4|1.4]] enables its SFX."
+    "Description": "Crane platform Toad's Factory. Slot [[Slot#1.4|1.4]] enables its SFX.",
+    "Tooltips": [
+        "",
+        "in 1/60s",
+        "in game units",
+        "",
+        "",
+        "",
+        "Multiplied with unknown number (always 1?).",
+        ""
+    ]
 }

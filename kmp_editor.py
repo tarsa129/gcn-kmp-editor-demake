@@ -248,8 +248,6 @@ class GenEditor(QMainWindow):
 
         return UndoEntry(bol_document, enemy_path_data)
 
-
-
     def load_top_undo_entry(self):
         if not self.undo_history:
             return
@@ -501,7 +499,8 @@ class GenEditor(QMainWindow):
         if hasattr(item, "bound_to"):
             self.pik_control.set_buttons(item.bound_to)
 
-        self.level_view.gizmo.move_to_average(self.level_view.selected_positions)
+        self.level_view.gizmo.move_to_average(self.level_view.selected_positions,
+                                              self.level_view.selected_rotations)
         self.level_view.do_redraw()
         self.level_view.select_update.emit()
 
@@ -966,13 +965,10 @@ class GenEditor(QMainWindow):
 
         self.collision_area_dialog.finished.connect(on_dialog_finished)
 
-
-
     def analyze_for_mistakes(self):
         analyzer_window = ErrorAnalyzer(self.level_file, parent=self)
         analyzer_window.exec_()
         analyzer_window.deleteLater()
-
 
     def on_file_menu_aboutToShow(self):
         recent_files = self.get_recent_files_list()
@@ -1006,7 +1002,6 @@ class GenEditor(QMainWindow):
         save_cfg(self.configuration)
 
         self.level_view.do_redraw()
-
 
     def on_cull_faces_triggered(self, checked):
         self.editorconfig["cull_faces"] = "True" if checked else "False"
@@ -1121,8 +1116,6 @@ class GenEditor(QMainWindow):
         self.leveldatatreeview.select_type.connect(self.select_all_of_type)
         self.leveldatatreeview.remove_all.connect(self.remove_all_points)
         self.leveldatatreeview.visible_changed.connect(lambda element, index: self.on_visible_menu_changed(element, index))
-
-
 
     def split_group_from_tree(self, group_item, item):
         group = group_item.bound_to
@@ -1543,15 +1536,14 @@ class GenEditor(QMainWindow):
         self.set_has_unsaved_changes(True)
 
     def button_open_add_item_window(self):
+        self.next_checkpoint_start_position = None
         obj = None
-        add_something = False
         if len(self.level_view.selected) == 1:
             obj = self.level_view.selected[0]
         else:
             if hasattr(self.leveldatatreeview.currentItem(), 'bound_to'):
                 obj = self.leveldatatreeview.currentItem().bound_to
         if obj is not None:
-            add_something = True
             #add points to group at current position
             if isinstance(obj, KMPPoint):
                 self.button_add_from_addi_options( "new_enemy_points", obj)
@@ -1567,15 +1559,6 @@ class GenEditor(QMainWindow):
                 print('nothing caught')
                 add_something = False
 
-        if add_something:
-            return
-        self.next_checkpoint_start_position = None
-        accepted = self.add_object_window.exec_()
-        if accepted:
-            self.add_item_window_save()
-        else:
-            self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_NONE)
-            self.pik_control.button_add_object.setChecked(False)
         self.update_3d()
 
     def shortcut_open_add_item_window(self):
@@ -1762,7 +1745,6 @@ class GenEditor(QMainWindow):
             if obj.route_obj is None:
                 new_route = self.level_file.get_route_for_obj(obj)
                 obj.route_obj = new_route
-                new_route.used_by = [obj]
 
             new_point = libkmp.RoutePoint.new()
             new_point.partof = obj
@@ -1947,56 +1929,7 @@ class GenEditor(QMainWindow):
         self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
 
     def auto_route_obj(self, obj):
-
-        route_data = obj.route_info()
-
-        if route_data == 2:
-            if obj.route_obj is None:
-                self.add_points_around_obj(obj,route_data,True)
-            elif len(obj.route_obj.points) < 2:
-                self.add_points_around_obj(obj,2 - len(obj.route_obj.points),False)
-        elif route_data == 3:
-            if obj.route_obj is None:
-                self.add_points_around_obj(obj,5,True)
-
-    def add_points_around_obj(self, obj, num = 2, create = False):
-        if num == 0:
-            return
-
-        set_speed = 0
-        if create:
-            if isinstance(obj, (MapObject, Area) ):
-                new_route_group = libkmp.ObjectRoute.new()
-                set_speed = 20
-
-            elif isinstance(obj, Camera):
-                set_speed = 30
-                new_route_group = libkmp.CameraRoute.new()
-            obj.route_obj = new_route_group
-
-        if create:
-            obj.route_obj.used_by.append(obj)
-        #create new points around the object
-        self.place_points(obj, num, set_speed)
-
-    def place_points(self, obj, num, set_speed = 0):
-        new_point = libkmp.RoutePoint.new()
-        new_point.unk1 = set_speed
-        self.object_to_be_added = [new_point, obj.route_obj, -1]
-
-        left_vector = obj.rotation.get_vectors()[2]
-
-        first_point = [obj.position.x - 500 * left_vector.x, obj.position.z - 500 * left_vector.z]
-        self.action_add_object(*first_point)
-
-        new_point = libkmp.RoutePoint.new()
-        if isinstance(obj, Area):
-            new_point.unk1 = set_speed
-        self.object_to_be_added = [new_point, obj.route_obj, -1]
-
-        if num > 1:
-            second_point = [obj.position.x + 500 * left_vector.x, obj.position.z + 500 * left_vector.z]
-            self.action_add_object(*second_point)
+        self.level_file.create_route_for_obj(obj)
 
     @catch_exception
     def action_add_object(self, x, z):
@@ -2021,8 +1954,6 @@ class GenEditor(QMainWindow):
         #this will assume that the points in the route should be moved so that they are centered
 
         #for camed stuff (areas only), the second one is the camera - whether to copy or not
-
-        #the thing setting the stuff does NOT change the used_by
         if position is not None and position < 0:
             position = 99999999 # this forces insertion at the end of the list
 
@@ -2098,7 +2029,6 @@ class GenEditor(QMainWindow):
                 if placeobject.type == 0:
                     self.level_file.replayareas.append(placeobject)
                     if placeobject.camera is not None:
-                        placeobject.camera.used_by.append(placeobject)
                         placeobject.camera.position = object.position + Vector3(3000, 2000, 0)
                         if placeobject.camera.route_obj is not None:
                             object.route_obj.points[0].position = placeobject.camera
@@ -2116,7 +2046,6 @@ class GenEditor(QMainWindow):
                 raise RuntimeError("Unknown object type {0}".format(type(object)))
 
             if hasattr(placeobject, "route_obj") and placeobject.route_obj is not None:
-                placeobject.route_obj.used_by.append(placeobject)
                 if position:
                     for point in placeobject.route_obj.points:
                         point.position += placeobject.position
@@ -2140,7 +2069,8 @@ class GenEditor(QMainWindow):
 
                 added_pos.append(pos)
 
-            self.level_view.gizmo.move_to_average(self.level_view.selected_positions)
+            self.level_view.gizmo.move_to_average(self.level_view.selected_positions,
+                                                  self.level_view.selected_rotations)
 
         if self.autoground_mode.isChecked():
             self.action_ground_objects(self.level_view.selected_positions)
@@ -2153,7 +2083,8 @@ class GenEditor(QMainWindow):
     def action_move_objects_to(self, posx, posy, posz):
         #get the average position, which is just the pos, huh.
         #so then that's the
-        self.level_view.gizmo.move_to_average(self.level_view.selected_positions)
+        self.level_view.gizmo.move_to_average(self.level_view.selected_positions,
+                                                self.level_view.selected_rotations)
         orig_avg = self.level_view.gizmo.position.copy()
         new_avg = Vector3(posx, posz, -posy)
         diff = new_avg - orig_avg
@@ -2162,7 +2093,8 @@ class GenEditor(QMainWindow):
             pos.y = pos.y + diff.y
             pos.z = pos.z + diff.z
 
-            self.level_view.gizmo.move_to_average(self.level_view.selected_positions)
+            self.level_view.gizmo.move_to_average(self.level_view.selected_positions,
+                                                self.level_view.selected_rotations)
         self.level_view.do_redraw()
         self.pik_control.update_info()
         self.set_has_unsaved_changes(True)
@@ -2361,13 +2293,16 @@ class GenEditor(QMainWindow):
 
             elif isinstance(obj, libkmp.RoutePoint):
                 #do not allow used route to fall under 2 points
-                not_used = not obj.partof.used_by
-                not_used |= all( (x in self.level_view.selected) for x in obj.partof.used_by )
-                if len(obj.partof.points) > 2 or not_used:
-                    obj.partof.points.remove(obj)
+                group = obj.partof
+                used_by = self.level_file.route_used_by(group)
 
-                    if len(obj.partof.points) == 0:
-                        for object in obj.partof.used_by:
+                not_used = not used_by
+                not_used |= all( (x in self.level_view.selected) for x in used_by )
+                if not_used or len(group.points) > 2:
+                    group.points.remove(obj)
+
+                    if len(group.points) == 0:
+                        for object in used_by:
                             object.route_obj = None
                 #see if a route point is used
                 for mapobject in self.level_file.objects.objects:
@@ -2386,19 +2321,14 @@ class GenEditor(QMainWindow):
                 #self.level_file.respawnpoints.remove(obj)
             elif isinstance(obj, libkmp.Area):
                 if obj.type == 0:
-                    self.level_file.replayareas.remove_area(obj)
+                    self.level_file.remove_area(obj)
                 else:
-                    self.level_file.areas.remove_area(obj)
+                    self.level_file.remove_area(obj)
             elif isinstance(obj, libkmp.Camera):
                 if isinstance(obj, libkmp.OpeningCamera):
                     self.level_file.remove_camera(obj)
             elif isinstance(obj, PointGroup ):
                 self.level_file.remove_group(obj)
-
-            elif isinstance(obj, libkmp.Route):
-                for object in obj.used_by:
-                    object.route_obj = None
-
         self.level_view.selected = []
         self.level_view.selected_positions = []
         self.level_view.selected_rotations = []
@@ -2410,28 +2340,6 @@ class GenEditor(QMainWindow):
         self.level_view.do_redraw()
         self.set_has_unsaved_changes(True)
 
-    def update_route_used_by(self, objs, old, new):
-        #print("update route used by", obj, old, new)
-        if old == new:
-            return
-        if old is not None:
-            for obj in objs:
-                old.used_by.remove(obj)
-        if new is not None:
-            for obj in objs:
-                new.used_by.append(obj)
-
-    def update_camera_used_by(self, objs, old : Camera, new : Camera):
-        #print("update route used by", obj, old, new)
-        if old == new:
-            return
-        if old is not None:
-            for obj in objs:
-                old.used_by.remove(obj)
-        if new is not None:
-            for obj in objs:
-                new.used_by.append(obj)
-
     def on_cut_action_triggered(self):
         self.on_copy_action_triggered()
         self.action_delete_objects()
@@ -2441,7 +2349,6 @@ class GenEditor(QMainWindow):
         # recursively, as top-level groups main contain points associated with widgets too.
 
         object_to_widget = {}
-        object_to_usedby = {}
         object_to_partof = {}
         object_to_routeobj = {}
         object_to_enemypoint = {}
@@ -2453,9 +2360,6 @@ class GenEditor(QMainWindow):
             if hasattr(obj, 'widget'):
                 object_to_widget[obj] = obj.widget
                 obj.widget = None
-            if hasattr(obj, 'used_by'):
-                object_to_usedby[obj] = obj.used_by
-                obj.used_by = None
             if hasattr(obj, 'partof'):
                 object_to_partof[obj] = obj.partof
                 obj.partof = None
@@ -2484,8 +2388,6 @@ class GenEditor(QMainWindow):
             # Restore the widgets and usedby.
             for obj, widget in object_to_widget.items():
                 obj.widget = widget
-            for obj, widget in object_to_usedby.items():
-                obj.used_by = widget
             for obj, partof in object_to_partof.items():
                 obj.partof = partof
             for obj, route_obj in object_to_routeobj.items():
@@ -2588,7 +2490,6 @@ class GenEditor(QMainWindow):
                     elif obj.type ==4 and obj.enemypointid > -1:
                         obj.enemypoint = self.level_file.enemypointgroups.get_point_from_index[obj.enemypointid]
             elif isinstance(obj, libkmp.Camera):
-                obj.used_by = []
                 self.level_file.cameras.append(obj)
                 if obj.type == 3 and obj.route > -1:
                     obj.route_obj = self.level_file.get_route_collec_for(obj)[obj.route]
@@ -2627,7 +2528,8 @@ class GenEditor(QMainWindow):
         self.update_3d()
 
     def update_3d(self):
-        self.level_view.gizmo.move_to_average(self.level_view.selected_positions)
+        self.level_view.gizmo.move_to_average(self.level_view.selected_positions,
+                                                self.level_view.selected_rotations)
         self.level_view.do_redraw()
 
     def select_from_3d_to_treeview(self):
@@ -2710,9 +2612,9 @@ class GenEditor(QMainWindow):
                 currentobj = selected[0]
 
 
-                if isinstance(currentobj, Route):
+                if isinstance(currentobj, RoutePoint):
                     objects = []
-                    for thing in currentobj.used_by:
+                    for thing in self.level_file.route_used_by(currentobj.partof):
                         if isinstance(thing, MapObject):
                             objects.append(get_kmp_name(thing.objectid))
                         elif isinstance(thing, Camera):
@@ -2989,7 +2891,6 @@ class GenEditor(QMainWindow):
                 if self.connect_start.route_obj:
                     self.level_file.create_route_for_obj(new_copy, True, )
                     new_route = new_copy.route_obj.copy()
-                    new_route.used_by.append(new_copy)
                     for i, point in enumerate(new_copy.route_obj.points):
                         offset = point.position - pos1
                         new_route.points[i].position = new_copy.position + offset
@@ -3041,7 +2942,6 @@ class GenEditor(QMainWindow):
                 for obj in self.connect_start:
                     if obj.route_info():
                         obj.route_obj = new_route
-                        new_route.used_by.append(obj)
                     routepoint_setting = obj.get_routepoint_idx()
                     if routepoint_setting is not None:
                         obj.userdata[routepoint_setting] = 0
@@ -3069,29 +2969,20 @@ class GenEditor(QMainWindow):
             elif isinstance(endpoint, RoutePoint) and isinstance(obj_type, (MapObject, Camera)):
                 for obj in self.connect_start:
                     if isinstance(endpoint.partof, ObjectRoute) and isinstance(obj, MapObject):
-                        if obj.route_obj is not None:
-                            obj.route_obj.used_by.remove(obj)
                         obj.route_obj = endpoint.partof
-                        endpoint.partof.used_by.append(obj)
                         if obj.get_routepoint_idx() is not None:
                             obj.routepoint = endpoint
                     if isinstance(endpoint.partof, CameraRoute) and isinstance(obj, Camera):
-                        if obj.route_obj is not None:
-                            obj.route_obj.used_by.remove(obj)
                         obj.route_obj = endpoint.partof
-                        endpoint.partof.used_by.append(obj)
             elif isinstance(self.connect_start, Area):
                 for area in self.connect_start:
                     if area.type == 0 and isinstance(endpoint, Camera):
                         old_camera = area.camera
                         area.camera = endpoint
-                        self.update_camera_used_by(area, old_camera, area.camera )
-                        if not old_camera.used_by:
+                        if not self.level_file.camera_used_by(old_camera):
                             self.level_file.remove_camera(old_camera)
                     if area.type == 3 and isinstance(endpoint, RoutePoint) and isinstance(endpoint.partof, AreaRoute):
-                        old_route = area.route_obj
                         area.route_obj = endpoint.partof
-                        self.update_route_used_by([area], old_route, area.route_obj)
                     elif area.type == 4 and isinstance(endpoint, EnemyPoint):
                         area.enemypoint = endpoint
             elif isinstance(endpoint, Camera) and isinstance(obj_type, Camera):

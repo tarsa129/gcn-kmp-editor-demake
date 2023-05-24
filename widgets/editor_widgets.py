@@ -173,6 +173,7 @@ class ErrorAnalyzer(QDialog):
         #check for unreachable groups
 
         #check for empty (and used!) routes
+        """
         for i, group in enumerate(kmp.routes):
 
             if len(group.used_by) > 0 :
@@ -182,7 +183,7 @@ class ErrorAnalyzer(QDialog):
                     write_line("Route {0} is used, but only has one point".format( i ))
             if len(group.points) == 2 and group.smooth != 0:
                 write_line("Route {0} has two points, but is set to smooth".format( i ))
-
+        """
         # Validate path id in objects
         for object in kmp.objects.objects:
             if object.route_info() > 0 and object.route_obj is None:

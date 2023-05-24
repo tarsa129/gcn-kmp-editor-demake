@@ -980,7 +980,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
                 self.select_update.emit()
 
-                self.gizmo.move_to_average(self.selected_positions)
+                self.gizmo.move_to_average(self.selected_positions, self.selected_rotations)
                 if len(selected) == 0:
                     #print("Select did register")
                     self.gizmo.hidden = True
@@ -1481,13 +1481,14 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                         selected = True
 
                     last_point = None
+                    used_by = self.level_file.route_used_by(route)
 
-                    render_type = "objectpoint" if route.used_by else "unusedobjectpoint"
+                    render_type = "objectpoint" if used_by else "unusedobjectpoint"
 
                     for point in route.points:
                         point_selected = point in select_optimize
                         if point_selected:
-                            objs_to_highlight.update( route.used_by )
+                            objs_to_highlight.update( used_by )
                         self.models.render_generic_position_colored(point.position, point_selected, render_type)
                         selected = selected or point_selected
 
@@ -1544,14 +1545,14 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                 type_3_areas = self.level_file.areas.get_type(3)
                 routes_to_circle = set([ area.route_obj for area in type_3_areas if (area in select_optimize)  ])
 
-                for i, route in enumerate(self.level_file.arearoutes):
+                for i, route in enumerate(arearoutes):
 
                     #selected = route in select_optimize
                     selected = False
                     circle = route in routes_to_circle
 
                     last_point = None
-                    if route.used_by:
+                    if self.level_file.route_used_by(route):
                         for point in route.points:
                             point_selected = point in select_optimize
                             self.models.render_generic_position_colored(point.position, point_selected, "areapoint")
@@ -1627,7 +1628,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                     if route in self.selected: #probably pointless
                         selected = True
                     last_point = None
-                    if route.used_by:
+                    if self.level_file.route_used_by(route):
                         for point in route.points:
                             point_selected = point in select_optimize
                             self.models.render_generic_position_colored(point.position, point_selected, "camerapoint")
@@ -1703,7 +1704,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                     selected = route in routes_to_highlight or route in self.selected
 
                     last_point = None
-                    if route.used_by:
+                    if self.level_file.route_used_by(route):
                         for point in route.points:
                             point_selected = point in select_optimize
                             self.models.render_generic_position_colored(point.position, point_selected, "camerapoint")

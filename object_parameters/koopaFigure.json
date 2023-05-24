@@ -11,7 +11,8 @@
     ],
     "Assets": [
         ".brres file needed",
-        ".brasd files needed"
+        ".brasd files needed",
+        ".breff/.breft files needed"
     ],
     "Default Values": [
         null,

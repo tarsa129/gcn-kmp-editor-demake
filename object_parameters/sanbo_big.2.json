@@ -25,5 +25,5 @@
         null
     ],
     "Route Info": null,
-    "Description": "Object not used in any track. Seems to be identical to sanbo_big."
+    "Description": "Object not used in any track. Giant Pokey's body parts used in the Thwomp Desert tournament. When used in the [[KMP]], it works identical as {{obj-ref|0x1ab|sanbo_big}}; however, its minimap icon does not appear correctly and no sounds can be heard."
 }
