@@ -1,9 +1,5 @@
 better ways to handle routes:
 make camera types 1 and 2 a "route optional" camera
-create routes for objects when switching ids
-add check to see if people actually add at least two route points
-do not auto ground for camera route points?
-when placing an object with a routepoint, assign to closest routepoint
 
 general fixes:
 edit camera / area types boxes
@@ -11,10 +7,12 @@ keep track of variables for topdown and 3d modes individually
 
 updates:
 improve json files
-error analyzer
 came - camera viewing fixes + replay (all types of cameras)
 render with scale
 select linked for objects
+better opening camera copying + creation
+when placing an object with a routepoint, assign to closest routepoint (new option)
+error analyzer
 
 new features:
 handle boos automatically + handle that enemy point switching thing

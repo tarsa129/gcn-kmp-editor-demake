@@ -77,32 +77,6 @@ def get_cmn_obj(objs, kmp_file=None):
 
     return cmn_obj
 
-def load_route_info(objectname):
-
-    try:
-        with open(os.path.join("object_parameters", objectname+".json"), "r") as f:
-            data = json.load(f)
-            if "Route Info" in data.keys():
-
-                return data["Route Info"]
-            else:
-                return None
-    except Exception as err:
-        print(err, "Make Route Info not found")
-        return None
-
-def load_default_info(objectname):
-    try:
-        with open(os.path.join("object_parameters", objectname+".json"), "r") as f:
-            data = json.load(f)
-            if "Default Values" in data.keys():
-                return data["Default Values"]
-            else:
-                return None
-    except Exception as err:
-        print(err, "Default Values not found")
-        return None
-
 def load_parameter_names(objectid):
     if (objectid is None) or (not objectid in OBJECTNAMES):
             return None
@@ -1123,6 +1097,9 @@ class ObjectEdit(DataEditor):
     def update_name(self, new):
         for obj in self.bound_to:
             obj.objectid = new
+        if self.bound_to[0].route_info() == 2:
+            for obj in self.bound_to:
+                obj.create_route(True, None, True)
         self.set_default_values()
 
         super().update_name()
@@ -1194,26 +1171,22 @@ class ObjectEdit(DataEditor):
             self.update_data()
             return
 
-        obj = objs[0]
+        first_obj = objs[0]
 
-        if obj.objectid not in OBJECTNAMES:
-            name = "INVALID"
-        else:
-            name = OBJECTNAMES[obj.objectid]
+        if first_obj.objectid in OBJECTNAMES:
 
-        if name != "INVALID":
-            defaults = load_default_info(name)
-
+            defaults = first_obj.get_default_values()
 
             if defaults is not None:
                 defaults = [0 if x is None else x for x in defaults]
-                obj.userdata = defaults.copy()
-                self.update_userdata_widgets(obj)
-
             else:
-                obj.userdata = [0] * 8
-                for i in range(8):
-                    self.userdata[i][1].setText("0")
+                defaults = [None] * 8
+
+            for obj in objs:
+                obj.userdata = defaults.copy()
+
+            self.update_userdata_widgets(first_obj)
+
         self.update_data()
     def update_data(self, load_defaults = False):
         obj: MapObject = get_cmn_obj(self.bound_to)

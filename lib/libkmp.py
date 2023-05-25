@@ -240,6 +240,25 @@ class ColorRGBA(ColorRGB):
         super().write(f)
         f.write(pack(">B", self.a))
 
+class RoutedObject(object):
+    def __init__(self):
+        self.route_obj = None
+        self.route = -1
+        self.routeclass = Route
+
+    def create_route(self, add_points=False, ref_points=None, absolute_pos=False, overwrite=False):
+        if self.route_info() < 1:
+            return
+        if not (overwrite or self.route_obj is None):
+            return
+        self.route_obj = self.routeclass()
+        if add_points:
+            self.route_obj.add_points(self.position, absolute_pos, ref_points)
+
+    def route_info(self):
+        return 0
+
+
 class KMPPoint(object):
     def __init__(self):
         pass
@@ -1298,10 +1317,7 @@ class AreaRoutePoint(RoutePoint):
 
 # Section 5
 # Objects
-class MapObject(object):
-    level_file = None
-    can_copy = True
-
+class MapObject(RoutedObject):
     def __init__(self, position, objectid):
         self.objectid = objectid
         self.position = position
@@ -1319,6 +1335,7 @@ class MapObject(object):
         self.widget = None
 
         self.routepoint = None
+        self.routeclass = ObjectRoute
 
     @classmethod
     def get_empty(cls):
@@ -1571,7 +1588,7 @@ class KartStartPoints(object):
 
 # Section 7
 # Areas
-class Area(object):
+class Area(RoutedObject):
     level_file = None
     can_copy = True
     def __init__(self, position):
@@ -1837,7 +1854,7 @@ class Cameras(ObjectContainer):
     def get_routes(self):
         return list(set([cam.route_obj for cam in self if cam.route_obj is not None and cam.route_info()]))
 
-class Camera(object):
+class Camera(RoutedObject):
     level_file = None
     can_copy = True
     def __init__(self, position):
@@ -2022,7 +2039,6 @@ class ReplayCamera(Camera):
     def from_generic(cls, generic):
         generic.__class__ = cls
         return generic
-
 
 class OpeningCamera(Camera):
 

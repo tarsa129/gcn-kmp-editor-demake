@@ -31,7 +31,6 @@ from configuration import read_config, make_default_config, save_cfg
 import mkwii_widgets
 from widgets.side_widget import PikminSideWidget
 from widgets.editor_widgets import open_error_dialog, catch_exception_with_dialog
-from widgets.data_editor import load_route_info, load_default_info
 from mkwii_widgets import KMPMapViewer, MODE_TOPDOWN
 from lib.libkmp import *
 import lib.libkmp as libkmp
@@ -1086,13 +1085,6 @@ class GenEditor(QMainWindow):
 
         self.level_view.customContextMenuRequested.connect(self.mapview_showcontextmenu)
 
-        self.pik_control.button_add_object.clicked.connect(
-            lambda _checked: self.button_open_add_item_window())
-        self.pik_control.button_add_object.setShortcut("V")
-
-        self.pik_control.button_stop_object.pressed.connect(self.button_stop_adding)
-        self.pik_control.button_stop_object.setShortcut("T")
-
         #self.pik_control.button_move_object.pressed.connect(self.button_move_objects)
         self.level_view.move_points.connect(self.action_move_objects)
         self.level_view.move_points_to.connect(self.action_move_objects_to)
@@ -1557,7 +1549,6 @@ class GenEditor(QMainWindow):
                 self.button_add_from_addi_options( "add_routepoints_end", obj)
             else:
                 print('nothing caught')
-                add_something = False
 
         self.update_3d()
 
@@ -1713,17 +1704,14 @@ class GenEditor(QMainWindow):
             self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
         elif option == "generic_copy_routed":  #copy with new route
             new_object = obj.copy()
-            new_object.route_obj = None
-            self.level_file.create_route_for_obj(new_object, True, obj.route_obj.points)
+            new_object.create_route(new_object, True, obj.route_obj.points, True)
             self.object_to_be_added = [new_object, True, True ]
 
             self.pik_control.button_add_object.setChecked(True)
             self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
 
         elif option == "add_routepoints_end": #add route point to end of route
-            if obj.route_obj is None:
-                new_route = self.level_file.get_route_for_obj(obj)
-                obj.route_obj = new_route
+            obj.create_route(False)
 
             new_point = obj.route_obj.pointclass.new()
             self.object_to_be_added = [new_point, obj.route_obj, -1 ]
@@ -1743,7 +1731,7 @@ class GenEditor(QMainWindow):
                 self.update_3d()
                 return
             new_camera = libkmp.OpeningCamera.default(obj)
-            self.level_file.create_route_for_obj(new_camera, True)
+            new_camera.create_route(True)
             self.object_to_be_added = [new_camera, True, True ]
 
             self.pik_control.button_add_object.setChecked(True)
@@ -1770,8 +1758,7 @@ class GenEditor(QMainWindow):
         elif option == "add_rarea_rout": #area camera route add
             new_area = libkmp.Area.default()
             new_camera = libkmp.ReplayCamera.default(2)
-
-            self.level_file.create_route_for_obj(new_camera, True)
+            new_camera.create_route(True)
             new_area.camera = new_camera
             self.object_to_be_added = [new_area, True, None ]
 
@@ -1872,9 +1859,9 @@ class GenEditor(QMainWindow):
     def button_add_object(self, objid):
         obj:MapObject = libkmp.MapObject.new(objid)
 
-        route_info = obj.get_single_json_val("Route Info")
+        route_info = obj.route_info()
         if route_info == 2:
-            self.level_file.create_route_for_obj(obj, True)
+            obj.create_route(True)
 
         self.object_to_be_added = [obj, True, True ]
 
@@ -1882,7 +1869,7 @@ class GenEditor(QMainWindow):
         self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
 
     def auto_route_obj(self, obj):
-        self.level_file.create_route_for_obj(obj, True, None, True)
+        obj.create_route(True, None, True)
 
     @catch_exception
     def action_add_object(self, x, z):
@@ -1992,8 +1979,7 @@ class GenEditor(QMainWindow):
                         placeobject.camera.position = placeobject.position + Vector3(3000, 1000, 0)
                         if placeobject.camera.route_obj is not None:
                             diffed_points = [RoutePoint(x.position - object.position) for x in object.camera.route_obj.points]
-                            placeobject.camera.route_obj = None
-                            self.level_file.create_route_for_obj(placeobject.camera, True, diffed_points, True)
+                            placeobject.camera.create_route(True, diffed_points, True)
                 else:
                     self.level_file.areas.append(placeobject)
                     if placeobject.type == 3:
@@ -2083,6 +2069,8 @@ class GenEditor(QMainWindow):
             self.pik_control.button_add_object.setChecked(False)
             #self.pik_control.button_move_object.setChecked(False)
             self.update_3d()
+        elif event.key() == Qt.Key_V:
+            self.button_open_add_item_window()
 
         if event.key() == Qt.Key_Shift:
             self.level_view.shift_is_pressed = True
@@ -2829,14 +2817,13 @@ class GenEditor(QMainWindow):
             for i in range(1, 5):
                 position = diff * (i/4) + pos1
                 new_copy = self.connect_start.copy()
-                new_copy.route_obj = None
 
                 new_copy.position = position
                 self.action_ground_objects([new_copy.position])
 
                 #deal with route:
                 if self.connect_start.route_obj:
-                    self.level_file.create_route_for_obj(new_copy, True, diffed_points, True)
+                    new_copy.create_route(True, diffed_points, True, overwrite=True)
                     self.action_ground_objects( [x.position for x in new_copy.route_obj.points]  )
                 self.level_file.objects.objects.append(new_copy)
                 #copy the route, if the route is type 2
@@ -2947,16 +2934,12 @@ class GenEditor(QMainWindow):
             return
         self.object_to_be_added = None
 
-        map_check = isinstance(self.obj_to_copy, MapObject) and self.obj_to_copy.route_info() > 0
-        cam_check = isinstance(self.obj_to_copy, Camera) and self.obj_to_copy.route_info() > 0
-        area_check = isinstance(self.obj_to_copy, Area) and self.obj_to_copy.route_info() > 0
-        if new_route and ( map_check or cam_check or area_check):
+        if new_route and isinstance(self.obj_to_copy, RoutedObject) and self.obj_to_copy.route_info():
             new_object = self.obj_to_copy.copy()
-            new_object.route_obj = None
             if self.obj_to_copy.route_obj is not None :
-                self.level_file.create_route_for_obj(new_object, True, self.obj_to_copy.route_obj.points)
+                new_object.create_route(True, self.obj_to_copy.route_obj.points, False, True)
             else:
-                self.level_file.create_route_for_obj(new_object, True, None)
+                new_object.create_route(True, None, False, True)
 
             self.object_to_be_added = [new_object, True, True ]
 

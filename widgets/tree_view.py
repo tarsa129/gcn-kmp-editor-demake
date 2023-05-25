@@ -1,7 +1,6 @@
 from PyQt5.QtWidgets import QTreeWidget, QTreeWidgetItem, QPushButton, QHBoxLayout, QWidget
 from lib.libkmp import KMP,  get_kmp_name, KMPPoint, Area, Camera, PointGroups, MapObject
 from widgets.data_editor_options import AREA_TYPES, CAME_TYPES, routed_cameras
-from widgets.data_editor import load_route_info
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import QAction, QMenu
 from PyQt5.QtGui import QIcon
@@ -283,16 +282,16 @@ class ObjectEntry(NamedItem):
     def update_name(self):
         name = get_kmp_name(self.bound_to.objectid)
         text_descrip = name
-        route_info = load_route_info(text_descrip)
+        route_info = self.bound_to.route_info()
         obj : MapObject = self.bound_to
 
-        if route_info is not None and route_info > 1:
+        if route_info > 1:
             if obj.route_obj is None:
                 text_descrip += " (NEEDS A ROUTE)"
             else:
                 text_descrip += " (Routed)"
-        elif (route_info is None or route_info == -1) and obj.route_obj is not None:
-            text_descrip += " (HAS USELESS ROUTE)"
+        elif route_info == 1 and obj.route_obj is not None:
+            text_descrip += " (Routed)"
 
         self.setText(1, text_descrip)
         self.setToolTip(1, self.bound_to.get_description())
