@@ -182,10 +182,12 @@ class MoreButtons(QWidget):
         elif isinstance(obj, MapObject):
             route_info = obj.route_info()
             if route_info:
-                self.add_button("v: Add Points to End of Route", "add_routepoints_end", obj)
-                self.add_button("Auto Route", "auto_route_single", obj)
-                self.add_button("Copy and Place Current Object (Same Route)", "generic_copy", obj.copy())
-                self.add_button("Copy and Place Current Object (New Route)", "generic_copy_routed", obj.copy())
+                if obj.route_obj is not None:
+                    self.add_button("v: Add Points to End of Route", "add_routepoints_end", obj)
+                    self.add_button("Copy and Place Current Object (Same Route)", "generic_copy", obj)
+                    self.add_button("Copy and Place Current Object (New Route)", "generic_copy_routed", obj)
+                else:
+                    self.add_button("Auto Route", "auto_route_single", obj)
             else:
                 self.add_button("Copy and Place Current Object", "generic_copy", obj.copy())
 
@@ -217,7 +219,7 @@ class MoreButtons(QWidget):
 
         elif isinstance(obj, OpeningCamera):
 
-            if obj.route_info():
+            if obj.route_info() and obj.route_obj is not None:
                 self.add_button("Copy and Place Camera (New Route)", "generic_copy_routed", obj.copy())
             else:
                 self.add_button("Copy and Place Camera", "generic_copy", obj.copy())

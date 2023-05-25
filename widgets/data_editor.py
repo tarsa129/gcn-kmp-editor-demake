@@ -30,7 +30,7 @@ def set_userdata_mult(objs:list[MapObject], idx, value):
         obj.userdata[idx] = value
 
 #make a common thing to find all common, esp if copy is going to be used
-def get_cmn_obj(objs):
+def get_cmn_obj(objs, kmp_file=None):
     if isinstance(objs[0], (KartStartPoints, Cameras)):
         return objs[0]
     try:
@@ -40,15 +40,14 @@ def get_cmn_obj(objs):
 
     if hasattr(cmn_obj,"route_obj"):
         cmn_obj.route_obj = [cmn_obj.route_obj]
-    if hasattr(cmn_obj,"partof"):
-        cmn_obj.partof = [cmn_obj.partof]
+
 
     members = [attr for attr in dir(cmn_obj) if not callable(getattr(cmn_obj, attr)) and not attr.startswith("__")]
     #print(members)
 
     for obj in objs[1:]:
         for member in members:
-            if member in ("route_obj", "partof"):
+            if member == "route_obj":
                 getattr(cmn_obj, member).append(  getattr(obj, member) )
             #print(getattr(obj, member),  getattr(cmn_obj, member))
             elif getattr(cmn_obj, member) is not None and getattr(obj, member) is not None:
@@ -70,9 +69,11 @@ def get_cmn_obj(objs):
     if hasattr(cmn_obj,"route_obj"):
         cmn_obj.route_obj = list(set(cmn_obj.route_obj ))
         cmn_obj.route_obj = [x for x in cmn_obj.route_obj if x is not None]
-    if hasattr(cmn_obj,"partof"):
-        cmn_obj.partof = list(set(cmn_obj.partof ))
-        cmn_obj.partof = [x for x in cmn_obj.partof if x is not None]
+    if isinstance(cmn_obj, RoutePoint):
+        routes = []
+        for obj in objs:
+            routes.append( kmp_file.get_route_of_point(obj)  )
+        cmn_obj.partof = list(set(routes))
 
     return cmn_obj
 
@@ -214,7 +215,7 @@ class DataEditor(QtWidgets.QWidget):
         self.vbox = QtWidgets.QVBoxLayout(self)
         self.vbox.setContentsMargins(0, 0, 0, 0)
         self.vbox.setSpacing(3)
-
+        self.kmp_file = parent.parent().parent().level_file
         self.setup_widgets()
 
     def catch_text_update(self):
@@ -394,37 +395,6 @@ class DataEditor(QtWidgets.QWidget):
         if widget_type == "checkbox":
             widget = QtWidgets.QCheckBox()
             widget.stateChanged.connect(lambda state: set_userdata_mult(self.bound_to, index, int(bool(state))))
-        elif widget_type == "combobox":
-            widget = QtWidgets.QComboBox()
-            policy = widget.sizePolicy()
-            policy.setHorizontalPolicy(QtWidgets.QSizePolicy.Expanding)
-            widget.setSizePolicy(policy)
-            widget.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToMinimumContentsLengthWithIcon)
-            for key, value in widget_type_args[0].items():
-                widget.addItem(key, value)
-            widget.currentIndexChanged.connect(
-                lambda index: set_value(widget.itemData(index)))
-        else:
-            widget = QtWidgets.QLineEdit()
-            widget.setValidator(QIntValidator(MIN_SIGNED_SHORT, MAX_SIGNED_SHORT))
-            widget.textChanged.connect(lambda text: set_value(int(text)))
-
-        layout.addLayout(self.create_labeled_widget(None, text, widget))
-
-        return widget
-
-    def add_types_widget_index(self, layout, text, attribute, index, widget_type):
-        # Certain widget types will be accompanied with arguments.
-        if isinstance(widget_type, (list, tuple)):
-            widget_type, *widget_type_args = widget_type
-
-        def set_value(value, index=index):
-            for obj in self.bound_to:
-                getattr(obj, attribute)[index] = value
-
-        if widget_type == "checkbox":
-            widget = QtWidgets.QCheckBox()
-            widget.stateChanged.connect(lambda state: set_value(int(bool(state))))
         elif widget_type == "combobox":
             widget = QtWidgets.QComboBox()
             policy = widget.sizePolicy()
@@ -1004,11 +974,12 @@ class ObjectRoutePointEdit(DataEditor):
         self.position = self.add_multiple_decimal_input("Position", "position", ["x", "y", "z"],
                                                         -inf, +inf)
         labels = [[], []]
-        obj: RoutePoint = get_cmn_obj(self.bound_to)
+
+        obj: RoutePoint = get_cmn_obj(self.bound_to, self.kmp_file)
         used_by = []
-        kmp_file = self.parent().parent().parent().level_file
+
         for route in obj.partof:
-            used_by.extend(kmp_file.route_used_by(route))
+            used_by.extend(self.kmp_file.route_used_by(route))
 
         for mapobject in used_by:
             point_labels = mapobject.get_route_text()
@@ -1027,7 +998,7 @@ class ObjectRoutePointEdit(DataEditor):
                                               MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT)
 
     def update_data(self):
-        obj: RoutePoint = get_cmn_obj(self.bound_to)
+        obj: RoutePoint = get_cmn_obj(self.bound_to, self.kmp_file)
         self.update_vector3("position", obj.position)
         if obj.unk1 is not None:
             self.unk1.setText(str(obj.unk1))

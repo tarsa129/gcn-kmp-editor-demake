@@ -1,14 +1,20 @@
-bugfixes / refactorings / better ways to handle stuff:
-remove used_by?
+better ways to handle routes:
 make camera types 1 and 2 a "route optional" camera
-edit camera / area types boxes
 create routes for objects when switching ids
+add check to see if people actually add at least two route points
+do not auto ground for camera route points?
+when placing an object with a routepoint, assign to closest routepoint
+
+general fixes:
+edit camera / area types boxes
+keep track of variables for topdown and 3d modes individually
 
 updates:
 improve json files
 error analyzer
 came - camera viewing fixes + replay (all types of cameras)
 render with scale
+select linked for objects
 
 new features:
 handle boos automatically + handle that enemy point switching thing
@@ -17,10 +23,3 @@ load + collide on gobj collision files
 add option to select x to y points
 create dialog for auto generation and auto cleanup
 brres loading
-
-notes:
-have it so that all objects can have a route_obj
-BUT, it only gets showed / saved if the object is routed
-
-add check to see if people actually add at least two route points
-

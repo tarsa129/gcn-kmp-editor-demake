@@ -1113,19 +1113,12 @@ class Route(object):
         self._pointstart = 0
         self.smooth = 0
         self.cyclic = 0
+        self.pointclass = RoutePoint
+        self.offset_vect = Vector3(500, 0, 0)
 
     @classmethod
-    def new(cls, obj = None):
-        route = cls ()
-        if obj is not None:
-            point1 = RoutePoint.new()
-            point1.position = obj.position.copy()
-            route.points.append(point1)
-
-            point2 = RoutePoint.new()
-            point2.position = obj.position + Vector3(2000, 0, 0)
-            route.points.append(point2)
-
+    def new(cls):
+        route = cls()
         return route
 
     def copy(self):
@@ -1133,32 +1126,15 @@ class Route(object):
         obj = this_class.new()
         return self.copy_params_to_child(obj)
 
-    def to_object(self):
-        object_route = ObjectRoute()
-        self.copy_params_to_child(object_route, False)
-        return object_route
+    def to_childclass(self, childclass):
+        new_route = childclass()
+        self.copy_params_to_child(new_route)
+        return new_route
 
-    def to_camera(self):
-        camera_route = CameraRoute()
-        self.copy_params_to_child(camera_route, False)
-        return camera_route
-
-    def to_area(self):
-        area_route = AreaRoute()
-        self.copy_params_to_child(area_route, False)
-        return area_route
-
-    def copy_params_to_child(self, new_route, deep_copy = True):
-        if deep_copy:
-            for point in self.points:
-                new_point = point.copy()
-                new_point.partof = new_route
-                new_route.points.append(new_point)
-        else:
-            new_route.points = self.points
+    def copy_params_to_child(self, new_route):
+        new_route.points = [point.copy(new_route.pointclass) for point in self.points]
         new_route.smooth = self.smooth
         new_route.cyclic = self.cyclic
-
         return new_route
 
     def total_distance(self):
@@ -1175,11 +1151,10 @@ class Route(object):
         route.cyclic = read_uint8(f)
 
         for i in range(route._pointcount):
-            point: RoutePoint = RoutePoint.from_file(f, route)
+            point: RoutePoint = RoutePoint.from_file(f)
             route.points.append( point  )
 
         return route
-
 
     def add_routepoints(self, points):
         for i in range(self._pointcount):
@@ -1200,27 +1175,78 @@ class Route(object):
             point.write(f)
         return len(self.points)
 
+    def add_points(self, position=None, absolute_pos=False, ref_points=None):
+        #if absolute: then add the route points
+        if ref_points:
+            if absolute_pos:
+                self.points = [self.pointclass(point.position + position) for point in ref_points]
+            else:
+                self.points = [self.pointclass(point.position - position) for point in ref_points]
+        else:
+            for i in range(2):
+                point = self.pointclass.new()
+                self.points.append(point)
+
+            if absolute_pos:
+                for point in self.points:
+                    point.position += position
+
 #here for type checking - they function in the same way
 class ObjectRoute(Route):
     def __init__(self):
         super().__init__()
+        self.pointclass = ObjectRoutePoint
+        self.offset_vect = Vector3(500, 0, 0)
+
+    def add_points(self, position=None, absolute_pos=False, points_to_diff=None):
+        super().add_points(position, absolute_pos, points_to_diff)
+        if not points_to_diff:
+            self.points[0].position += Vector3(500, 0, 0)
+            self.points[1].position += Vector3(-500, 0, 0)
 
 class CameraRoute(Route):
     def __init__(self):
         super().__init__()
+        self.pointclass = CameraRoutePoint
+        self.offset_vect = Vector3(2000, 0, 0)
+
+    def add_points(self, position=None, absolute_pos=False, points_to_diff=None):
+        super().add_points(position, absolute_pos, points_to_diff)
+        for point in self.points:
+            point.unk1 = 30
+        if not points_to_diff:
+            self.points[1].position += Vector3(-500, 0, 0)
 
 class AreaRoute(Route):
     def __init__(self):
         super().__init__()
+        self.pointclass = AreaRoutePoint
+        self.offset_vect = Vector3(1500, 0, 0)
 
     @classmethod
     def new(cls):
         return cls()
 
-class ReplayCameraRoute(Route):
-     def __init__(self):
-        super().__init__()
+    def add_points(self, position=None, absolute_pos=False, points_to_diff=None):
+        super().add_points(position, absolute_pos, points_to_diff)
+        for point in self.points[:-1]:
+            point.unk1 = 30
+        if not points_to_diff:
+            self.points[0].position += Vector3(2000, 0, 0)
+            self.points[1].position += Vector3(4000, 0, 0)
 
+
+class ReplayCameraRoute(Route):
+    def __init__(self):
+        super().__init__()
+        self.pointclass = ReplayCameraRoutePoint
+
+    def add_points(self, position=None, absolute_pos=False, points_to_diff=None):
+        super().add_points(position, absolute_pos, points_to_diff)
+        for point in self.points:
+            point.unk1 = 30
+        if not points_to_diff:
+            self.points[1].position += Vector3(-500, 0, 0)
 
 # Section 4
 # Route point for use with routes from section 3
@@ -1229,33 +1255,25 @@ class RoutePoint(object):
         self.position = position
         self.unk1 = 0
         self.unk2 = 0
-        self.partof = None
 
     @classmethod
     def new(cls):
         return cls(Vector3(0.0, 0.0, 0.0))
 
     @classmethod
-    def new_partof(cls, exis_point):
-        new_point = cls(Vector3(0.0, 0.0, 0.0))
-        new_point.partof = exis_point.partof
-        return new_point
-
-    @classmethod
-    def from_file(cls, f, partof = None):
+    def from_file(cls, f):
         position = Vector3(*unpack(">fff", f.read(12)))
         point = cls(position)
 
         point.unk1 = read_uint16(f)
         point.unk2 = read_uint16(f)
-        point.partof = partof
         return point
 
-
-    def copy(self):
-        obj = self.__class__.new()
-        obj.position = Vector3(self.position.x, self.position.y, self.position.z)
-        obj.partof = self.partof
+    def copy(self, RPClass=None):
+        if RPClass is None:
+            obj = self.__class__(self.position.copy())
+        else:
+            obj = RPClass(self.position.copy())
         obj.unk1 = self.unk1
         obj.unk2 = self.unk2
         return obj
@@ -1263,6 +1281,20 @@ class RoutePoint(object):
     def write(self, f):
         f.write(pack(">fff", self.position.x, self.position.y, self.position.z ) )
         f.write(pack(">HH", self.unk1, self.unk2) )
+
+class ObjectRoutePoint(RoutePoint):
+    def __init__(self, position):
+        super().__init__(position)
+class CameraRoutePoint(RoutePoint):
+    def __init__(self, position):
+        super().__init__(position)
+class ReplayCameraRoutePoint(RoutePoint):
+    def __init__(self, position):
+        super().__init__(position)
+class AreaRoutePoint(RoutePoint):
+    def __init__(self, position):
+        super().__init__(position)
+
 
 # Section 5
 # Objects
@@ -1307,6 +1339,7 @@ class MapObject(object):
         defaults = new_object.get_single_json_val("Default Values")
         if defaults is not None:
             new_object.userdata = defaults
+        return new_object
 
     @classmethod
     def default_item_box(cls):
@@ -1974,6 +2007,7 @@ class Camera(object):
     def handle_route_change(self):
         if self.route_info() and self.route_obj is None:
             self.route_obj = CameraRoute.new(self)
+            self.route_obj.add_points(self.position)
 
     def get_route_text(self):
         return ["Speed", None]
@@ -2442,12 +2476,10 @@ class KMP(object):
                     routes_used_by[new_route].extend(objs)
             routes_used_by.clear(route)
 
-        #set route_obj and partof
+        #set route_obj
         for i, (route, value) in enumerate(routes_used_by.items()):
             for obj in value:
                 obj.route_obj = route
-            for point in route.points:
-                point.partof = route
 
         for obj in self.objects.objects:
             special_usersetting = obj.get_routepoint_idx()
@@ -2553,6 +2585,14 @@ class KMP(object):
                     return_string += "A checkpoint was found to have an invalid respawn reference\
                         it has been reassigned to the closest resapwn point.\n"
                     point.assign_to_closest(self.respawnpoints)
+
+        new_types = ( (ObjectRoute, self.objects.get_routes()), (AreaRoute, self.areas.get_routes()),
+                      (CameraRoute, self.cameras.get_routes()), (ReplayCameraRoute, self.replayareas.get_routes())  )
+        for childclass, routecollec in new_types:
+            for route in routecollec:
+                new_route = route.to_childclass(childclass)
+                for thing in self.route_used_by(route):
+                    thing.route_obj = new_route
 
         return return_string
 
@@ -2936,6 +2976,7 @@ class KMP(object):
             group.prevgroup = [self.itempointgroups.groups[prev] for prev in group.prevgroup]
             group.nextgroup = [self.itempointgroups.groups[next] for next in group.nextgroup]
 
+    #routes
     def get_route_for_obj(self, obj):
         if isinstance(obj, (ReplayCameraRoute, ReplayCamera)):
             return ReplayCameraRoute()
@@ -2946,28 +2987,12 @@ class KMP(object):
         else:
             return ObjectRoute()
 
-    def create_route_for_obj(self, obj, add_points=False, points_to_diff=None):
+    def create_route_for_obj(self, obj, add_points=False, ref_points=None, absolute_pos=False):
         if obj.route_info() < 1 or obj.route_obj is not None:
             return
         obj.route_obj = self.get_route_for_obj(obj)
-        if add_points and points_to_diff:
-            for point in points_to_diff:
-                new_point = RoutePoint.new()
-                new_point.partof = obj.route_obj
-                new_point.position = point.position - obj.position
-                obj.route_obj.points.append(new_point)
-        elif add_points:
-            for i in range(2):
-                point = RoutePoint.new()
-                new_point.partof = obj.route_obj
-                obj.route_obj.points.append(point)
-            obj.route_obj.points[0].position += obj.rotation.get_vectors[2] * 500
-            obj.route_obj.points[1].position += obj.rotation.get_vectors[2] * -500
-        if add_points and isinstance(obj, (Area, Camera)):
-            for point in obj.route_obj.points[:-1]:
-                point.unk1 = 30
-            if isinstance(obj, Area):
-                obj.route_obj.points[1].unk1 = 30
+        if add_points:
+            obj.route_obj.add_points(obj.position, absolute_pos, ref_points)
 
     #cameras
     def remove_unused_cameras(self):
@@ -3023,13 +3048,13 @@ class KMP(object):
 
     #grabbing functions
     def get_route_collec_for(self, obj):
-        if isinstance(obj, (Area, AreaRoute)):
+        if isinstance(obj, (Area, AreaRoute, AreaRoutePoint)):
             return self.areas.get_routes()
-        elif isinstance(obj, (MapObject, ObjectRoute)):
+        elif isinstance(obj, (MapObject, ObjectRoute, ObjectRoutePoint)):
             return self.objects.get_routes()
-        elif isinstance(obj, (ReplayCamera, ReplayCameraRoute)):
+        elif isinstance(obj, (ReplayCamera, ReplayCameraRoute, ReplayCameraRoutePoint)):
             return self.replayareas.get_routes()
-        elif isinstance(obj, (Camera, CameraRoute)):
+        elif isinstance(obj, (Camera, CameraRoute, CameraRoutePoint)):
             return self.cameras.get_routes()
 
     def route_used_by(self, route: Route):
@@ -3053,7 +3078,12 @@ class KMP(object):
         else:
             self.areas.remove(area)
 
-        
+    def get_route_of_point(self, point:RoutePoint):
+        collect = self.get_route_collec_for(point)
+        for route in collect:
+            if point in route.points:
+                return route
+        return None
 
 with open("lib/mkwiiobjects.json", "r") as f:
     tmp = json.load(f)
