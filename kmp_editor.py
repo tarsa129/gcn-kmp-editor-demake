@@ -1743,7 +1743,7 @@ class GenEditor(QMainWindow):
                 self.update_3d()
                 return
             new_camera = libkmp.OpeningCamera.default(obj)
-            self.level_file.create_route_for_obj(new_camera)
+            self.level_file.create_route_for_obj(new_camera, True)
             self.object_to_be_added = [new_camera, True, True ]
 
             self.pik_control.button_add_object.setChecked(True)
@@ -1771,14 +1771,12 @@ class GenEditor(QMainWindow):
             new_area = libkmp.Area.default()
             new_camera = libkmp.ReplayCamera.default(2)
 
-            self.level_file.create_route_for_obj(new_camera)
+            self.level_file.create_route_for_obj(new_camera, True)
             new_area.camera = new_camera
             self.object_to_be_added = [new_area, True, None ]
 
             self.pik_control.button_add_object.setChecked(True)
             self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
-
-            self.object_to_be_added = None
         elif option == "add_rarea_stat": #area camera add
             new_area = libkmp.Area.default()
             new_camera = libkmp.ReplayCamera.default(1)
@@ -1989,14 +1987,13 @@ class GenEditor(QMainWindow):
             elif isinstance(placeobject, libkmp.Area):
                 if placeobject.type == 0:
                     self.level_file.replayareas.append(placeobject)
-                    if group:
+                    if group: #if you are going to copy the camera
                         placeobject.camera = object.camera.copy()
-                    if placeobject.camera is not None:
-                        placeobject.camera.position = object.position + Vector3(3000, 2000, 0)
+                        placeobject.camera.position = placeobject.position + Vector3(3000, 1000, 0)
                         if placeobject.camera.route_obj is not None:
-                            placeobject.camera.route_obj = object.route_obj.copy()
-                            placeobject.camera.route_obj.points[0].position = placeobject.camera
-                            placeobject.camera.route_obj.points[1].position = placeobject.camera.position + Vector3( 0, 0, -3500)
+                            diffed_points = [RoutePoint(x.position - object.position) for x in object.camera.route_obj.points]
+                            placeobject.camera.route_obj = None
+                            self.level_file.create_route_for_obj(placeobject.camera, True, diffed_points, True)
                 else:
                     self.level_file.areas.append(placeobject)
                     if placeobject.type == 3:
@@ -2007,7 +2004,7 @@ class GenEditor(QMainWindow):
             elif isinstance(object, libkmp.OpeningCamera):
                 self.level_file.cameras.append(placeobject)
                 if placeobject.route_obj is not None:
-                    placeobject.route_obj.points[0].position 
+                    placeobject.route_obj.points[0].position = placeobject.position
             else:
                 raise RuntimeError("Unknown object type {0}".format(type(object)))
 

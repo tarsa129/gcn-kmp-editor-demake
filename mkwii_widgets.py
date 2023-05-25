@@ -1625,28 +1625,17 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                 for i, route in enumerate(replaycameraroutes):
                     selected = route in routes_to_highlight
 
-                    if route in self.selected: #probably pointless
-                        selected = True
                     last_point = None
-                    if self.level_file.route_used_by(route):
-                        for point in route.points:
-                            point_selected = point in select_optimize
-                            self.models.render_generic_position_colored(point.position, point_selected, "camerapoint")
-                            selected = selected or point_selected
-                            if last_point is not None:
-                                self.models.draw_arrow_head(last_point.position, point.position)
-                            if route in routes_to_circle:
-                                glColor3f(0.0, 0.0, 1.0)
-                                self.models.draw_sphere(point.position, 600)
-                            last_point = point
-                    else:
-                        for point in route.points:
-                            point_selected = point in select_optimize
-                            self.models.render_generic_position_colored(point.position, point_selected, "unusedpoint")
-                            selected = selected or point_selected
-                            if last_point is not None:
-                                self.models.draw_arrow_head(last_point.position, point.position)
-                            last_point = point
+                    for point in route.points:
+                        point_selected = point in select_optimize
+                        self.models.render_generic_position_colored(point.position, point_selected, "camerapoint")
+                        selected = selected or point_selected
+                        if last_point is not None:
+                            self.models.draw_arrow_head(last_point.position, point.position)
+                        if route in routes_to_circle:
+                            glColor3f(0.0, 0.0, 1.0)
+                            self.models.draw_sphere(point.position, 600)
+                        last_point = point
                     if selected:
                         glLineWidth(3.0)
                     glBegin(GL_LINE_STRIP)

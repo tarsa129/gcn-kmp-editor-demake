@@ -1212,10 +1212,10 @@ class CameraRoute(Route):
 
     def add_points(self, position=None, absolute_pos=False, points_to_diff=None):
         super().add_points(position, absolute_pos, points_to_diff)
-        for point in self.points:
+        for point in self.points[:-1]:
             point.unk1 = 30
         if not points_to_diff:
-            self.points[1].position += Vector3(-500, 0, 0)
+            self.points[1].position += Vector3(2000, 0, 0)
 
 class AreaRoute(Route):
     def __init__(self):
@@ -1229,7 +1229,7 @@ class AreaRoute(Route):
 
     def add_points(self, position=None, absolute_pos=False, points_to_diff=None):
         super().add_points(position, absolute_pos, points_to_diff)
-        for point in self.points[:-1]:
+        for point in self.points:
             point.unk1 = 30
         if not points_to_diff:
             self.points[0].position += Vector3(2000, 0, 0)
@@ -1243,10 +1243,10 @@ class ReplayCameraRoute(Route):
 
     def add_points(self, position=None, absolute_pos=False, points_to_diff=None):
         super().add_points(position, absolute_pos, points_to_diff)
-        for point in self.points:
+        for point in self.points[:-1]:
             point.unk1 = 30
         if not points_to_diff:
-            self.points[1].position += Vector3(-500, 0, 0)
+            self.points[1].position += Vector3(2000, 0, 0)
 
 # Section 4
 # Route point for use with routes from section 3
@@ -1939,7 +1939,7 @@ class Camera(object):
         self.widget = widget
 
         new_camera.nextcam_obj = nextcam_obj
-        if copyroute:
+        if copyroute and route_obj is not None:
             new_camera.route_obj = route_obj.copy()
         else:
             new_camera.route_obj = route_obj
