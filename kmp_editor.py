@@ -2218,7 +2218,8 @@ class GenEditor(QMainWindow):
 
         self.pik_control.update_info()
         if (selected):
-            self.level_view.gizmo.move_to_average(self.level_view.selected_positions)
+            self.level_view.gizmo.move_to_average(self.level_view.selected_positions,
+                                                  self.level_view.selected_rotations)
         self.set_has_unsaved_changes(True)
         self.level_view.do_redraw()
 
@@ -2259,10 +2260,7 @@ class GenEditor(QMainWindow):
                 self.level_file.remove_respawn(obj)
                 #self.level_file.respawnpoints.remove(obj)
             elif isinstance(obj, libkmp.Area):
-                if obj.type == 0:
-                    self.level_file.remove_area(obj)
-                else:
-                    self.level_file.remove_area(obj)
+                self.level_file.remove_area(obj)
             elif isinstance(obj, libkmp.Camera):
                 if isinstance(obj, libkmp.OpeningCamera):
                     self.level_file.remove_camera(obj)
@@ -2603,6 +2601,12 @@ class GenEditor(QMainWindow):
 
         if len(self.level_view.selected) == 1:
             obj = self.level_view.selected[0]
+            if isinstance(obj, RoutedObject):
+                select_linked = QAction("Select Linked", self)
+                select_linked.triggered.connect(lambda: self.select_linked(obj))
+                context_menu.addAction(select_linked)
+
+
             if isinstance(obj, RoutePoint):
                 select_all = QAction("Select All in Route", self)
                 select_all.triggered.connect(lambda: self.select_route_from_point(obj))
@@ -2611,25 +2615,16 @@ class GenEditor(QMainWindow):
                 delete_all = QAction("Delete Route", self)
                 delete_all.triggered.connect(lambda: self.delete_route_from_point(obj))
                 context_menu.addAction(delete_all)
-            if isinstance(obj, Camera) and obj in self.level_file.cameras:
+            elif isinstance(obj, Camera) and obj in self.level_file.cameras:
                 set_first = QAction("Make First Cam", self)
                 set_first.triggered.connect(lambda: self.make_first_cam(obj))
                 context_menu.addAction(set_first)
-
-                select_linked = QAction("Select Linked", self)
-                select_linked.triggered.connect(lambda: self.select_linked(obj))
-                context_menu.addAction(select_linked)
 
                 preview_cam = QAction("Preview Camera", self)
                 preview_cam.triggered.connect( lambda:
                     self.level_view.preview_opening_cameras([obj]))
                 context_menu.addAction(preview_cam)
-
-            if isinstance(obj, Area) and obj in self.level_file.replayareas:
-                select_linked = QAction("Select Linked", self)
-                select_linked.triggered.connect(lambda: self.select_linked(obj))
-                context_menu.addAction(select_linked)
-            if isinstance(obj, EnemyPoint) or isinstance(obj, ItemPoint):
+            elif isinstance(obj, EnemyPoint) or isinstance(obj, ItemPoint):
                 set_as_first = QAction("Set as First", self)
                 set_as_first.triggered.connect(lambda: self.set_as_first(obj))
                 context_menu.addAction(set_as_first)
@@ -2641,7 +2636,7 @@ class GenEditor(QMainWindow):
                 delete_all_group = QAction("Delete All in Group", self)
                 delete_all_group.triggered.connect(lambda: self.delete_all_of_group(obj))
                 context_menu.addAction(delete_all_group)
-            if isinstance(obj, MapObject):
+            elif isinstance(obj, MapObject):
                 select_type = QAction("Select All of Type", self)
                 select_type.triggered.connect(lambda: self.select_all_of_type(obj))
                 context_menu.addAction(select_type)
@@ -2659,7 +2654,8 @@ class GenEditor(QMainWindow):
         self.level_view.selected_positions =  [point.position for point in route.points]
         self.level_view.selected_rotations = []
 
-        self.level_view.gizmo.move_to_average(self.level_view.selected_positions)
+        self.level_view.gizmo.move_to_average(self.level_view.selected_positions,
+                                              self.level_view.selected_rotations)
         self.level_view.do_redraw()
         self.level_view.select_update.emit()
 
@@ -2676,33 +2672,32 @@ class GenEditor(QMainWindow):
         self.level_view.do_redraw()
 
     def select_linked(self, obj):
-        if isinstance(obj, Area) and obj in self.level_file.replayareas:
-            new_selected = [obj]
-            new_selected_position = [obj.position]
+        new_selected = [obj]
+        new_selected_position = [obj.position]
+        if isinstance(obj, Area):
             if obj.camera is not None:
                 new_selected.append(obj.camera)
                 new_selected_position.append(obj.camera.position)
-            if obj.camera.route_obj is not None:
-                new_selected.extend( [ point for point in obj.camera.route_obj.points]  )
-                new_selected_position.extend( [ point.position for point in obj.camera.route_obj.points]  )
+                if obj.camera.route_obj is not None:
+                    new_selected.extend( obj.camera.route_obj .points  )
+                    new_selected_position.extend( [ point.position for point in obj.camera.route_obj.points]  )
+            if obj.enemypoint is not None:
+                new_selected.append(obj.enemypoint)
+                new_selected_position.append(obj.enemypoint.position)
+        elif isinstance(obj, MapObject):
+            if obj.routepoint is not None and obj.get_routepoint_idx():
+                new_selected.append(obj.routepoint)
+                new_selected_position.append(obj.routepoint.position)
+        if obj.route_obj is not None:
+            new_selected.extend( obj.route_obj.points  )
+            new_selected_position.extend( [ point.position for point in obj.route_obj.points]  )
 
-            self.level_view.selected = new_selected
-            self.level_view.selected_positions = new_selected_position
-            self.level_view.selected_rotations = [obj.rotation]
-            self.level_view.do_redraw()
-            self.level_view.select_update.emit()
-        elif isinstance(obj, Camera):
-            new_selected = [obj]
-            new_selected_position = [obj.position]
-            if obj.route_obj is not None:
-                new_selected.extend( obj.route_obj.points  )
-                new_selected_position.extend( [ point.position for point in obj.route_obj.points]  )
 
-            self.level_view.selected = new_selected
-            self.level_view.selected_positions = new_selected_position
-            self.level_view.selected_rotations = [obj.rotation]
-            self.level_view.do_redraw()
-            self.level_view.select_update.emit()
+        self.level_view.selected = new_selected
+        self.level_view.selected_positions = new_selected_position
+        self.level_view.selected_rotations = [obj.rotation]
+        self.level_view.do_redraw()
+        self.level_view.select_update.emit()
 
     def set_as_first(self, obj):
         to_deal_with = self.level_file.get_to_deal_with(obj)

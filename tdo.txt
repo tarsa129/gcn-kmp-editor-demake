@@ -1,5 +1,5 @@
 better ways to handle routes:
-make camera types 1 and 2 a "route optional" camera
+make camera types 1 and 2 a "route optional" camera + add in 4 and 5 as well
 
 general fixes:
 edit camera / area types boxes
@@ -9,7 +9,6 @@ updates:
 improve json files
 came - camera viewing fixes + replay (all types of cameras)
 render with scale
-select linked for objects
 better opening camera copying + creation
 when placing an object with a routepoint, assign to closest routepoint (new option)
 error analyzer

@@ -211,8 +211,6 @@ class Gizmo2DRotateY(Gizmo2DMoveX):
     def just_released(self, editor, buttons, event):
         super().just_released(editor, buttons, event)
         editor.gizmo.reset_axis()
-        #editor.gizmo.move_to_average(editor.selected)
-
 
 class AddObjectTopDown(ClickAction):
     def condition(self, editor, buttons, event):
