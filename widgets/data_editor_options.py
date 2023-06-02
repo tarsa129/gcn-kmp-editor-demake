@@ -37,7 +37,7 @@ START_SQUEEZE["Normal"] = 0
 START_SQUEEZE["Narrow"] = 1
 
 AREA_Type = OrderedDict()
-AREA_Type["Camera"] = 0
+#AREA_Type["Camera"] = 0
 AREA_Type["Environment Effect"] = 1
 AREA_Type["BFG Swapper"] = 2
 AREA_Type["Moving Road"] = 3
@@ -48,7 +48,6 @@ AREA_Type["Flying Boos"] = 7
 AREA_Type["Object Grouper"] = 8
 AREA_Type["Group Unloading"] = 9
 AREA_Type["Fall Boundary"] = 10
-AREA_Type["INVALID"] = 11
 
 AREA_TYPES = [ "Camera (don't use aaaa)", "Environment Effect","BFG Swapper", "Moving Road", "Destination Point" , "Minimap Control",
                "BBLM Swapper", "Flying Boos", "Object Grouper", "Group Unloading", "Fall Boundary"]
@@ -58,6 +57,10 @@ AREA_Shape["Box"] = 0
 AREA_Shape["Cylinder"] = 1
 
 CAME_Type = OrderedDict()
+#CAME_Type["Goal"] = 0
+CAME_Type["Simple"] = 1
+CAME_Type["Player Origin"] = 3
+"""
 CAME_Type["Goal"] = 0
 CAME_Type["FixSearch (Replay)"] = 1
 CAME_Type["PathSearch (Replay)"] = 2
@@ -68,7 +71,7 @@ CAME_Type["OP_PathMoveAt (Replay)"] = 6
 CAME_Type["MiniGame (Unused)"] = 7
 CAME_Type["MissionSuccess (Unused)"] = 8
 CAME_Type["MSPT"] = 9
-CAME_Type["INVALID"] = 10
+"""
 
 CAME_TYPES = ["Goal", "FixSearch (R)", "PathSearch (R)", "KartFollow (R)", "KartPathFollow (R/O)",
                 "OP_FixMoveAt(O)", "OP_PathMoveAt (R)", "MiniGame", "MissionSuccess", "MSPT"]

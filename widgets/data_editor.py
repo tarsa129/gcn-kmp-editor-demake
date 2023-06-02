@@ -6,10 +6,7 @@ import widgets.tooltip_list as ttl
 import PyQt5.QtWidgets as QtWidgets
 from PyQt5.QtGui import QIntValidator, QDoubleValidator, QValidator, QColor, QPixmap
 from math import inf
-from lib.libkmp import (EnemyPoint, EnemyPointGroup, CheckpointGroup, Checkpoint, Route, RoutePoint, ItemPoint, ItemPointGroup,
-                        MapObject, KartStartPoint, KartStartPoints, Area, Camera, Cameras, KMP, JugemPoint, MapObject,
-                        CannonPoint, MissionPoint, OBJECTNAMES, REVERSEOBJECTNAMES,
-                         Rotation)
+from lib.libkmp import *
 from lib.vectors import Vector3
 from PyQt5.QtCore import pyqtSignal, Qt, QSignalBlocker
 from widgets.data_editor_options import *
@@ -21,10 +18,12 @@ def set_attr_mult(objs, attr, value):
                 setattr(this_obj, attr, value)
         else:
             setattr(obj, attr, value)
-def set_subattr_mult(objs, attr, subattr, value):
+def set_subattrs_mult(objs, attrs, value):
     for obj in objs:
-        setattr( getattr(obj, attr), subattr, value)
-
+        element = obj
+        for attr in attrs[:-1]:
+            element = element[int(attr)] if isinstance(element, list) else getattr(element, attr)
+        setattr( element, attrs[-1], value)
 def set_userdata_mult(objs:list[MapObject], idx, value):
     for obj in objs:
         obj.userdata[idx] = value
@@ -260,9 +259,9 @@ class DataEditor(QtWidgets.QWidget):
             layout.addWidget(widget)
         return layout
 
-    def add_checkbox(self, text, attribute, off_value, on_value):
+    def add_checkbox(self, text, attribute, off_value, on_value, return_both=False):
         checkbox = QtWidgets.QCheckBox(self)
-        layout = self.create_labeled_widget(self, text, checkbox)
+        layout, label = self.create_labeled_widget_ret_both(self, text, checkbox)
 
         def checked(state):
             if state == 0:
@@ -273,11 +272,13 @@ class DataEditor(QtWidgets.QWidget):
         checkbox.stateChanged.connect(checked)
         self.vbox.addLayout(layout)
 
+        if return_both:
+            return checkbox, label
         return checkbox
 
-    def add_integer_input(self, text, attribute, min_val, max_val):
+    def add_integer_input(self, text, attribute, min_val, max_val, return_both=False):
         line_edit = QtWidgets.QLineEdit(self)
-        layout = self.create_labeled_widget(self, text, line_edit)
+        layout, label = self.create_labeled_widget_ret_both(self, text, line_edit)
 
         line_edit.setValidator(PythonIntValidator(min_val, max_val, line_edit))
 
@@ -291,6 +292,8 @@ class DataEditor(QtWidgets.QWidget):
         line_edit.editingFinished.connect(input_edited)
 
         self.vbox.addLayout(layout)
+        if return_both:
+            return line_edit, label
         #print("created for", text, attribute)
         return line_edit
 
@@ -307,11 +310,7 @@ class DataEditor(QtWidgets.QWidget):
             #print("input:", text)
 
             if "." in attribute:
-                sub_obj, attr = attribute.split('.')
-                cmn_obj = get_cmn_obj(self.bound_to)
-                if cmn_obj.route_obj:
-                    points = [x.points[0] for x in cmn_obj.route_obj]
-                    set_attr_mult( points, attr, val)
+                set_subattrs_mult(self.bound_to, attribute.split('.'), val)
             else:
                 set_attr_mult(self.bound_to, attribute, val)
 
@@ -423,9 +422,8 @@ class DataEditor(QtWidgets.QWidget):
     def add_dropdown_input(self, text, attribute, keyval_dict, return_both = False):
         #create the combobox
         combobox = QtWidgets.QComboBox(self)
-        for val in keyval_dict:
-            if val != "INVALID":
-                combobox.addItem(val)
+        for key, val in keyval_dict.items():
+            combobox.addItem(key, val)
 
         tt_dict = getattr(ttl, attribute, None)
         try:
@@ -438,29 +436,23 @@ class DataEditor(QtWidgets.QWidget):
         policy = combobox.sizePolicy()
         policy.setHorizontalPolicy(QtWidgets.QSizePolicy.Expanding)
         combobox.setSizePolicy(policy)
-
-        max_value = max( keyval_dict.values()  )
         #create the layout and label
         layout, label = self.create_labeled_widget_ret_both(self, text, combobox)
 
-        def item_selected(item):
-            if item in keyval_dict:
-                val = keyval_dict[item]
-            else:
-                val = max_value + 1
-            #print("selected", item)
+        def item_selected(index):
+            val = combobox.itemData(index)
             if "." in attribute:
-                sub_obj, attr = attribute.split('.')
-                set_subattr_mult(self.bound_to, sub_obj, attr, val)
+                set_subattrs_mult(self.bound_to, attribute.split('.'), val)
             else:
                 set_attr_mult(self.bound_to, attribute, val)
 
+            item = combobox.itemText(index)
             if tt_dict is not None and item in tt_dict:
                 combobox.setToolTip(tt_dict[item])
             else:
                 combobox.setToolTip('')
 
-        combobox.currentTextChanged.connect(item_selected)
+        combobox.currentIndexChanged.connect(lambda index: item_selected(index))
 
         #print("created for", text, attribute)
 
@@ -681,8 +673,6 @@ class DataEditor(QtWidgets.QWidget):
                 if hasattr(obj.widget, "parent") and obj.widget.parent() is not None:
                     obj.widget.parent().sort()
                 obj.widget.setSelected(True)
-            if isinstance(obj, Camera):
-                obj.handle_route_change()
 
     def update_vector3(self, attr, vec):
         inputs = getattr(self, attr)
@@ -708,7 +698,7 @@ def create_setter(lineedit, bound_to, attribute, subattr, update3dview, isFloat)
             #print(bound_to, attribute, subattr)
             #mainattr = getattr(get_cmn_obj(bound_to), attribute)
 
-            set_subattr_mult(bound_to, attribute, subattr, float(text))
+            set_subattrs_mult(bound_to, [attribute, subattr], float(text))
             update3dview()
         return input_edited
     else:
@@ -716,7 +706,7 @@ def create_setter(lineedit, bound_to, attribute, subattr, update3dview, isFloat)
             text = lineedit.text()
             #mainattr = getattr(get_cmn_obj(bound_to), attribute)
 
-            set_subattr_mult(bound_to, attribute, subattr, int(text))
+            set_subattrs_mult(bound_to, [attribute, subattr], int(text))
             update3dview()
         return input_edited
 
@@ -759,9 +749,16 @@ def choose_data_editor(obj):
     elif isinstance(obj, KartStartPoints):
         return KartStartPointsEdit
     elif isinstance(obj, Area):
-        return AreaEdit
-    elif isinstance(obj, Camera):
-        return CameraEdit
+        if obj.type == 0:
+            return ReplayAreaEdit
+        else:
+            return AreaEdit
+    elif isinstance(obj, ReplayCamera):
+        return ReplayCameraEdit
+    elif isinstance(obj, (OpeningCamera, GoalCamera)):
+        return OpeningCameraEdit
+    elif isinstance(obj, Cameras):
+        return CamerasEdit
     elif isinstance(obj, JugemPoint):
         return RespawnPointEdit
     elif isinstance(obj, CannonPoint):
@@ -1255,9 +1252,6 @@ class KartStartPointsEdit(DataEditor):
         #print( self.pole_position.currentIndex(), self.start_squeeze.currentIndex())
         self.update_name()
 
-    def update_name(self):
-        super().update_name()
-
 class KartStartPointEdit(DataEditor):
     def setup_widgets(self):
         self.position = self.add_multiple_decimal_input("Position", "position", ["x", "y", "z"],
@@ -1354,81 +1348,85 @@ class AreaEdit(DataEditor):
         self.set_settings_visible()
         super().update_name()
 
-class CameraEdit(DataEditor):
+class ReplayAreaEdit(DataEditor):
 
     def setup_widgets(self):
-        self.position = self.add_multiple_decimal_input("Position", "position", ["x", "y", "z"],
-                                                        -inf, +inf)
-        #self.rotation = self.add_rotation_input()
+        self.main_thing = QtWidgets.QTabWidget()
+        self.vbox.addWidget(self.main_thing)
+
+        self.area_edit = AreaEdit(self.parent(), self.bound_to)
+        self.camera_edit = ReplayCameraEdit(self.parent(), [x.camera for x in self.bound_to])
+
+        self.main_thing.addTab(self.area_edit, "Area")
+        self.main_thing.addTab(self.camera_edit, "Camera")
+
+    def update_data(self):
+        self.area_edit.update_data()
+        self.camera_edit.update_data()
+
+class CameraEdit(DataEditor):
+    def setup_widgets(self):
+
+        self.position, self.position_label = self.add_multiple_decimal_input("Position", "position", ["x", "y", "z"],
+                                                        -inf, +inf, True)
+
+        self.follow_player, self.follow_player_label = self.add_checkbox("Follow Player", "follow_player", 0, 1, True)
+
         self.position2, self.position2_label = self.add_multiple_decimal_input("Start Point", "position2", ["x", "y", "z"],
                                                         -inf, +inf, True)
         self.position3, self.position3_label = self.add_multiple_decimal_input("End Point", "position3", ["x", "y", "z"],
                                                         -inf, +inf, True)
+        self.viewspeed, self.viewspeed_label = self.add_integer_input("View Speed", "viewspeed", MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT, True)
 
-        self.type = self.add_dropdown_input("Camera Type", "type", CAME_Type)
-
-        self.shake = self.add_integer_input("Shake", "shake", MIN_UNSIGNED_BYTE, MAX_UNSIGNED_BYTE)
-
-        self.routespeed = self.add_integer_input("Route Speed", "routespeed", MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT)
-        self.zoomspeed = self.add_integer_input("Zoom Speed", "zoomspeed", MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT)
-        self.viewspeed = self.add_integer_input("View Speed", "viewspeed", MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT)
+        self.type, self.type_label = self.add_dropdown_input("Camera Type", "type", CAME_Type, True)
 
         self.fov = self.add_multiple_integer_input("Start/End FOV", "fov", ["start", "end"],
                                                    MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT)
-        self.camduration = self.add_integer_input("Camera Duration", "camduration",
-                                                  MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT)
+        self.zoomspeed = self.add_integer_input("Zoom Speed", "zoomspeed", MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT)
 
-        self.startflag = self.add_integer_input("Start Flag", "startflag", MIN_UNSIGNED_BYTE, MAX_UNSIGNED_BYTE)
-        self.movieflag = self.add_integer_input("Movie Flag", "movieflag", MIN_UNSIGNED_BYTE, MAX_UNSIGNED_BYTE)
+        self.routespeed, self.routespeed_label = self.add_integer_input("Route Speed", "routespeed", MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT, True)
+        self.shake = self.add_integer_input("Shake", "shake", MIN_UNSIGNED_BYTE, MAX_UNSIGNED_BYTE)
+        #self.startflag = self.add_integer_input("Start Flag", "startflag", MIN_UNSIGNED_BYTE, MAX_UNSIGNED_BYTE)
+        #self.movieflag = self.add_integer_input("Movie Flag", "movieflag", MIN_UNSIGNED_BYTE, MAX_UNSIGNED_BYTE)
 
         self.smooth, self.smooth_label = self.add_dropdown_input("Sharp/Smooth motion", "route_obj.smooth", POTI_Setting1, return_both = True)
         self.cyclic, self.cyclic_label = self.add_dropdown_input("Cyclic/Back and forth motion", "route_obj.cyclic", POTI_Setting2, return_both = True)
 
         self.route_unk1, self.route_unk1_label = self.add_integer_input_hideable(\
-            "Sharp/Smooth motion", "route_obj.unk1", MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT)
+            "Sharp/Smooth motion", "route_obj.points.0.unk1", MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT)
         self.route_unk2, self.route_unk2_label = self.add_integer_input_hideable(\
-            "Sharp/Smooth motion", "route_obj.unk2", MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT)
+            "Sharp/Smooth motion", "route_obj.points.0.unk2", MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT)
 
-        if get_cmn_obj(self.bound_to).route_obj is None:
-            self.smooth.setVisible(False)
-            self.smooth_label.setVisible(False)
-            self.cyclic.setVisible(False)
-            self.cyclic_label.setVisible(False)
-
-            self.route_unk1.setVisible(False)
-            self.route_unk1_label.setVisible(False)
-            self.route_unk2.setVisible(False)
-            self.route_unk1_label.setVisible(False)
-
-
-        self.type.currentTextChanged.connect(self.update_name)
+        self.type.currentIndexChanged.connect(self.update_name)
+        self.type.currentIndexChanged.connect(lambda index: self.update_positions(index))
+        self.follow_player.stateChanged.connect(lambda _index: self.update_positions(None))
 
     def update_data(self):
         obj: Camera = get_cmn_obj(self.bound_to)
+        with QSignalBlocker(self.follow_player):
+            self.follow_player.setChecked(obj.follow_player)
+
+        typeindex = self.type.findData(obj.type )
+        self.type.setCurrentIndex(typeindex if typeindex != -1 else 1)
+
+        using_view = (obj.type == 3) or (not self.follow_player.isChecked())
+        self.set_visible_followplayer(using_view)
+
+        obj: Camera = get_cmn_obj(self.bound_to)
         self.update_vector3("position", obj.position)
+
         self.update_vector3("position2", obj.position2)
         self.update_vector3("position3", obj.position3)
 
-        for widget_group in (self.position2, self.position3):
-            for widget in widget_group:
-                widget.setVisible(obj.type in (0, 1,  3, 4,5))
-        self.position2_label.setVisible(obj.type in (0, 1,  3, 4,5))
-        self.position3_label.setVisible(obj.type in (0, 1,  3, 4,5))
-
-        #self.update_rotation(*self.rotation)
-
-
-        self.type.setCurrentIndex( obj.type )
         self.shake.setText(str(obj.shake))
         self.routespeed.setText(str(obj.routespeed))
         self.zoomspeed.setText(str(obj.zoomspeed))
         self.viewspeed.setText(str(obj.viewspeed))
-        self.startflag.setText(str(obj.startflag))
-        self.movieflag.setText(str(obj.movieflag))
+        #self.startflag.setText(str(obj.startflag))
+        #self.movieflag.setText(str(obj.movieflag))
 
         self.fov[0].setText(str(obj.fov.start))
         self.fov[1].setText(str(obj.fov.end))
-        self.camduration.setText(str(obj.camduration))
 
         obj: Route = obj.route_obj
         if len(obj) == 1:
@@ -1440,15 +1438,148 @@ class CameraEdit(DataEditor):
                 self.route_unk2.setText( str( obj[0].points[0].unk2  ))
 
         has_route = len(obj) > 0
-        self.smooth.setVisible(has_route)
-        self.smooth_label.setVisible(has_route)
-        self.cyclic.setVisible(has_route)
-        self.cyclic_label.setVisible(has_route)
+        self.set_visible_route(has_route)
 
-        self.route_unk1.setVisible(has_route)
-        self.route_unk1_label.setVisible(has_route)
-        self.route_unk2.setVisible(has_route)
-        self.route_unk2_label.setVisible(has_route)
+
+
+    def update_positions(self, index):
+        type = self.type.itemData(index)
+        follow_player = self.follow_player.isChecked()
+        self.set_visible_followplayer( type == 3 or not follow_player )
+        self.update_data()
+
+    def set_visible_followplayer(self, using_view):
+        #different configurations:
+        #1-2 doesn't use pos2, pos3, or viewspeed
+        #4-5 uses pos2, pos3 and viewspeed
+        #3,6 uses pos2, pos3, and viewspeed.
+        widgets = [self.position2_label, self.position3_label] + self.position2 + self.position3
+        widgets.extend( [self.viewspeed, self.viewspeed_label] )
+        [widget.setVisible(using_view) for widget in widgets]
+
+    def set_visible_route(self, vis_value):
+        self.routespeed.setVisible(vis_value)
+        self.routespeed_label.setVisible(vis_value)
+
+        self.smooth.setVisible(vis_value)
+        self.smooth_label.setVisible(vis_value)
+        self.cyclic.setVisible(vis_value)
+        self.cyclic_label.setVisible(vis_value)
+
+        self.route_unk1.setVisible(vis_value)
+        self.route_unk1_label.setVisible(vis_value)
+        self.route_unk2.setVisible(vis_value)
+        self.route_unk2_label.setVisible(vis_value)
+
+class ReplayCameraEdit(CameraEdit):
+
+    def setup_widgets(self):
+        super().setup_widgets()
+
+    def update_data(self):
+        super().update_data()
+        obj: Camera = get_cmn_obj(self.bound_to)
+        [widget.setVisible(obj.type == 1) for widget in self.position]
+        self.position_label.setVisible(obj.type == 1)
+
+    def update_name(self):
+        super().update_name()
+
+        obj: Camera = get_cmn_obj(self.bound_to)
+        self.follow_player.setVisible(obj == 1)
+        self.follow_player_label.setVisible(obj == 1)
+
+        [widget.setVisible(obj == 1) for widget in self.position]
+        self.position_label.setVisible(obj == 1)
+
+        for obj in self.bound_to:
+            obj.handle_type_change()
+
+    def update_positions(self, index=None):
+        if index is None:
+            index = self.type.currentIndex()
+        super().update_positions(index)
+        type = self.type.itemData(index)
+        [widget.setVisible(type == 1) for widget in (self.follow_player, self.follow_player_label)]
+        [widget.setVisible(type == 1) for widget in self.position]
+        self.position_label.setVisible(type == 1)
+
+class OpeningCameraEdit(CameraEdit):
+    def setup_widgets(self):
+        super().setup_widgets()
+        self.camduration = self.add_integer_input("Camera Duration", "camduration",
+                                                  MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT)
+        self.type.setVisible(False)
+        self.type_label.setVisible(False)
+        self.follow_player.setVisible(False)
+        self.follow_player_label.setVisible(False)
+
+    def update_data(self):
+        super().update_data()
+        obj: Camera = get_cmn_obj(self.bound_to)
+        self.camduration.setText(str(obj.camduration))
+
+class CamerasEdit(DataEditor):
+    def setup_widgets(self):
+        self.bound_to = self.bound_to[0]
+        self.main_thing = QtWidgets.QTabWidget()
+        self.vbox.addWidget(self.main_thing)
+
+        self.seq_edit = OpeningCamerasEdit(self.parent(), [self.bound_to])
+        if self.bound_to.goalcam is not None:
+            self.camera_edit = OpeningCameraEdit(self.parent(), [self.bound_to.goalcam])
+
+        self.main_thing.addTab(self.seq_edit, "Opening Cameras")
+        self.main_thing.addTab(self.camera_edit, "Goal Camera")
+
+    def update_data(self):
+        self.seq_edit.update_data()
+        self.camera_edit.update_data()
+
+class CameraSummaryEdit(DataEditor):
+    def setup_widgets(self):
+        self.camduration = self.add_integer_input("Camera Duration", "camduration",
+                                    MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT)
+    def update_data(self):
+        self.camduration.setText(str(self.bound_to.camduration))
+
+class OpeningCamerasEdit(DataEditor):
+    def setup_widgets(self):
+        self.widgets = []
+
+        for obj in self.bound_to[0]:
+            editor = CameraSummaryEdit(self.parent(), obj)
+            self.vbox.addWidget(editor)
+            self.widgets.append(editor)
+
+    def update_data(self):
+        for widget in self.widgets:
+            widget.update_data()
+
+class RoutedOpeningCameraEdit(DataEditor):
+    def setup_widgets(self):
+        self.widgets = []
+
+        editor = OpeningCameraEdit(self.parent(), self.bound_to)
+
+        self.vbox.addWidget(editor)
+        self.widgets.append(editor)
+
+    def update_data(self):
+        for widget in self.widgets:
+            widget.update_data()
+
+class CameraRoutePointEdit(DataEditor): #will ONLY have one point
+    def setup_widgets(self):
+        obj = self.bound_to[0]
+        idx = self.kmp_file.get_route_of_point(obj).points.index(obj)
+
+        self.unk1 = self.add_integer_input("Point " + str(idx), "unk1",
+                                              MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT)
+
+    def update_data(self):
+        obj = self.bound_to[0]
+        self.unk1.setText(str(obj.unk1))
 
 class RespawnPointEdit(DataEditor):
     def setup_widgets(self):

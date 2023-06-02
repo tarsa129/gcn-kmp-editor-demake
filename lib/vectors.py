@@ -1,7 +1,9 @@
 from math import sqrt
 from io import StringIO
-from numpy import array, arctan2
-
+from numpy import arctan2, ndarray, matmul, deg2rad, cos, sin
+from copy import deepcopy
+from struct import unpack, pack
+from scipy.spatial.transform import Rotation as R
 
 class Vector3(object):
     def __init__(self, x, y, z):
@@ -89,7 +91,7 @@ class Vector3(object):
 
     def flip_render(self):
         return Vector3(self.x, self.y, -self.z)
-    
+
     def to_euler(self):
         #flipping the first one flips the thing
         horiz = arctan2(self.z, self.x)
@@ -177,7 +179,7 @@ class Triangle(object):
         self.p1_to_p3 = p3 - p1
 
         self.normal = self.p1_to_p2.cross(self.p1_to_p3)
-        
+
         self.material = material
 
         if not self.normal.is_zero():
@@ -233,7 +235,7 @@ class Line(object):
         edge1 = tri.p1_to_p2
         edge2 = tri.p1_to_p3
 
-        normal = tri.normal 
+        normal = tri.normal
         if normal.is_zero():
             return False
 
@@ -376,3 +378,106 @@ class Matrix4x4(object):
         out.write("\n}")
 
         return out.getvalue()
+
+
+rotation_constant = 100
+class Rotation(Vector3):
+    def __init__(self, x, y, z):
+        super().__init__(x, y, z)
+
+    def rotate_around_x(self, degrees):
+        self.x += degrees * rotation_constant
+
+    def rotate_around_y(self, degrees):
+        self.y += degrees * rotation_constant
+
+    def rotate_around_z(self, degrees):
+        self.z += degrees  * rotation_constant
+
+    def get_rotation_matrix( self ):
+
+        iden = [
+			[1, 0, 0, 0],
+			[0, 1, 0, 0],
+			[0, 0, 1, 0],
+			[0, 0, 0, 1]
+		]
+        iden = matmul(iden, self.get_rotation_from_vector( Vector3(0.0, 0.0, 0.1), 90))
+        iden = matmul(iden, self.get_rotation_from_vector( Vector3(1.0, 0.0, 0.0), -self.x   ))
+        iden = matmul(iden, self.get_rotation_from_vector( Vector3(0.0, 0.0, 1.0), -self.y   ))
+        iden = matmul(iden, self.get_rotation_from_vector( Vector3(0.0, 1.0, 0.0), self.z   ))
+
+        return iden
+
+    def get_rotation_from_vector(self, vec, degrees):
+        x = vec.x
+        y = vec.y
+        z = vec.z
+        c = cos( deg2rad(degrees) )
+        s = sin( deg2rad(degrees) )
+        t = 1 - c
+
+        return [
+			[t*x*x + c,    t*x*y - z*s,  t*x*z + y*s, 0],
+			[t*x*y + z*s,  t*y*y + c,    t*y*z - x*s, 0],
+			[t*x*z - y*s,  t*y*z + x*s,  t*z*z + c,   0],
+			[          0,            0,          0,   1]
+		]
+
+    @classmethod
+    def default(cls):
+        return cls(0, 0, 0)
+    @classmethod
+    def from_file(cls, f, printe = False):
+        euler_angles = list(unpack(">fff", f.read(12)))
+
+        return cls(*euler_angles)
+
+    def get_vectors(self):
+
+        y = self.y - 90
+        y, z = self.z * -1, self.y
+
+        r = R.from_euler('xyz', [self.x, y, z], degrees=True)
+        vecs = r.as_matrix()
+        vecs = vecs.transpose()
+
+        mtx = ndarray(shape=(4,4), dtype=float, order="F")
+        mtx[0][0:3] = vecs[0]
+        mtx[1][0:3] = vecs[1]
+        mtx[2][0:3] = vecs[2]
+        mtx[3][0] = mtx[3][1] = mtx[3][2] = 0.0
+        mtx[3][3] = 1.0
+
+        left = Vector3(-mtx[0][0], mtx[0][2], mtx[0][1])
+        left.normalize()
+        #up = Vector3(-mtx[2][0], mtx[2][2], mtx[2][1])
+        forward = Vector3(-mtx[1][0], mtx[1][2], mtx[1][1])
+        forward.normalize()
+        up = forward.cross(left) * -1
+
+        return forward, up, left
+
+    def write(self, f):
+        f.write(pack(">fff", self.x, self.y, self.z) )
+
+    def get_render(self):
+
+        return self.get_rotation_matrix()
+
+    def get_euler(self):
+
+        vec = [self.x % 360, self.y % 360 , self.z % 360]
+
+        return vec
+
+    @classmethod
+    def from_euler(cls, degs):
+        rotation = cls(degs.x, degs.y, degs.z )
+
+
+        return rotation
+
+
+    def copy(self):
+        return deepcopy(self)

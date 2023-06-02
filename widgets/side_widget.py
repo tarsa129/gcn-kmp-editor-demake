@@ -1,5 +1,5 @@
 from PyQt5 import QtCore, QtWidgets, QtGui
-from widgets.data_editor import choose_data_editor, ObjectEdit, CameraEdit, AreaEdit
+from widgets.data_editor import choose_data_editor
 from widgets.more_buttons import MoreButtons
 from lib.libkmp import Area, Camera, all_of_same_type
 
@@ -96,7 +96,7 @@ class PikminSideWidget(QtWidgets.QWidget):
 
     #updates the data editor
     def set_info(self, obj, update3d, usedby=[]):
-        self.set_buttons(None)
+        self.set_buttons(obj)
         if usedby:
             self.name_label.setText("Selected: {}\nUsed by: {}".format(
                 type(obj).__name__, ", ".join(usedby)))
@@ -161,7 +161,3 @@ class PikminSideWidget(QtWidgets.QWidget):
 
         self.comment_label.setText(text)
         self.comment_label.setVisible(bool(text))
-
-
-    def set_buttons(self, obj):
-        self.more_buttons.add_buttons(obj)

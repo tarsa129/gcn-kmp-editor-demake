@@ -553,8 +553,8 @@ class LevelDataTreeView(QTreeWidget):
         selected_items = None
 
         # Preserve the expansion state of the top-level items that can have nested groups.
-        enemyroutes_expansion_states = self._get_expansion_states(self.enemyroutes)
-        checkpointgroups_expansion_states = self._get_expansion_states(self.checkpointgroups)
+        #enemyroutes_expansion_states = self._get_expansion_states(self.enemyroutes)
+        #checkpointgroups_expansion_states = self._get_expansion_states(self.checkpointgroups)
 
         self.reset()
 
@@ -569,9 +569,10 @@ class LevelDataTreeView(QTreeWidget):
         for area in kmpdata.areas:
             item = AreaEntry(self.areas, "Area", area)
 
+        """
         for i, camera in enumerate(kmpdata.cameras):
             item = CameraEntry(self.cameras, "Camera", camera, i)
-
+        """
         for cannon in kmpdata.cannonpoints:
             item = CannonEntry(self.cannons, "Cannon", cannon)
 
@@ -579,9 +580,9 @@ class LevelDataTreeView(QTreeWidget):
             item = MissionEntry(self.missions, "Mission Success Point", mission)
 
         # Restore expansion states.
-        self._set_expansion_states(self.enemyroutes, enemyroutes_expansion_states)
-        self._set_expansion_states(self.itemroutes, enemyroutes_expansion_states)
-        self._set_expansion_states(self.checkpointgroups, checkpointgroups_expansion_states)
+        #self._set_expansion_states(self.enemyroutes, enemyroutes_expansion_states)
+        #self._set_expansion_states(self.itemroutes, enemyroutes_expansion_states)
+        #self._set_expansion_states(self.checkpointgroups, checkpointgroups_expansion_states)
 
         # And restore previous selection.
         if selected_item_indexes:

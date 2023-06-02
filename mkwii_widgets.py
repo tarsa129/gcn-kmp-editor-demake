@@ -11,9 +11,8 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 
 from PyQt5 import QtGui
-from PyQt5.QtGui import QCursor, QMouseEvent, QWheelEvent, QPainter, QColor, QFont, QFontMetrics, QPolygon, QImage, QPixmap, QKeySequence
-from PyQt5.QtWidgets import (QWidget, QListWidget, QListWidgetItem, QDialog, QMenu, QLineEdit,
-                            QMdiSubWindow, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QTextEdit, QAction, QShortcut)
+from PyQt5.QtGui import QCursor, QMouseEvent, QWheelEvent
+from PyQt5.QtWidgets import (QMenu, QAction)
 import PyQt5.QtWidgets as QtWidgets
 import PyQt5.QtCore as QtCore
 from PyQt5.QtCore import QSize, pyqtSignal, QPoint, QRect
@@ -30,7 +29,7 @@ from gizmo import Gizmo
 from lib.object_models import ObjectModels
 from editor_controls import UserControl
 #from lib.libpath import Paths
-from lib.libkmp import KMP, KMPPoint, Camera
+from lib.libkmp import KMP, ReplayCameraRoutePoint
 import numpy
 from editor_preview import *
 
@@ -52,6 +51,8 @@ with open("lib/color_coding.json", "r") as f:
     colors_json = json.load(f)
     colors_selection = colors_json["SelectionColor"]
     colors_area  = colors_json["Areas"]
+    colors_replayarea = colors_json["ReplayArea"]
+    colors_replaycamera = colors_json["ReplayCamera"]
 
 
 class SelectionQueue(list):
@@ -194,6 +195,9 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
         self.timer.start()
         self._lastrendertime = 0
         self._lasttime = 0
+
+        self.params2d = EditorParams()
+        self.params3d = EditorParams()
         self.preview = None
 
         self._frame_invalid = False
@@ -773,7 +777,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
                 offset = len(objlist)
 
-                if vismenu.objects.is_selectable():
+                if vismenu.objects.is_selectable(): #object routes
                     i = 0
                     for route in objectroutes:
                         for obj in route.points:
@@ -787,9 +791,22 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                             i += 1
                 offset = len(objlist)
 
+                if vismenu.objects.is_selectable(): #object routes
+                    i = 0
+                    for obj in self.level_file.objects.objects:
+                        objlist.append(
+                            ObjectSelectionEntry(obj=obj,
+                                                pos1=obj.position,
+                                                pos2=None,
+                                                pos3=None,
+                                                rotation=None))
+                        self.models.render_generic_position_rotation_colored_id(obj.position, obj.rotation, id + (offset+i) * 4, obj.scale)
+                        i += 1
+                offset = len(objlist)
+
                 if vismenu.cameras.is_selectable():
                     for i, obj in enumerate(self.level_file.cameras):
-                        if obj.type in (4, 5):
+                        if obj.type == 1 and not obj.follow_player:
                             objlist.append(
                                 ObjectSelectionEntry(obj=obj,
                                                      pos1=obj.position,
@@ -870,7 +887,6 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                         self.models.render_generic_position_colored_id(obj.end, id+(offset+i)*4 + 1)
 
                 for is_selectable, collection in (
-                        (vismenu.objects.is_selectable(), self.level_file.objects.objects),
                         (vismenu.kartstartpoints.is_selectable(), self.level_file.kartpoints.positions),
                         (vismenu.areas.is_selectable(), self.level_file.areas),
                         (vismenu.replaycameras.is_selectable(), self.level_file.replayareas),
@@ -1461,7 +1477,8 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                 for object in self.level_file.objects.objects:
                     self.models.render_generic_position_rotation_colored("objects",
                                                                  object.position, object.rotation,
-                                                                 object in select_optimize)
+                                                                 object in select_optimize,
+                                                                 object.scale)
 
                 routes_to_highlight = set()
 
@@ -1586,57 +1603,81 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                         glLineWidth(1.0)
 
             if vismenu.replaycameras.is_visible():
+                #define levels of :
+
+                #stuff that is directly selected by a user
+                selected_areas = [area for area in self.level_file.replayareas if area in select_optimize]
+                selected_cameras = [camera for camera in replaycameras if camera in select_optimize]
+                selected_points = [thing for thing in select_optimize if isinstance(thing, ReplayCameraRoutePoint)]
+                selected_routes = list(set([self.level_file.get_route_of_point(x) for x in selected_points]))
+
+                linked_cameras = []
+                [linked_cameras.extend(self.level_file.route_used_by(x)) for x in selected_routes]
+                linked_cameras.extend([area.camera for area in selected_areas])
+
+                linked_areas = []
+                for collec in (selected_cameras, linked_cameras):
+                    linked_areas.extend([area for area in self.level_file.replayareas if area.camera in collec])
+                linked_areas = list(set(linked_areas))
+
+                linked_routes = []
+                for collec in (selected_cameras, linked_cameras):
+                    linked_routes.extend([cam.route_obj for cam in collec if cam.route_info() and cam.route_obj is not None])
+                linked_routes = list(set(linked_routes))
+
 
                 for object in self.level_file.replayareas:
-                    self.models.render_generic_position_rotation_colored("areas",
+                    bolded = object in linked_areas
+                    self.models.render_generic_position_rotation_colored("replayareas",
                                                                 object.position, object.rotation,
-                                                                object in select_optimize)
-                    if object in select_optimize:
+                                                                bolded)
+                    if bolded:
                         glColor4f(*colors_selection)
                         glLineWidth(3.0)
                     else:
-                        glColor4f(*colors_area)
+                        glColor4f(*colors_replayarea)
                         glLineWidth(1.0)
+
                     if object.shape == 0:
                         self.models.draw_wireframe_cube(object.position, object.rotation, object.scale*100 * 100)
                     else:
                         self.models.draw_wireframe_cylinder(object.position, object.rotation, object.scale*50 * 100)
 
                 #render cameras
-                cameras_to_circle = [ area.camera for area in self.level_file.replayareas if (area in select_optimize)  ]
                 for i, object in enumerate(replaycameras):
-
-                    self.models.render_generic_position_rotation_colored("camera",
+                    selected = object in selected_cameras
+                    bolded = object in linked_cameras
+                    self.models.render_generic_position_rotation_colored("replaycameras",
                                                                 object.position, object.rotation,
-                                                                object in select_optimize)
+                                                                bolded)
 
-                    if object in cameras_to_circle:
-                        glColor3f(0.0, 0.0, 1.0)
-                        self.models.draw_sphere(object.position, 600)
-
-                    if object in select_optimize and object.type == 4:
-                        glColor3f(0.0, 1.0, 0.0)
+                    if object.type == 1 and not object.follow_player:
+                        glColor4f(*colors_replaycamera)
                         self.models.draw_sphere(object.position3, 300)
-                        glColor3f(1.0, 0.0, 0.0)
                         self.models.draw_sphere(object.position2, 300)
+                        if bolded:
+                            glLineWidth(3.0)
+                        else:
+                            glLineWidth(1.0)
+                        glColor3f(0.0, 0.0, 0.0)
+                        glBegin(GL_LINE_STRIP)
+                        
+                        glVertex3f(object.position2.x, -object.position2.z, object.position2.y)
+                        glVertex3f(object.position3.x, -object.position3.z, object.position3.y)
+                        glEnd()
+                        self.models.draw_arrow_head(object.position2, object.position3)
 
-                routes_to_highlight = [camera.route_obj for camera in replaycameras if camera in select_optimize]
-                routes_to_circle = [camera.route_obj for camera in replaycameras if camera in cameras_to_circle]
                 for i, route in enumerate(replaycameraroutes):
-                    selected = route in routes_to_highlight
+                    selected = route in selected_routes
+                    bolded = route in linked_routes
 
                     last_point = None
                     for point in route.points:
-                        point_selected = point in select_optimize
-                        self.models.render_generic_position_colored(point.position, point_selected, "camerapoint")
-                        selected = selected or point_selected
+                        self.models.render_generic_position_colored(point.position, bolded, "replaycamerapoint")
                         if last_point is not None:
                             self.models.draw_arrow_head(last_point.position, point.position)
-                        if route in routes_to_circle:
-                            glColor3f(0.0, 0.0, 1.0)
-                            self.models.draw_sphere(point.position, 600)
                         last_point = point
-                    if selected:
+                    if bolded:
                         glLineWidth(3.0)
                     glBegin(GL_LINE_STRIP)
                     glColor3f(0.0, 0.0, 0.0)
@@ -1646,7 +1687,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                         pos = point.position
                         glVertex3f(pos.x, -pos.z, pos.y)
                     glEnd()
-                    if selected:
+                    if bolded:
                         glLineWidth(1.0)
 
             if vismenu.cameras.is_visible():
@@ -1656,7 +1697,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                     self.models.render_generic_position_rotation_colored("camera",
                                                                 object.position, object.rotation,
                                                                  object in select_optimize)
-                    if object.type in (4, 5):
+                    if object.type == 1:
                         if object in select_optimize:
                             glColor3f(1.0, 0.0, 1.0)
                         else:
@@ -1693,27 +1734,18 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                     selected = route in routes_to_highlight or route in self.selected
 
                     last_point = None
-                    if self.level_file.route_used_by(route):
-                        for point in route.points:
-                            point_selected = point in select_optimize
-                            self.models.render_generic_position_colored(point.position, point_selected, "camerapoint")
-                            selected = selected or point_selected
-                            if last_point is not None:
-                                self.models.draw_arrow_head(last_point.position, point.position)
-                            last_point = point
-                    else:
-                        for point in route.points:
-                            point_selected = point in select_optimize
-                            self.models.render_generic_position_colored(point.position, point_selected, "unusedpoint")
-                            selected = selected or point_selected
-                            if last_point is not None:
-                                self.models.draw_arrow_head(last_point.position, point.position)
-                            last_point = point
+                    for point in route.points:
+                        point_selected = point in select_optimize
+                        self.models.render_generic_position_colored(point.position, point_selected, "camerapoint")
+                        selected = selected or point_selected
+                        if last_point is not None:
+                            self.models.draw_arrow_head(last_point.position, point.position)
+                        last_point = point
 
                     if selected:
                         glLineWidth(3.0)
                     glBegin(GL_LINE_STRIP)
-                    glColor3f(0.8, 0.0, 0.8)
+                    glColor3f(0.0, 0.0, 0.0)
                     if len(route.points) == 2 and route.smooth != 0:
                         glColor3f(1.0, 0.0, 0.0 )
                     for point in route.points:
@@ -1950,10 +1982,10 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
         self.preview = OpeningPreview(cameras)
         self.mode = MODE_3D
 
-    def preview_replay_cameras(self, areas, enemies):
+    def preview_replay_cameras(self, areas, enemies, singlearea=False):
         if not areas:
             return
-        self.preview = ReplayPreview(areas, enemies)
+        self.preview = ReplayPreview(areas, enemies, singlearea)
         self.mode = MODE_3D
 
 def create_object_type_pixmap(canvas_size: int, directed: bool,

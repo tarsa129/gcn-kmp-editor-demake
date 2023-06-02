@@ -11,3 +11,7 @@ this editor uses python, which will need to be installed. in addition, a few lib
 These can be installed via pip. 
 Then, the kmp_editor.py file can be ran. 
 
+## thanks
+* cristian64, yoshi2, and geras, for work on the mkdd editor
+* zatchi, for camera previewing code from KMP3D
+

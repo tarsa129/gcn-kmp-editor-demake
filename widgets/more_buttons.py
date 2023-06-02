@@ -219,19 +219,17 @@ class MoreButtons(QWidget):
 
         elif isinstance(obj, OpeningCamera):
 
-            if obj.route_info() and obj.route_obj is not None:
-                self.add_button("Copy and Place Camera (New Route)", "generic_copy_routed", obj.copy())
+            if obj.route_obj is not None and len(obj.route_obj.points) > 1:
+                self.add_button("Copy and Place Camera (New Route)", "generic_copy_routed", obj)
+            elif obj.route_obj is not None:
+                self.add_button("Copy and Place Camera", "generic_copy_routed", obj)
             else:
-                self.add_button("Copy and Place Camera", "generic_copy", obj.copy())
+                self.add_button("Copy and Place Camera", "generic_copy", obj)
+            self.add_button("v: Add Points to End of Route", "add_routepoints_end", obj)
 
         elif isinstance(obj, Cameras):
             self.add_button("Remove Unused Cameras", "remove_unused_cams", obj)
-            self.add_button("Add Opening Camera Type 4 (KartPathFollow)", "add_camera", 4)
-            self.add_button("Add Opening Camera Type 5 with Route (OP_FixMoveAt)", "add_camera", 5)
-
-            if not obj.get_type(0):
-                self.add_button("Add Goal Camera", "add_camera", 0)
-
+            self.add_button("Add Routed Opening Camera", "add_camera", 1)
             self.add_button("Preview Opening Cams (Not Functional)", "preview_opening", obj)
 
         elif isinstance(obj, ObjectContainer) and obj.assoc is JugemPoint:

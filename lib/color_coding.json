@@ -1,16 +1,13 @@
 {
+  "SelectionColor": [1.0, 0.874, 0.153, 1.0],
+
   "EnemyRoutes": [1.0, 0.2, 0.2, 1.0],
   "FirstEnemyPoint": [0.5, 0.1, 0.1, 1.0],
   "ItemRoutes": [1.0, 0.7, 0.7, 1.0],
   "FirstItemPoint": [0.5, 0.35, 0.35, 1.0],
 
-  "AreaRoutes":   [0.0, 0.0, 1.0, 1.0],
-  "CameraRoutes": [0.349, 0.316, 0.267, 1.0],
-  "UnusedRoutes": [0.7, 0.7, 0.7, 1.0],
   "CheckpointLeft": [1.0, 0.0, 0.0, 1.0],
   "CheckpointRight": [0.1, 0.1, 0.8, 1.0],
-  "SelectionColor": [1.0, 0.874, 0.153, 1.0],
-  "StartPoints": [0.1, 0.1, 0.1, 1.0],
 
   "Respawn": [1.0, 1.0, 0.0, 1.0],
   "UnusedRespawn": [0.5, 0.5, 0.25, 1.0],
@@ -19,8 +16,17 @@
   "ObjectRoutes": [1.0, 0.5, 1.0, 1.0],
   "UnusedObjectRoutes": [0.7, 0.5, 0.7, 1.0],
 
-  "Camera": [0.749, 0.616, 0.467, 1.0],
+  "Camera": [0.5, 0.1, 0.7, 1],
+  "CameraRoutes": [0.7, 0.1, 1, 1],
+
+  "ReplayArea": [1, 0.3, 0, 1],
+  "ReplayCamera": [1, 0.5, 0, 1],
+  "ReplayCameraRoute": [1, 0.7, 0, 1],
+
   "Areas": [0.529, 0.808, 0.922, 1.0],
+  "AreaRoutes":   [0.0, 0.0, 1.0, 1.0],
+
+  "StartPoints": [0.1, 0.1, 0.1, 1.0],
   "Cannons" : [1.0, 0.8, 0.0, 1.0],
   "Missions"  : [0.2, 0.2, 0.2, 1.0]
 }

@@ -2,6 +2,7 @@ import os
 import json
 from OpenGL.GL import *
 from .model_rendering import (GenericObject, Model, TexturedModel, Cube)
+from lib.vectors import Vector3
 
 with open("lib/color_coding.json", "r") as f:
     colors = json.load(f)
@@ -28,18 +29,22 @@ class ObjectModels(object):
         self.checkpointleft = Cube(colors["CheckpointLeft"])
         self.checkpointright = Cube(colors["CheckpointRight"])
 
+        self.respawn = GenericObject(colors["Respawn"])
+        self.unusedrespawn = GenericObject(colors["UnusedRespawn"])
+
         self.objects = GenericObject(colors["Objects"])
         self.objectpoint = Cube(colors["ObjectRoutes"])
         self.unusedobjectpoint = Cube(colors["UnusedObjectRoutes"])
 
-        self.areapoint = Cube(colors["AreaRoutes"])
-        self.camerapoint = Cube(colors["CameraRoutes"])
-        self.unusedpoint = Cube(colors["UnusedRoutes"])
         self.camera = GenericObject(colors["Camera"])
-        self.areas = GenericObject(colors["Areas"])
+        self.camerapoint = Cube(colors["CameraRoutes"])
 
-        self.respawn = GenericObject(colors["Respawn"])
-        self.unusedrespawn = GenericObject(colors["UnusedRespawn"])
+        self.replayareas = GenericObject(colors["ReplayArea"])
+        self.replaycameras = GenericObject(colors["ReplayCamera"])
+        self.replaycamerapoint = Cube(colors["ReplayCameraRoute"])
+
+        self.areas = GenericObject(colors["Areas"])
+        self.areapoint = Cube(colors["AreaRoutes"])
 
         self.startpoints = GenericObject(colors["StartPoints"])
         self.cannons = GenericObject(colors["Cannons"])
@@ -78,11 +83,15 @@ class ObjectModels(object):
                     filename = os.path.basename(file)
                     objectname = filename.rsplit(".", 1)[0]
                     self.models[objectname] = TexturedModel.from_obj_path(os.path.join(dirpath, file), rotate=True)
-        for cube in (self.cube, self.checkpointleft, self.checkpointright, self.camerapoint, self.objectpoint, 
+        for cube in (self.cube,
                      self.enemypoint, self.enemypointfirst, self.itempoint, self.itempointfirst,
-                     self.objects, self.areas, self.respawn, self.startpoints, self.camera, self.unusedpoint, self.areapoint,
-                     self.unusedobjectpoint, self.unusedrespawn,
-                     self.cannons, self.missions):
+                     self.checkpointleft, self.checkpointright,
+                     self.respawn, self.unusedrespawn,
+                     self.objects, self.objectpoint, self.unusedobjectpoint,
+                     self.camera, self.camerapoint,
+                     self.replayareas, self.replaycameras, self.replaycamerapoint,
+                     self.areas, self.areapoint,
+                     self.startpoints, self.cannons, self.missions):
             cube.generate_displists()
 
         for cube in self.playercolors:
@@ -180,18 +189,15 @@ class ObjectModels(object):
     def render_player_position_colored(self, position, selected, player):
         self._render_generic_position(self.playercolors[player], position, selected)
 
-    def render_generic_position_rotation(self, position, rotation, selected):
-        self._render_generic_position_rotation("generic", position, rotation, selected)
+    def render_generic_position_rotation(self, position, rotation, selected, scale=Vector3(1, 1, 1)):
+        self._render_generic_position_rotation("generic", position, rotation, selected, scale)
 
-    def render_generic_position_rotation_colored(self, objecttype, position, rotation, selected):
-        self._render_generic_position_rotation(objecttype, position, rotation, selected)
+    def render_generic_position_rotation_colored(self, objecttype, position, rotation, selected, scale=Vector3(1, 1, 1)):
+        self._render_generic_position_rotation(objecttype, position, rotation, selected, scale)
 
-    def _render_generic_position_rotation(self, name, position, rotation, selected):
+    def _render_generic_position_rotation(self, name, position, rotation, selected, scale):
         glPushMatrix()
         glTranslatef(position.x, -position.z, position.y)
-        #glTranslatef(position.x, position.y, position.z)
-
-
         do_rotation(rotation)
 
         glColor3f(0.0, 0.0, 0.0)
@@ -201,7 +207,7 @@ class ObjectModels(object):
         glVertex3f(1000.0, 0.0, 0.0)
         glEnd()
 
-        #glScalef(1.0, 1.0, 1.0)
+        glScalef(scale.x, scale.z, scale.y)
         getattr(self, name).render(selected=selected)
 
         glPopMatrix()
@@ -214,31 +220,20 @@ class ObjectModels(object):
 
         glPopMatrix()
 
-    def render_generic_position_colored_id(self, position, id):
+    def render_generic_position_colored_id(self, position, id, scale=Vector3(1, 1, 1)):
         glPushMatrix()
         glTranslatef(position.x, -position.z, position.y)
-        #glScale(2.0, 2.0, 2.0)
-        #glTranslatef(position.x, position.y, position.z)
         self.cube.render_coloredid(id)
-
+        glScalef(scale.x, scale.z, scale.y)
         glPopMatrix()
 
-    def render_generic_position_rotation_colored_id(self, position, rotation, id):
+    def render_generic_position_rotation_colored_id(self, position, rotation, id, scale=Vector3(1, 1, 1)):
         glPushMatrix()
         glTranslatef(position.x, -position.z, position.y)
-        #glTranslatef(position.x, position.y, position.z)
-
-
-        #mtx = rotation.mtx
-        #glMultMatrixf(mtx)
-
         do_rotation(rotation)
-        #glScale(2.0, 2.0, 2.0)
+        glScalef(scale.x, scale.z, scale.y)
         self.cube.render_coloredid(id)
 
         glPopMatrix()
-
-    def render_line(self, pos1, pos2):
-        pass
 
 
