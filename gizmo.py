@@ -11,7 +11,10 @@ id_to_meshname = {
     0x4: "rotation_x",
     0x5: "rotation_y",
     0x6: "rotation_z",
-    0x7: "middle"
+    0x7: "middle",
+    0x8: "scale_x",
+    0x9: "scale_y",
+    0xA: "scale_z"
 }
 
 AXIS_X = 0
