@@ -199,7 +199,6 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
         self._lasttime = 0
 
         self.params2d = EditorParams()
-        self.params3d = EditorParams()
         self.preview = None
 
         self._frame_invalid = False
@@ -331,6 +330,9 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
         if self.mode == MODE_3D:
             return
         else:
+            self.params2d.position = self.position.copy()
+            self.params2d.zoom = self._zoom_factor
+
             self.mode = MODE_3D
 
             if self.mousemode == MOUSE_MODE_NONE:
@@ -344,10 +346,13 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
         if self.mode == MODE_TOPDOWN:
             return
         else:
+            self.position = self.params2d.position.copy()
+            self._zoom_factor = self.params2d.zoom
+
             self.mode = MODE_TOPDOWN
             if self.mousemode == MOUSE_MODE_NONE:
                 self.setContextMenuPolicy(Qt.CustomContextMenu)
-            self.position.x *= -1
+            #self.position.x *= -1
             self.do_redraw()
 
 
@@ -1860,8 +1865,6 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
     def do_selection(self):
         pass
-
-
 
     @catch_exception
     def mousePressEvent(self, event):

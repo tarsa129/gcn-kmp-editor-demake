@@ -2,11 +2,6 @@ better ways to handle cameras:
 better type 3 rendering
 - make relative to area
 
-add stuff in edit menu to config
-
-general fixes:
-keep track of variables for topdown and 3d modes individually
-
 updates:
 better area rendering
 improve json files
@@ -17,7 +12,7 @@ move route to another tab for cameras
 
 new features:
 handle boos automatically + handle that enemy point switching thing
-scale on gizmo + area scale handlers
+scale on gizmo (better) + area scale handlers
 add arrow keys for "next point" in route + linedraw increment
 load + collide on gobj collision files
 add option to select x to y points
