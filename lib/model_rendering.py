@@ -582,57 +582,6 @@ class GenericObject(SelectableModel):
         glColor4ub(0x09, 0x93, 0x00, 0xFF)
         self.named_meshes["tip"].render()
 
-
-class GenericComplexObject(GenericObject):
-    def __init__(self, modelpath, height, tip, eyes, body, rest):
-        self.scale = 10
-        with open(modelpath, "r") as f:
-            model = Model.from_obj(f, scale=self.scale, rotate=True)
-        self.mesh_list = model.mesh_list
-        self.named_meshes = model.mesh_list
-
-        self._tip = tip
-        self._eyes = eyes
-        self._body = body
-        self._height = height
-        self._rest = rest
-
-    def render(self, selected=False):
-        glEnable(GL_CULL_FACE)
-        if selected:
-            glColor4f(*selectioncolor)
-        else:
-            glColor4f(0.0, 0.0, 0.0, 1.0)
-        glCullFace(GL_FRONT)
-        glPushMatrix()
-        glTranslatef(0.0, 0.0, self._height * self.scale)
-        if selected:
-            glScalef(1.5, 1.5, 1.5)
-        else:
-            glScalef(1.2, 1.2, 1.2)
-
-        self.mesh_list[self._body].render()
-        glPopMatrix()
-        glCullFace(GL_BACK)
-        glPushMatrix()
-        glTranslatef(0.0, 0.0, self._height*self.scale)
-        glColor4f(1.0, 1.0, 1.0, 1.0)
-        self.mesh_list[self._body].render()
-        glColor4ub(0x09, 0x93, 0x00, 0xFF)
-        self.mesh_list[self._tip].render() # tip
-        glColor4ub(0x00, 0x00, 0x00, 0xFF)
-        self.mesh_list[self._eyes].render() # eyes
-
-        glPopMatrix()
-
-        if selected:
-            glColor4f(*selectioncolor)
-        else:
-            glColor4f(0.0, 0.0, 0.0, 1.0)
-
-        self.mesh_list[self._rest].render()
-        glDisable(GL_CULL_FACE)
-
     def render_coloredid(self, id):
         glColor3ub((id >> 16) & 0xFF, (id >> 8) & 0xFF, (id >> 0) & 0xFF)
         glPushMatrix()
@@ -648,8 +597,6 @@ class GenericComplexObject(GenericObject):
 
         glPopMatrix()
         self.mesh_list[self._rest].render()
-
-
 
 
 class TexturedPlane(object):
@@ -891,6 +838,7 @@ class CollisionModel(object):
         for meshtype, mesh in self.meshes.items():
             displist = glGenLists(1)
             glNewList(displist, GL_COMPILE)
+            glEnable(GL_CULL_FACE)
             glBegin(GL_TRIANGLES)
 
             for v1, v2, v3, normal, color in mesh:

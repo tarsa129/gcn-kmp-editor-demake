@@ -36,6 +36,7 @@ class Gizmo(Model):
         self.hidden = True
         self.with_rotation = True
         self.callbacks = {}
+        self.with_scale = False
 
         self.was_hit = {}
         self.was_hit_at_all = False
@@ -43,7 +44,6 @@ class Gizmo(Model):
             self.was_hit[meshname] = False
 
         self.render_axis = None
-
         with open("resources/gizmo_collision.obj", "r") as f:
             self.collision = Model.from_obj(f, rotate=True)
 
@@ -53,12 +53,18 @@ class Gizmo(Model):
     def reset_axis(self):
         self.render_axis = None
 
-    def move_to_average(self, positions, rotations):
+    def move_to_average(self, objects):
+
+        positions = [obj.position for obj in objects if hasattr(obj, "position")]
+        rotations = [obj.rotation for obj in objects if hasattr(obj, "rotation")]
+        scales = [obj.scale for obj in objects if hasattr(obj, "scale")]
+
         if len(positions) == 0:
             self.hidden = True
             return
         self.hidden = False
         self.with_rotation = len(positions) > 1 or rotations
+        self.with_scale = scales or len(positions) > 1
 
         avgx = None
         avgy = None
@@ -95,7 +101,11 @@ class Gizmo(Model):
                 named_meshes["rotation_y"].render_colorid(0x5)
                 if is3d: named_meshes["rotation_z"].render_colorid(0x6)
             named_meshes["middle"].render_colorid(0x7)
-            #if not is3d: named_meshes["middle"].render_colorid(0x7)
+            if self.with_scale:
+                named_meshes["scale_x"].render_colorid(0x8)
+                if is3d: named_meshes["scale_y"].render_colorid(0x9)
+                named_meshes["scale_z"].render_colorid(0xA)
+
             glPopMatrix()
 
     def register_callback(self, gizmopart, func):
@@ -155,9 +165,20 @@ class Gizmo(Model):
                 glColor4f(*Z_COLOR if hover_id != 0x6 else HOVER_COLOR)
                 self.named_meshes["rotation_z"].render()
 
-        if True and (not handle_hit or self.was_hit["middle"]):
+        if not handle_hit or self.was_hit["middle"]:
             glColor4f(*MIDDLE_COLOR if hover_id != 0x7 else HOVER_COLOR)
             self.named_meshes["middle"].render()
+
+        if self.with_scale:
+            if not handle_hit or self.was_hit["scale_x"]:
+                glColor4f(*X_COLOR if hover_id != 0x8 else HOVER_COLOR)
+                self.named_meshes["scale_x"].render()
+            if is3d and not handle_hit or self.was_hit["scale_y"]:
+                glColor4f(*Y_COLOR if hover_id != 0x9 else HOVER_COLOR)
+                self.named_meshes["scale_y"].render()
+            if not handle_hit or self.was_hit["scale_z"]:
+                glColor4f(*Z_COLOR if hover_id != 0xA else HOVER_COLOR)
+                self.named_meshes["scale_z"].render()
 
     def render_scaled(self, scale, is3d=True, hover_id=0xFF):
         glPushMatrix()
@@ -182,4 +203,3 @@ class Gizmo(Model):
 
 
         glPopMatrix()
-

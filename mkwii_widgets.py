@@ -96,6 +96,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
     create_waypoint_3d = pyqtSignal(float, float, float)
 
     rotate_current = pyqtSignal(Vector3)
+    scale_current = pyqtSignal(Vector3)
 
     connected_to_point = pyqtSignal()
 
@@ -143,6 +144,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
         self.selected = []
         self.selected_positions = []
         self.selected_rotations = []
+        self.selected_scales = []
 
         #self.p = QPainter()
         #self.p2 = QPainter()
@@ -223,6 +225,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
         self.camera_vertical = -pi*(1/4)
         self.last_move = None
         self.backgroundcolor = (255, 255, 255, 255)
+        self.fov = 75
 
         look_direction = Vector3(cos(self.camera_horiz), sin(self.camera_horiz),
                                  sin(self.camera_vertical))
@@ -996,7 +999,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
                 self.select_update.emit()
 
-                self.gizmo.move_to_average(self.selected_positions, self.selected_rotations)
+                self.gizmo.move_to_average(self.selected)
                 if len(selected) == 0:
                     #print("Select did register")
                     self.gizmo.hidden = True
@@ -1327,7 +1330,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                         concave_next = j + 1 < len(group.points) and check_box_convex(checkpoint, group.points[j+1])
                         concave_prev = j - 1 >= 0 and check_box_convex(checkpoint, group.points[j-1])
                         if concave_next or concave_prev:
-                            glColor3f( 1.0, 0.0, 0.0 )                            
+                            glColor3f( 1.0, 0.0, 0.0 )
 
                         elif checkpoint.lapcounter == 1:
                             glColor3f( 1.0, 0.5, 0.0 )

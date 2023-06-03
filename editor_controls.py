@@ -166,7 +166,7 @@ class Gizmo2DMoveX(ClickDragAction):
     def just_released(self, editor, buttons, event):
         super().just_released(editor, buttons, event)
         editor.gizmo.reset_axis()
-        editor.gizmo.move_to_average(editor.selected_positions, editor.selected_rotations)
+        editor.gizmo.move_to_average(editor.selected)
 
 
 class Gizmo2DMoveXZ(Gizmo2DMoveX):
@@ -211,6 +211,31 @@ class Gizmo2DRotateY(Gizmo2DMoveX):
     def just_released(self, editor, buttons, event):
         super().just_released(editor, buttons, event)
         editor.gizmo.reset_axis()
+
+SCALE_CONSTANT = .005
+class Gizmo2DScaleX(Gizmo2DMoveX):
+    def just_clicked(self, editor, buttons, event):
+        super().just_clicked(editor, buttons, event)
+
+    def move(self, editor, buttons, event):
+        if editor.gizmo.was_hit["scale_x"]:
+            editor.gizmo.set_render_axis(AXIS_X)
+            delta = 1 + ((event.x() - self.first_click.x) * SCALE_CONSTANT)
+            self.first_click = Vector2(event.x(), event.y())
+            editor.scale_current.emit(Vector3(delta, 0, 0))
+
+    def just_released(self, editor, buttons, event):
+        super().just_released(editor, buttons, event)
+        editor.gizmo.reset_axis()
+
+class Gizmo2DScaleZ(Gizmo2DScaleX):
+    def move(self, editor, buttons, event):
+        if editor.gizmo.was_hit["scale_z"]:
+            editor.gizmo.set_render_axis(AXIS_Z)
+            delta = 1 + ( (self.first_click.y - event.y()) * SCALE_CONSTANT)
+            self.first_click = Vector2(event.x(), event.y())
+            editor.scale_current.emit(Vector3(0, 0, delta))
+
 
 class AddObjectTopDown(ClickAction):
     def condition(self, editor, buttons, event):
@@ -519,6 +544,49 @@ class Gizmo3DRotateZ(Gizmo3DRotateY):
     def do_delta(self, delta):
         return 0, 0, delta
 
+class Gizmo3DScaleX(Gizmo2DMoveX):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.axis_name = "scale_x"
+        self.axis = AXIS_X
+        self.dir = numpy.array([1, 0, 0, 0])
+
+    def do_delta(self, delta):
+        return Vector3(delta, 0, 0)
+
+    def move(self, editor, buttons, event):
+        if editor.gizmo.was_hit[self.axis_name]:
+            editor.gizmo.set_render_axis(self.axis)
+
+            proj = numpy.dot(editor.modelviewmatrix, self.dir)
+            proj[2] = proj[3] = 0.0
+            proj = proj/numpy.linalg.norm(proj)
+            delta = numpy.array([event.x() - self.first_click.x, event.y() - self.first_click.y, 0, 0])
+            delta[1] = -delta[1]
+            self.first_click = Vector2(event.x(), event.y())
+            delta = 1 + (numpy.dot(delta, proj) * SCALE_CONSTANT)
+            editor.scale_current.emit(self.do_delta(delta))
+
+
+class Gizmo3DScaleY(Gizmo3DScaleX):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.axis_name = "scale_y"
+        self.axis = AXIS_Y
+        self.dir = numpy.array([0, 1, 0, 0])
+
+    def do_delta(self, delta):
+        return Vector3(0, delta, 0)
+
+class Gizmo3DScaleZ(Gizmo3DScaleX):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.axis_name = "scale_z"
+        self.axis = AXIS_Z
+        self.dir = numpy.array([0, 0, 1, 0])
+
+    def do_delta(self, delta):
+        return Vector3(0, 0, delta)
 
 class UserControl(object):
     def __init__(self, editor_widget):
@@ -538,6 +606,8 @@ class UserControl(object):
         self.add_action(Gizmo2DMoveXZ("Gizmo2DMoveXZ", "Left"))
         self.add_action(Gizmo2DRotateY("Gizmo2DRotateY", "Left"))
         self.add_action(AddObjectTopDown("AddObject2D", "Left"))
+        self.add_action(Gizmo2DScaleX("Gizmo2DScaleX", "Left"))
+        self.add_action(Gizmo2DScaleZ("Gizmo2DScaleZ", "Left"))
 
         self.add_action3d(View3DScroll("3DScroll", "Middle"))
         self.add_action3d(RotateCamera3D("RotateCamera", "Right"))
@@ -549,6 +619,9 @@ class UserControl(object):
         self.add_action3d(Gizmo3DRotateX("Gizmo3DRotateX", "Left"))
         self.add_action3d(Gizmo3DRotateY("Gizmo3DRotateY", "Left"))
         self.add_action3d(Gizmo3DRotateZ("Gizmo3DRotateZ", "Left"))
+        self.add_action3d(Gizmo3DScaleX("Gizmo3DScaleX", "Left"))
+        self.add_action3d(Gizmo3DScaleY("Gizmo3DScaleY", "Left"))
+        self.add_action3d(Gizmo3DScaleZ("Gizmo3DScaleZ", "Left"))
         self.add_action3d(Select3D("Select3D", "Left"))
 
         self.last_position_update = 0.0

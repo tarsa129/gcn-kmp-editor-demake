@@ -2,10 +2,13 @@ better ways to handle cameras:
 better type 3 rendering
 - make relative to area
 
+add stuff in edit menu to config
+
 general fixes:
 keep track of variables for topdown and 3d modes individually
 
 updates:
+better area rendering
 improve json files
 when placing an object with a routepoint, assign to closest routepoint (new option)
 error analyzer

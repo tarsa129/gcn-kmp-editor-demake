@@ -474,6 +474,7 @@ class GenEditor(QMainWindow):
         self.level_view.selected = []
         self.level_view.selected_positions = []
         self.level_view.selected_rotations = []
+        self.level_view.selected_scales = []
 
         if isinstance(item, (tree_view.CameraEntry, tree_view.RespawnEntry, tree_view.AreaEntry, tree_view.ObjectEntry,
                              tree_view.KartpointEntry, tree_view.EnemyRoutePoint, tree_view.ItemRoutePoint,
@@ -498,8 +499,7 @@ class GenEditor(QMainWindow):
         if hasattr(item, "bound_to"):
             self.pik_control.set_buttons(item.bound_to)
 
-        self.level_view.gizmo.move_to_average(self.level_view.selected_positions,
-                                              self.level_view.selected_rotations)
+        self.level_view.gizmo.move_to_average(self.level_view.selected)
         self.level_view.do_redraw()
         self.level_view.select_update.emit()
 
@@ -610,13 +610,26 @@ class GenEditor(QMainWindow):
 
         self.rotation_mode = QAction("Rotate Positions around Pivot", self)
         self.rotation_mode.setCheckable(True)
-        self.rotation_mode.setChecked(True)
+        self.rotation_mode.setChecked(self.editorconfig.get("rotate_around_pivot") == "True" )
+        self.rotation_mode.setShortcut(QtGui.QKeySequence('Ctrl+J'))
+        self.rotation_mode.triggered.connect(lambda: self.on_editing_setting_changed(
+            "rotate_around_pivot",  self.rotation_mode))
         self.edit_menu.addAction(self.rotation_mode)
+
+        self.scale_mode = QAction("Edit Scales around Pivot", self)
+        self.scale_mode.setCheckable(True)
+        self.scale_mode.setChecked(self.editorconfig.get("scale_around_pivot") == "True")
+        self.scale_mode.setShortcut(QtGui.QKeySequence('Ctrl+L'))
+        self.scale_mode.triggered.connect(lambda: self.on_editing_setting_changed(
+            "scale_around_pivot",  self.scale_mode))
+        self.edit_menu.addAction(self.scale_mode)
 
         self.autoground_mode = QAction("Autoground in 2D", self)
         self.autoground_mode.setCheckable(True)
-        self.autoground_mode.setChecked(False)
+        self.autoground_mode.setChecked(self.editorconfig.get("autoground_2d") == "True")
         self.autoground_mode.setShortcut(QtGui.QKeySequence('Ctrl+G'))
+        self.autoground_mode.triggered.connect(lambda: self.on_editing_setting_changed(
+            "autoground_2d",  self.autoground_mode) )
         self.edit_menu.addAction(self.autoground_mode)
 
         self.visibility_menu = mkwii_widgets.FilterViewMenu(self)
@@ -1044,15 +1057,9 @@ class GenEditor(QMainWindow):
         for i, option in enumerate(view_options):
             view_actions[i].setChecked(option == view_string)
 
-    def on_default_view_changed(self, view_string):
-        self.editorconfig["default_view"] = view_string
+    def on_editing_setting_changed(self, setting, widget):
+        self.editorconfig["setting"] = str(widget.isChecked())
         save_cfg(self.configuration)
-
-        view_actions = [self.load_as_topdown, self.load_as_3dview]
-        view_options = ("topdownview", "3dview")
-
-        for i, option in enumerate(view_options):
-            view_actions[i].setChecked(option == view_string)
 
     def setup_ui_toolbar(self):
         # self.toolbar = QtWidgets.QToolBar("Test", self)
@@ -1088,7 +1095,6 @@ class GenEditor(QMainWindow):
         #self.pik_control.button_move_object.pressed.connect(self.button_move_objects)
         self.level_view.move_points.connect(self.action_move_objects)
         self.level_view.move_points_to.connect(self.action_move_objects_to)
-        self.level_view.height_update.connect(self.action_change_object_heights)
         self.level_view.create_waypoint.connect(self.action_add_object)
         self.level_view.create_waypoint_3d.connect(self.action_add_object_3d)
         self.pik_control.button_ground_object.clicked.connect(
@@ -1101,6 +1107,7 @@ class GenEditor(QMainWindow):
 
 
         self.level_view.rotate_current.connect(self.action_rotate_object)
+        self.level_view.scale_current.connect(self.action_scale_object)
         self.leveldatatreeview.select_all.connect(self.select_all_of_group)
         self.leveldatatreeview.reverse.connect(self.reverse_all_of_group)
         self.leveldatatreeview.split.connect(self.split_group_from_tree)
@@ -2019,8 +2026,7 @@ class GenEditor(QMainWindow):
 
                 added_pos.append(pos)
 
-            self.level_view.gizmo.move_to_average(self.level_view.selected_positions,
-                                                  self.level_view.selected_rotations)
+            self.level_view.gizmo.move_to_average(self.level_view.selected)
 
         if self.autoground_mode.isChecked():
             self.action_ground_objects(self.level_view.selected_positions)
@@ -2033,8 +2039,7 @@ class GenEditor(QMainWindow):
     def action_move_objects_to(self, posx, posy, posz):
         #get the average position, which is just the pos, huh.
         #so then that's the
-        self.level_view.gizmo.move_to_average(self.level_view.selected_positions,
-                                                self.level_view.selected_rotations)
+        self.level_view.gizmo.move_to_average(self.level_view.selected)
         orig_avg = self.level_view.gizmo.position.copy()
         new_avg = Vector3(posx, posz, -posy)
         diff = new_avg - orig_avg
@@ -2043,26 +2048,9 @@ class GenEditor(QMainWindow):
             pos.y = pos.y + diff.y
             pos.z = pos.z + diff.z
 
-            self.level_view.gizmo.move_to_average(self.level_view.selected_positions,
-                                                self.level_view.selected_rotations)
+            self.level_view.gizmo.move_to_average(self.level_view.selected)
         self.level_view.do_redraw()
         self.pik_control.update_info()
-        self.set_has_unsaved_changes(True)
-
-    @catch_exception
-    def action_change_object_heights(self, deltay):
-        for obj in self.pikmin_gen_view.selected:
-            obj.y += deltay
-            obj.y = round(obj.y, 6)
-            obj.position_y = obj.y
-            obj.offset_y = 0
-
-        if len(self.pikmin_gen_view.selected) == 1:
-            obj = self.pikmin_gen_view.selected[0]
-            self.pik_control.set_info(obj, (obj.x, obj.y, obj.z), obj.get_rotation())
-
-        #self.pikmin_gen_view.update()
-        self.pikmin_gen_view.do_redraw()
         self.set_has_unsaved_changes(True)
 
     def action_stop_adding(self):
@@ -2218,6 +2206,29 @@ class GenEditor(QMainWindow):
         self.set_has_unsaved_changes(True)
         self.pik_control.update_info()
 
+    def action_scale_object(self, deltascale):
+        scales = [obj.scale for obj in self.level_view.selected if hasattr(obj, "scale")]
+        has_scale = [obj for obj in self.level_view.selected if hasattr(obj, "scale")]
+        #situations
+        #multiple objects - depends on ischecked
+        #single object with scale - local
+
+        for obj, scale in zip(has_scale, scales):
+            if isinstance(scale, Vector3):
+                scale.scale_by(deltascale)
+            else:
+                obj.scale *= (deltascale.x + deltascale.y + deltascale.z)
+        if self.scale_mode.isChecked(): #edit scales around pivot. ONLY edit translations
+            self.level_view.gizmo.move_to_average(self.level_view.selected)
+            orig_avg = self.level_view.gizmo.position.copy()
+            for pos in self.level_view.selected_positions:
+                if deltascale.x > 0:
+                    pos.x = (pos.x - orig_avg.x) *  deltascale.x + orig_avg.x
+                if deltascale.y > 0:
+                    pos.y = (pos.y - orig_avg.y) *  deltascale.y + orig_avg.y
+                if deltascale.z > 0:
+                    pos.z = (pos.z - orig_avg.z) *  deltascale.z + orig_avg.z
+
     def action_ground_objects(self, positions=None):
         selected = (positions is None)
         if positions is None:
@@ -2233,8 +2244,7 @@ class GenEditor(QMainWindow):
 
         self.pik_control.update_info()
         if (selected):
-            self.level_view.gizmo.move_to_average(self.level_view.selected_positions,
-                                                  self.level_view.selected_rotations)
+            self.level_view.gizmo.move_to_average(self.level_view.selected)
         self.set_has_unsaved_changes(True)
         self.level_view.do_redraw()
 
@@ -2487,8 +2497,7 @@ class GenEditor(QMainWindow):
         self.update_3d()
 
     def update_3d(self):
-        self.level_view.gizmo.move_to_average(self.level_view.selected_positions,
-                                                self.level_view.selected_rotations)
+        self.level_view.gizmo.move_to_average(self.level_view.selected)
         self.level_view.do_redraw()
 
     def select_from_3d_to_treeview(self):
@@ -2696,8 +2705,7 @@ class GenEditor(QMainWindow):
         self.level_view.selected_positions =  [point.position for point in route.points]
         self.level_view.selected_rotations = []
 
-        self.level_view.gizmo.move_to_average(self.level_view.selected_positions,
-                                              self.level_view.selected_rotations)
+        self.level_view.gizmo.move_to_average(self.level_view.selected)
         self.level_view.do_redraw()
         self.level_view.select_update.emit()
 

@@ -98,6 +98,11 @@ class Vector3(object):
         verti = arctan2(self.y, self.z)
         return horiz, verti
 
+    def scale_by(self, other_vec):
+        self.x = self.x * other_vec.x if other_vec.x > 0 else self.x
+        self.y = self.y * other_vec.y if other_vec.y > 0 else self.y
+        self.z = self.z * other_vec.z if other_vec.z > 0 else self.z
+
 class Vector4(Vector3):
     def __init__(self, x, y, z, w):
         Vector3.__init__(self, x, y, z)
