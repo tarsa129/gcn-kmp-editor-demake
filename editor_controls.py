@@ -166,7 +166,7 @@ class Gizmo2DMoveX(ClickDragAction):
     def just_released(self, editor, buttons, event):
         super().just_released(editor, buttons, event)
         editor.gizmo.reset_axis()
-        editor.gizmo.move_to_average(editor.selected)
+        editor.gizmo.move_to_average(editor.selected, editor.selected_positions)
 
 
 class Gizmo2DMoveXZ(Gizmo2DMoveX):

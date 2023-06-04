@@ -9,11 +9,8 @@ version = "1.2"
 include_files = [
     "object_parameters",
     "resources/",
-    ("lib/mkddobjects.json", "lib/mkddobjects.json"),
-    ("lib/music_ids.json", "lib/music_ids.json"),
+    ("lib/mkwiiobjects.json", "lib/mkwiiobjects.json"),
     ("lib/color_coding.json", "lib/color_coding.json"),
-    ("lib/minimap_locations.json", "lib/minimap_locations.json"),
-    ("lib/superbmd/", "lib/superbmd/"),
 ]
 
 build_dirpath = 'build'

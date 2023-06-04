@@ -1507,6 +1507,7 @@ class Area(RoutedObject):
         self.enemypoint = None
 
         self.widget = None
+        self.routeclass = AreaRoute
 
     @classmethod
     def new(cls):
@@ -2731,18 +2732,11 @@ class KMP(object):
         self.create_checkpoints_from_enemy()
         self.checkpoints.set_key_cps()
         self.create_respawns()
-        self.cameras.add_goal_camera()
 
     def auto_cleanup(self):
-        self.enemypointgroups.merge_groups()
-        self.itempointgroups.merge_groups()
-        self.checkpoints.merge_groups()
-
         self.remove_unused_cameras()
         self.remove_unused_respawns()
 
-        self.remove_invalid_cameras()
-        self.areas.remove_invalid()
         self.remove_invalid_objects()
 
     #respawnid code

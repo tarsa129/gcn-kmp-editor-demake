@@ -499,7 +499,8 @@ class GenEditor(QMainWindow):
         if hasattr(item, "bound_to"):
             self.pik_control.set_buttons(item.bound_to)
 
-        self.level_view.gizmo.move_to_average(self.level_view.selected)
+        self.level_view.gizmo.move_to_average(self.level_view.selected, 
+                                              self.level_view.selected_positions)
         self.level_view.do_redraw()
         self.level_view.select_update.emit()
 
@@ -1729,7 +1730,10 @@ class GenEditor(QMainWindow):
             self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
         elif option == "add_area_gener": #add new area
             #self.addobjectwindow_last_selected_category = 7
-            self.object_to_be_added = [libkmp.Area.default(obj), None, None ]
+            new_area = libkmp.Area.default(obj)
+            self.object_to_be_added = [new_area, True, True ]
+            if obj == 3:
+                new_area.create_route(True)
             self.pik_control.button_add_object.setChecked(True)
             self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
         elif option == "add_camera":  #add new camera with route
@@ -1987,9 +1991,7 @@ class GenEditor(QMainWindow):
                             placeobject.camera.create_route(True, diffed_points, True)
                 else:
                     self.level_file.areas.append(placeobject)
-                    if placeobject.type == 3:
-                        self.auto_route_obj(placeobject)
-                    elif placeobject.type == 4:
+                    if placeobject.type == 4:
                         placeobject.find_closest_enemypoint()
                         #assign to closest enemypoint
             elif isinstance(object, libkmp.OpeningCamera):
@@ -2026,7 +2028,8 @@ class GenEditor(QMainWindow):
 
                 added_pos.append(pos)
 
-            self.level_view.gizmo.move_to_average(self.level_view.selected)
+            self.level_view.gizmo.move_to_average(self.level_view.selected, 
+                                                  self.level_view.selected_positions)
 
         if self.autoground_mode.isChecked():
             self.action_ground_objects(self.level_view.selected_positions)
@@ -2039,7 +2042,8 @@ class GenEditor(QMainWindow):
     def action_move_objects_to(self, posx, posy, posz):
         #get the average position, which is just the pos, huh.
         #so then that's the
-        self.level_view.gizmo.move_to_average(self.level_view.selected)
+        self.level_view.gizmo.move_to_average(self.level_view.selected, 
+                                              self.level_view.selected_positions)
         orig_avg = self.level_view.gizmo.position.copy()
         new_avg = Vector3(posx, posz, -posy)
         diff = new_avg - orig_avg
@@ -2048,7 +2052,8 @@ class GenEditor(QMainWindow):
             pos.y = pos.y + diff.y
             pos.z = pos.z + diff.z
 
-            self.level_view.gizmo.move_to_average(self.level_view.selected)
+            self.level_view.gizmo.move_to_average(self.level_view.selected, 
+                                                  self.level_view.selected_positions)
         self.level_view.do_redraw()
         self.pik_control.update_info()
         self.set_has_unsaved_changes(True)
@@ -2219,7 +2224,8 @@ class GenEditor(QMainWindow):
             else:
                 obj.scale *= (deltascale.x + deltascale.y + deltascale.z)
         if self.scale_mode.isChecked(): #edit scales around pivot. ONLY edit translations
-            self.level_view.gizmo.move_to_average(self.level_view.selected)
+            self.level_view.gizmo.move_to_average(self.level_view.selected,
+                                                  self.level_view.selected_positions)
             orig_avg = self.level_view.gizmo.position.copy()
             for pos in self.level_view.selected_positions:
                 if deltascale.x > 0:
@@ -2244,7 +2250,8 @@ class GenEditor(QMainWindow):
 
         self.pik_control.update_info()
         if (selected):
-            self.level_view.gizmo.move_to_average(self.level_view.selected)
+            self.level_view.gizmo.move_to_average(self.level_view.selected,
+                                                  self.level_view.selected_positions)
         self.set_has_unsaved_changes(True)
         self.level_view.do_redraw()
 
@@ -2497,7 +2504,8 @@ class GenEditor(QMainWindow):
         self.update_3d()
 
     def update_3d(self):
-        self.level_view.gizmo.move_to_average(self.level_view.selected)
+        self.level_view.gizmo.move_to_average(self.level_view.selected,
+                                              self.level_view.selected_positions)
         self.level_view.do_redraw()
 
     def select_from_3d_to_treeview(self):
@@ -2705,7 +2713,8 @@ class GenEditor(QMainWindow):
         self.level_view.selected_positions =  [point.position for point in route.points]
         self.level_view.selected_rotations = []
 
-        self.level_view.gizmo.move_to_average(self.level_view.selected)
+        self.level_view.gizmo.move_to_average(self.level_view.selected,
+                                              self.level_view.selected_positions)
         self.level_view.do_redraw()
         self.level_view.select_update.emit()
 

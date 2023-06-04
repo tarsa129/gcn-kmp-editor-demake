@@ -53,9 +53,8 @@ class Gizmo(Model):
     def reset_axis(self):
         self.render_axis = None
 
-    def move_to_average(self, objects):
+    def move_to_average(self, objects, positions):
 
-        positions = [obj.position for obj in objects if hasattr(obj, "position")]
         rotations = [obj.rotation for obj in objects if hasattr(obj, "rotation")]
         scales = [obj.scale for obj in objects if hasattr(obj, "scale")]
 

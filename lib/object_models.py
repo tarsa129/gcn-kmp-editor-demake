@@ -223,8 +223,8 @@ class ObjectModels(object):
     def render_generic_position_colored_id(self, position, id, scale=Vector3(1, 1, 1)):
         glPushMatrix()
         glTranslatef(position.x, -position.z, position.y)
-        self.cube.render_coloredid(id)
         glScalef(scale.x, scale.z, scale.y)
+        self.cube.render_coloredid(id)
         glPopMatrix()
 
     def render_generic_position_rotation_colored_id(self, position, rotation, id, scale=Vector3(1, 1, 1)):

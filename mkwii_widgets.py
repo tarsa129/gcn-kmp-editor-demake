@@ -23,8 +23,8 @@ from helper_functions import calc_zoom_in_factor, calc_zoom_out_factor
 from lib.collision import Collision
 from widgets.editor_widgets import catch_exception, catch_exception_with_dialog, check_box_convex
 from opengltext import draw_collision
-from lib.vectors import Matrix4x4, Vector3, Line, Plane, Triangle
-from lib.model_rendering import TexturedPlane, Model, Grid, GenericObject, Material
+from lib.vectors import Matrix4x4, Vector3, Line, Plane, Rotation
+from lib.model_rendering import Grid, TransPlane
 from gizmo import Gizmo
 from lib.object_models import ObjectModels
 from editor_controls import UserControl
@@ -1004,7 +1004,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
                 self.select_update.emit()
 
-                self.gizmo.move_to_average(self.selected)
+                self.gizmo.move_to_average(self.selected, self.selected_positions)
                 if len(selected) == 0:
                     #print("Select did register")
                     self.gizmo.hidden = True
@@ -1020,6 +1020,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
         #glClearColor(1.0, 1.0, 1.0, 0.0)
         glClearColor(*self.backgroundcolor)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
         glEnable(GL_DEPTH_TEST)
         glDisable(GL_TEXTURE_2D)
         glColor4f(1.0, 1.0, 1.0, 1.0)
@@ -1056,18 +1057,11 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
         self.grid.render()
 
         if self.mode == MODE_TOPDOWN:
+            #glDisable(GL_DEPTH_TEST)
             glClear(GL_DEPTH_BUFFER_BIT)
 
         glEnable(GL_ALPHA_TEST)
         glAlphaFunc(GL_GEQUAL, 0.5)
-        p = 0
-
-        #self.dolphin.render_visual(self, self.selected)
-
-        """for valid, kartpos in self.karts:
-            if valid:
-                self.models.render_player_position_colored(kartpos, valid in self.selected, p)
-            p += 1"""
 
         if self.preview is not None:
             glColor3f(0.0, 0.0, 0.0)
@@ -1789,38 +1783,62 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                     self.models.render_generic_position_rotation_colored("mission",
                                                                 object.position, object.rotation,
                                                                  object in select_optimize)
-
-        #connections?
-        if self.connecting_mode:
-            mouse_pos = self.mapFromGlobal(QCursor.pos())
-            if self.mode == MODE_TOPDOWN:
-                mapx, mapz = self.mouse_coord_to_world_coord(mouse_pos.x(), mouse_pos.y())
-                pos2 = Vector3( mapx, 0, -mapz)
-            elif self.mode == MODE_3D:
-                pos2 = self.get_3d_coordinates(mouse_pos.x(), mouse_pos.y())
-                pos2 = Vector3(pos2.x, pos2.z, -pos2.y)
-
-            if pos2 is not None:
-                for pos1 in self.connecting_start:
+                    
+        if self.level_file is not None:
+            if vismenu.replaycameras.is_visible():
+                for object in self.level_file.replayareas:
                     if self.mode == MODE_TOPDOWN:
-                        pos2.y = pos1.y
-                    glLineWidth(5.0)
-                    glBegin(GL_LINES)
-                    glColor3f(0.0, 0.0, 0.0)
-                    glVertex3f(pos1.x, -pos1.z, pos1.y)
-                    glVertex3f(pos2.x, -pos2.z, pos2.y)
-                    glEnd()
-                    self.models.draw_arrow_head(pos1, pos2)
-                    if self.connecting_mode == "linedraw":
-                        diff = pos2 - pos1
-                        for i in range(1, 5):
-                            position = diff * (i/4) + pos1
-                            self.models.render_generic_position_rotation_colored("objects",
-                                position, self.connecting_rotation,
-                                object in select_optimize)
+                        TransPlane.render_srt(object.position, object.rotation, object.scale,
+                                              Vector3(-100, 0, -100), Vector3(100, 0, 100),
+                                              (1, 0.5, 0, .5))
+                    else:
+                        TransPlane.render_box_srt(object.position, object.rotation, object.scale, (1, 0.5, 0, .5))
+            if vismenu.areas.is_visible():
+                for object in self.level_file.areas:
+                    if self.mode == MODE_TOPDOWN:
+                        TransPlane.render_srt(object.position, object.rotation, object.scale,
+                                              Vector3(-100, 0, -100), Vector3(100, 0, 100),
+                                              (0, 0, 1, .5))
+                    else:
+                        TransPlane.render_box_srt(object.position, object.rotation, object.scale, (0, 0, 1, .5))
+            if vismenu.checkpoints.is_visible() and self.mode == MODE_3D:
+                glEnable(GL_CULL_FACE)
+                rotation = Rotation.from_euler(Vector3(0, 90, 0))
+                for group in self.level_file.checkpoints.groups:
+                    for point in group.points:
+                        if point in select_optimize or point.type:
+                            color = (1, 1, 0, .3)
+                        elif point.lapcounter:
+                            color = (1, 0.5, 0, .3)
+                        else:
+                            color = (0, 0, 1, .3)
+                        horiz, _verti = (point.end - point.start).to_euler()
+                        rotation = Rotation.from_euler(Vector3(0, -horiz * 180/3.14 - 90, 0))
+                        scale = Vector3(1, 1,  ((point.end - point.start).norm()) / 100)
+                        TransPlane.render_srt(point.get_mid(), rotation, scale,
+                                        Vector3(-1, 0, 0), Vector3(1, 1000, 0),
+                                        color)
+                glDisable(GL_CULL_FACE)
+                color = (0, 0, 1, .3)
+                for group in self.level_file.checkpoints.groups:
+                    for point, next_point in zip(group.points, group.points[1:]):
+                        horiz, _verti = (next_point.start - point.start).to_euler()
+                        rotation = Rotation.from_euler(Vector3(0, -horiz * 180/3.14 - 90, 0))
+                        scale = Vector3(1, 1,  ((next_point.start - point.start).norm()) / 100)
+                        position = (next_point.start + point.start) / 2
+                        TransPlane.render_srt(position, rotation, scale,
+                                        Vector3(-1, 0, 0), Vector3(1, 1000, 0),
+                                        color)
 
+                        horiz, _verti = (next_point.end - point.end).to_euler()
+                        rotation = Rotation.from_euler(Vector3(0, -horiz * 180/3.14 - 90, 0))
+                        scale = Vector3(1, 1,  ((next_point.end - point.end).norm()) / 100)
+                        position = (next_point.end + point.end) / 2
+                        TransPlane.render_srt(position, rotation, scale,
+                                        Vector3(-1, 0, 0), Vector3(1, 1000, 0),
+                                        color)
 
-
+        #render evrything absolute
         self.gizmo.render_scaled(gizmo_scale, is3d=self.mode == MODE_3D, hover_id=gizmo_hover_id)
 
         glDisable(GL_DEPTH_TEST)
@@ -1858,7 +1876,37 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
                 glLineWidth(1.0)
 
-            glEnable(GL_DEPTH_TEST)
+        glEnable(GL_DEPTH_TEST)
+
+        #connections?
+        if self.connecting_mode:
+            mouse_pos = self.mapFromGlobal(QCursor.pos())
+            if self.mode == MODE_TOPDOWN:
+                mapx, mapz = self.mouse_coord_to_world_coord(mouse_pos.x(), mouse_pos.y())
+                pos2 = Vector3( mapx, 0, -mapz)
+            elif self.mode == MODE_3D:
+                pos2 = self.get_3d_coordinates(mouse_pos.x(), mouse_pos.y())
+                pos2 = Vector3(pos2.x, pos2.z, -pos2.y)
+
+            if pos2 is not None:
+                for pos1 in self.connecting_start:
+                    if self.mode == MODE_TOPDOWN:
+                        pos2.y = pos1.y
+                    glLineWidth(5.0)
+                    glBegin(GL_LINES)
+                    glColor3f(0.0, 0.0, 0.0)
+                    glVertex3f(pos1.x, -pos1.z, pos1.y)
+                    glVertex3f(pos2.x, -pos2.z, pos2.y)
+                    glEnd()
+                    self.models.draw_arrow_head(pos1, pos2)
+                    if self.connecting_mode == "linedraw":
+                        diff = pos2 - pos1
+                        for i in range(1, 5):
+                            position = diff * (i/4) + pos1
+                            self.models.render_generic_position_rotation_colored("objects",
+                                position, self.connecting_rotation,
+                                object in select_optimize)
+
         glFinish()
         #now = default_timer() - start
         #print("Frame time:", now, 1/now, "fps")

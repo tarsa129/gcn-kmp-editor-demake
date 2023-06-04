@@ -6,6 +6,7 @@ import sys
 from OpenGL.GL import *
 from PIL import Image
 from .vectors import Vector3
+from PyQt5 import QtGui
 
 
 with open("lib/color_coding.json") as f:
@@ -330,7 +331,6 @@ class TexturedModel(object):
                         for mtl_line in g:
                             mtl_line = mtl_line.strip()
                             mtlargs = mtl_line.split(" ")
-                            
 
                             if len(mtlargs) == 0 or mtl_line.startswith("#"):
                                 continue
@@ -343,7 +343,7 @@ class TexturedModel(object):
                                     lasttex = None
 
                                 lastmat = " ".join(mtlargs[1:])
-                            elif mtlargs[0].lower() == "kd":                         
+                            elif mtlargs[0].lower() == "kd":
                                 r, g, b = map(float, mtlargs[1:4])
                                 lastdiffuse = (r,g,b)
                             elif mtlargs[0].lower() == "map_kd":
@@ -357,7 +357,7 @@ class TexturedModel(object):
                             materials[lastmat] = Material(diffuse=lastdiffuse, texturepath=lasttex)
                             lastdiffuse = None
                             lasttex = None
-                        
+
                     for mtlname, material in materials.items():
                         material_json = materials_json.get(mtlname)
                         if material_json is not None:
@@ -668,12 +668,59 @@ ORIENTATIONS = {
     3: [(0.0, 1.0), (1.0, 1.0), (1.0, 0.0), (0.0, 0.0)]
 }
 
+class TransPlane(object):
+    def __init__(self, texpath=None):
+        pass
+    
+    @classmethod
+    def render_box_srt(cls, position, rotation, scale, color):
+        cls.render_srt(position, rotation, scale, Vector3(-100, 0, -100), Vector3(100, 0, 100), color) #bottom
+        cls.render_srt(position, rotation, scale, Vector3(-100, 200, -100), Vector3(100, 200, 100), color) #top
+        cls.render_srt(position, rotation, scale, Vector3(-100, 200, -100), Vector3(-100, 0, 100), color) #front
+        cls.render_srt(position, rotation, scale, Vector3(100, 200, -100), Vector3(100, 0, 100), color) #back
+        cls.render_srt(position, rotation, scale, Vector3(-100, 200, 100), Vector3(100, 0, 100), color) #left
+        cls.render_srt(position, rotation, scale, Vector3(-100, 200, -100), Vector3(100, 0, -100), color) #right
 
-class Minimap(object):
-    def __init__(self, corner1, corner2, orientation, texpath=None):
+    @classmethod
+    def render_srt(cls, position, rotation, scale, corner1, corner2, color):
+        glDisable(GL_ALPHA_TEST)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        glEnable(GL_BLEND)
+
+        glColor4f(*color)
+        glPushMatrix()
+        glTranslatef(position.x, -position.z, position.y)
+
+        glMultMatrixf( rotation.get_render() )
+        glScalef(scale.z * 500, scale.x * 500, scale.y * 5000)
+
+
+        glBegin(GL_TRIANGLE_FAN)
+        glVertex3f(corner1.x, -corner1.z, corner1.y)
+        if corner1.z == corner2.z:
+            glVertex3f(corner1.x, -corner1.z, corner2.y)
+        else:
+            glVertex3f(corner1.x, -corner2.z, corner1.y)
+        glVertex3f(corner2.x, -corner2.z, corner2.y)
+        if corner1.z == corner2.z:
+            glVertex3f(corner2.x, -corner2.z, corner1.y)
+        else:
+            glVertex3f(corner2.x, -corner1.z, corner2.y)
+        glEnd()
+        glPopMatrix()
+
+        glColor4f(1.0, 1.0, 1.0, 1.0)
+        glDisable(GL_BLEND)
+        glBlendFunc(GL_ZERO, GL_ONE)
+        glEnable(GL_ALPHA_TEST)
+
+
+class AlphaTexture(object):
+    def __init__(self, texpath=None):
         self.ID = None
         if texpath is not None:
             self.set_texture(texpath)
+        self.orientation = [(0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0)]
 
 
     def is_available(self):
@@ -695,8 +742,7 @@ class Minimap(object):
         glTexImage2D(GL_TEXTURE_2D, 0, 4, qimage.width(), qimage.height(), 0, GL_BGRA, GL_UNSIGNED_BYTE, imgdata)
         self.ID = ID
 
-    def render(self):
-        corner1, corner2 = self.corner1, self.corner2
+    def render(self, corner1, corner2):
 
         glDisable(GL_ALPHA_TEST)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
@@ -853,6 +899,7 @@ class CollisionModel(object):
                 glVertex3f(v3.x, v3.z, v3.y)
 
             glEnd()
+            glDisable(GL_CULL_FACE)
             glEndList()
 
             self._displists.append((meshtype, displist))
@@ -868,16 +915,16 @@ class CollisionModel(object):
         out vec3 vecColor;
         vec3 selectedcol = vec3(1.0, 0.0, 0.0);
         vec3 lightvec = normalize(vec3(0.3, 0.0, -1.0));
-        
+
         void main(void)
         {
             vecNormal = normal;
             vec3 col = (1-interpolate) * color + interpolate*selectedcol;
             vecColor = col*clamp(1.0-dot(lightvec, normal), 0.3, 1.0);
             gl_Position = gl_ModelViewProjectionMatrix * vert;
-            
+
         }
-        
+
         """
 
         fragshader = """
@@ -885,9 +932,9 @@ class CollisionModel(object):
         in vec3 vecNormal;
         in vec3 vecColor;
         out vec4 finalColor;
-        
+
         void main (void)
-        {   
+        {
             finalColor = vec4(vecColor, 1.0);
         }"""
 

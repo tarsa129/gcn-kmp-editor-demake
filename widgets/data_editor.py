@@ -1306,7 +1306,10 @@ class AreaEdit(DataEditor):
         self.update_vector3("scale", obj.scale)
 
         self.shape.setCurrentIndex( obj.shape )
-        self.area_type.setCurrentIndex( obj.type )
+
+        typeindex = self.area_type.findData(obj.type )
+        self.area_type.setCurrentIndex(typeindex if typeindex != -1 else 1)
+
         self.area_type.setVisible(obj.type != 0)
         self.area_type_label.setVisible(obj.type != 0)
 
@@ -1317,8 +1320,8 @@ class AreaEdit(DataEditor):
 
         obj: Route = obj.route_obj
         if len(obj) == 1:
-            self.smooth.setCurrentIndex( min(obj.smooth, 1))
-            self.cyclic.setCurrentIndex( min(obj.cyclic, 1))
+            self.smooth.setCurrentIndex( min(obj[0].smooth, 1))
+            self.cyclic.setCurrentIndex( min(obj[0].cyclic, 1))
 
         has_route = len(obj) > 0
         self.smooth.setVisible(has_route)

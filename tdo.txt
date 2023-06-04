@@ -1,14 +1,14 @@
 better ways to handle cameras:
 better type 3 rendering
 - make relative to area
+move route to another tab for cameras
+- add button for "create route" and "remove route"
 
 updates:
 better area rendering
 improve json files
 when placing an object with a routepoint, assign to closest routepoint (new option)
 error analyzer
-move route to another tab for cameras
-- add button for "create route" and "remove route"
 
 new features:
 handle boos automatically + handle that enemy point switching thing
