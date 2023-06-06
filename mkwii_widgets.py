@@ -1699,21 +1699,20 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                     self.models.render_generic_position_rotation_colored("camera",
                                                                 object.position, object.rotation,
                                                                  object in select_optimize)
-                    if object.type == 1:
-                        if object in select_optimize:
-                            glColor3f(1.0, 0.0, 1.0)
-                        else:
-                            glColor3f(0.749, 0.616, 0.467)
-                        pos1 = object.position2
-                        pos2 = object.position3
-                        self.models.draw_sphere(pos1, 300)
-                        self.models.draw_sphere(pos2, 300)
-                        glLineWidth(2.0)
-                        glBegin(GL_LINES)
-                        glVertex3f(pos1.x, -pos1.z, pos1.y)
-                        glVertex3f(pos2.x, -pos2.z, pos2.y)
-                        glEnd()
-                        self.models.draw_arrow_head(pos1, pos2)
+                    if object in select_optimize:
+                        glColor3f(1.0, 0.0, 1.0)
+                    else:
+                        glColor3f(0.749, 0.616, 0.467)
+                    pos1 = object.position2
+                    pos2 = object.position3
+                    self.models.draw_sphere(pos1, 300)
+                    self.models.draw_sphere(pos2, 300)
+                    glLineWidth(2.0)
+                    glBegin(GL_LINES)
+                    glVertex3f(pos1.x, -pos1.z, pos1.y)
+                    glVertex3f(pos2.x, -pos2.z, pos2.y)
+                    glEnd()
+                    self.models.draw_arrow_head(pos1, pos2)
 
                     if object.nextcam_obj is not None:
                         pos1 = object.position

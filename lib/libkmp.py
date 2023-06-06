@@ -1776,7 +1776,7 @@ class Camera(RoutedObject):
         self.route = -1
         self.route_obj = None
         self.routespeed = 0
-        self.zoomspeed = 0
+        self.zoomspeed = 5
         self.viewspeed = 0
         self.startflag = 0
         self.movieflag = 0
@@ -1785,6 +1785,8 @@ class Camera(RoutedObject):
         self.rotation = Rotation.default()
 
         self.fov = FOV()
+        self.fov.start = 30
+        self.fov.end = 50
 
         self.position2 = Vector3(0.0, 0.0, 0.0)
         self.position3 = Vector3(0.0, 0.0, 0.0)
@@ -1803,13 +1805,11 @@ class Camera(RoutedObject):
     @classmethod
     def new(cls):
         return cls(Vector3(0.0, 0.0, 0.0))
+    
     @classmethod
-    def default(cls, type = 2):
+    def default(cls, type = 1):
         camera = cls(Vector3(0.0, 0.0, 0.0))
         camera.type = type
-        camera.fov.start = 30
-        camera.fov.end = 50
-
         return camera
 
     @classmethod
@@ -1945,6 +1945,9 @@ class Camera(RoutedObject):
         if self.type in (1, 2):
             self.follow_player = 1
             self.type = 1
+        elif self.type in (4,5):
+            self.follow_player = 0
+            self.type = 1
         elif self.type == 6:
             self.position2 = self.position
             self.type = 3
@@ -1978,14 +1981,22 @@ class ReplayCamera(Camera):
         generic.routeclass = ReplayCameraRoute
         return generic
 
+    @classmethod
+    def default(cls, type):
+        camera = cls(Vector3(0.0, 0.0, 0.0))
+        camera.type = type
+        camera.follow_player = True
+        return camera
+
 class OpeningCamera(Camera):
     def __init__(self, position):
         super().__init__(position)
+        self.type = 1
+        self.follow_player = False
+
     @classmethod
     def from_generic(cls, generic):
         generic.__class__ = cls
-        generic.type = 1
-        generic.follow_player = False
         return generic
 
 class GoalCamera(Camera):
@@ -2391,6 +2402,13 @@ class KMP(object):
             curr_val = dict.get(key, [])
             curr_val.append(value)
             dict[key] = curr_val
+
+        #remove invalid objects
+        to_remove = []
+        for object in self.objects.objects:
+            if object.objectid not in OBJECTNAMES:
+                to_remove.append(object)
+        [self.objects.objects.remove(obj) for obj in to_remove]
 
         for object in self.objects.objects:
             if object.route_info() > 0:

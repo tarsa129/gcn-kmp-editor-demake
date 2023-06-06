@@ -1,11 +1,9 @@
 better ways to handle cameras:
-better type 3 rendering
-- make relative to area
-move route to another tab for cameras
-- add button for "create route" and "remove route"
+better type 3 rendering:
+- do not have it actually affect the position
 
 updates:
-better area rendering
+better area rendering - image + circle
 improve json files
 when placing an object with a routepoint, assign to closest routepoint (new option)
 error analyzer
@@ -18,3 +16,4 @@ load + collide on gobj collision files
 add option to select x to y points
 create dialog for auto generation and auto cleanup
 brres loading
+lookinto collision translucency

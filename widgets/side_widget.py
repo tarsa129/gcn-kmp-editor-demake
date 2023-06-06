@@ -103,6 +103,13 @@ class PikminSideWidget(QtWidgets.QWidget):
         else:
             self.name_label.setText("Selected: {}".format(type(obj).__name__))
 
+        self.set_data_edit(obj, update3d)
+
+        self.objectlist = []
+        self.comment_label.setText("")
+        self.comment_label.hide()
+
+    def set_data_edit(self, obj, update3d):
         if self.object_data_edit is not None:
             self.object_data_edit.deleteLater()
             del self.object_data_edit
@@ -115,9 +122,10 @@ class PikminSideWidget(QtWidgets.QWidget):
             self.scroll_area_frame_layout.addWidget(self.object_data_edit)
             self.object_data_edit.emit_3d_update.connect(update3d)
 
-        self.objectlist = []
-        self.comment_label.setText("")
-        self.comment_label.hide()
+    def update_data_edit(self):
+        if self.object_data_edit is None or not hasattr(self.object_data_edit, "update_route"):
+            return
+        self.object_data_edit.update_route()
 
     def set_info_multiple(self, objs, update3d):
         self.more_buttons.add_buttons_multi(objs)

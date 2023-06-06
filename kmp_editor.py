@@ -1766,10 +1766,10 @@ class GenEditor(QMainWindow):
             self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
         elif option == "add_rarea_rout": #area camera route add
             new_area = libkmp.Area.default()
-            new_camera = libkmp.ReplayCamera.default(2)
+            new_camera = libkmp.ReplayCamera.default(1)
             new_camera.create_route(True)
             new_area.camera = new_camera
-            self.object_to_be_added = [new_area, True, None ]
+            self.object_to_be_added = [new_area, True, True]
 
             self.pik_control.button_add_object.setChecked(True)
             self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
@@ -1988,7 +1988,8 @@ class GenEditor(QMainWindow):
                         placeobject.camera.position = placeobject.position + Vector3(3000, 1000, 0)
                         if placeobject.camera.route_obj is not None:
                             diffed_points = [RoutePoint(x.position - object.position) for x in object.camera.route_obj.points]
-                            placeobject.camera.create_route(True, diffed_points, True)
+                            placeobject.camera.create_route(True, diffed_points, True, overwrite=True)
+                            placeobject.camera.route_obj.points[0].position = placeobject.camera.position
                 else:
                     self.level_file.areas.append(placeobject)
                     if placeobject.type == 4:
@@ -2008,11 +2009,11 @@ class GenEditor(QMainWindow):
             else:
                 raise RuntimeError("Unknown object type {0}".format(type(object)))
 
-
+            if isinstance(placeobject, RoutePoint):
+                self.pik_control.update_data_edit()
             self.level_view.do_redraw()
             self.leveldatatreeview.set_objects(self.level_file)
             self.set_has_unsaved_changes(True)
-
             self.select_tree_item_bound_to(placeobject)
 
     @catch_exception
@@ -2266,6 +2267,7 @@ class GenEditor(QMainWindow):
                 #cameras *can* have their routes deleted
                 group = self.level_file.get_route_of_point(obj)
                 if group is None:
+                    print("what")
                     continue #probably already deleted the group
                 used_by = self.level_file.route_used_by(group)
                 group.points.remove(obj)

@@ -37,9 +37,8 @@ def get_cmn_obj(objs, kmp_file=None):
     except:
         cmn_obj = deepcopy(objs[0])
 
-    if hasattr(cmn_obj,"route_obj"):
-        cmn_obj.route_obj = [cmn_obj.route_obj]
-
+    if hasattr(objs[0],"route_obj"):
+        cmn_obj.route_obj = [objs[0].route_obj]
 
     members = [attr for attr in dir(cmn_obj) if not callable(getattr(cmn_obj, attr)) and not attr.startswith("__")]
     #print(members)
@@ -62,6 +61,11 @@ def get_cmn_obj(objs, kmp_file=None):
                     cmn_vec.x = None if cmn_vec.x != obj_vec.x else cmn_vec.x
                     cmn_vec.y = None if cmn_vec.y != obj_vec.y else cmn_vec.y
                     cmn_vec.z = None if cmn_vec.z != obj_vec.z else cmn_vec.z
+                elif isinstance( getattr(cmn_obj, member), (FOV)):
+                    cmn_fov = getattr(cmn_obj, member)
+                    obj_fov = getattr(obj, member)
+                    cmn_fov.start = None if cmn_fov.start != obj_fov.start else cmn_fov.start
+                    cmn_fov.end = None if cmn_fov.end != obj_fov.end else cmn_fov.end
                 elif getattr(obj, member) != getattr(cmn_obj, member):
                     setattr(cmn_obj, member, None)
 
@@ -182,13 +186,16 @@ class ColorPicker(ClickableLabel):
 class DataEditor(QtWidgets.QWidget):
     emit_3d_update = pyqtSignal()
 
-    def __init__(self, parent, bound_to):
+    def __init__(self, parent, bound_to, kmp_file=None):
         super().__init__(parent)
         self.bound_to = bound_to
         self.vbox = QtWidgets.QVBoxLayout(self)
         self.vbox.setContentsMargins(0, 0, 0, 0)
         self.vbox.setSpacing(3)
-        self.kmp_file = parent.parent().parent().level_file
+        if kmp_file:
+            self.kmp_file = kmp_file
+        else:
+            self.kmp_file = parent.parent().parent().level_file
         self.setup_widgets()
 
     def catch_text_update(self):
@@ -225,15 +232,6 @@ class DataEditor(QtWidgets.QWidget):
         layout.addWidget(widget)
         return layout
 
-    def create_labeled_widget_ret_both(self, parent, text, widget):
-        layout = QtWidgets.QHBoxLayout()
-        layout.setSpacing(5)
-        label = self.create_label(text)
-        label.setText(text)
-        layout.addWidget(label)
-        layout.addWidget(widget)
-        return layout, label
-
     def create_labeled_widgets(self, parent, text, widgetlist):
         layout = QtWidgets.QHBoxLayout()
         layout.setSpacing(5)
@@ -261,7 +259,7 @@ class DataEditor(QtWidgets.QWidget):
 
     def add_checkbox(self, text, attribute, off_value, on_value, return_both=False):
         checkbox = QtWidgets.QCheckBox(self)
-        layout, label = self.create_labeled_widget_ret_both(self, text, checkbox)
+        layout = self.create_labeled_widget(self, text, checkbox)
 
         def checked(state):
             if state == 0:
@@ -273,12 +271,12 @@ class DataEditor(QtWidgets.QWidget):
         self.vbox.addLayout(layout)
 
         if return_both:
-            return checkbox, label
+            return checkbox, layout.itemAt(0).widget()
         return checkbox
 
     def add_integer_input(self, text, attribute, min_val, max_val, return_both=False):
         line_edit = QtWidgets.QLineEdit(self)
-        layout, label = self.create_labeled_widget_ret_both(self, text, line_edit)
+        layout = self.create_labeled_widget(self, text, line_edit)
 
         line_edit.setValidator(PythonIntValidator(min_val, max_val, line_edit))
 
@@ -293,32 +291,9 @@ class DataEditor(QtWidgets.QWidget):
 
         self.vbox.addLayout(layout)
         if return_both:
-            return line_edit, label
+            return line_edit, layout.itemAt(0).widget()
         #print("created for", text, attribute)
         return line_edit
-
-    def add_integer_input_hideable(self, text, attribute, min_val, max_val):
-        line_edit = QtWidgets.QLineEdit(self)
-        layout, label = self.create_labeled_widget_ret_both(self, text, line_edit)
-
-        line_edit.setValidator(PythonIntValidator(min_val, max_val, line_edit))
-
-        def input_edited():
-            #print("Hmmmm")
-            text = line_edit.text()
-            val = int(text)
-            #print("input:", text)
-
-            if "." in attribute:
-                set_subattrs_mult(self.bound_to, attribute.split('.'), val)
-            else:
-                set_attr_mult(self.bound_to, attribute, val)
-
-        line_edit.editingFinished.connect(input_edited)
-
-        self.vbox.addLayout(layout)
-        #print("created for", text, attribute)
-        return line_edit, label
 
     def add_integer_input_index(self, text, attribute, index, min_val, max_val):
         line_edit = QtWidgets.QLineEdit(self)
@@ -387,7 +362,7 @@ class DataEditor(QtWidgets.QWidget):
 
         return widget
 
-    def add_text_input(self, text, attribute, maxlength):
+    def add_text_input(self, text, attribute, maxlength, return_both=False):
         line_edit = QtWidgets.QLineEdit(self)
         layout = self.create_labeled_widget(self, text, line_edit)
 
@@ -401,23 +376,10 @@ class DataEditor(QtWidgets.QWidget):
         line_edit.editingFinished.connect(input_edited)
         self.vbox.addLayout(layout)
 
-        return line_edit
-
-    def add_text_input_return_both(self, text, attribute, maxlength):
-        line_edit = QtWidgets.QLineEdit(self)
-        layout = self.create_labeled_widget(self, text, line_edit)
-
-        line_edit.setMaxLength(maxlength)
-
-        def input_edited():
-            text = line_edit.text()
-            text = text.rjust(maxlength)
-            set_attr_mult(self.bound_to, attribute, text)
-
-        line_edit.editingFinished.connect(input_edited)
-        self.vbox.addLayout(layout)
-
-        return line_edit, layout.itemAt(0)
+        if return_both:
+            return line_edit, layout.itemAt(0).widget()
+        else:
+            return line_edit
 
     def add_dropdown_input(self, text, attribute, keyval_dict, return_both = False):
         #create the combobox
@@ -437,7 +399,7 @@ class DataEditor(QtWidgets.QWidget):
         policy.setHorizontalPolicy(QtWidgets.QSizePolicy.Expanding)
         combobox.setSizePolicy(policy)
         #create the layout and label
-        layout, label = self.create_labeled_widget_ret_both(self, text, combobox)
+        layout = self.create_labeled_widget(self, text, combobox)
 
         def item_selected(index):
             val = combobox.itemData(index)
@@ -458,7 +420,7 @@ class DataEditor(QtWidgets.QWidget):
 
         self.vbox.addLayout(layout)
         if return_both:
-            return combobox, label
+            return combobox, layout.itemAt(0).widget()
         return combobox
 
     def add_dropdown_lineedit_input(self, text, attribute, keyval_dict, min_val, max_val):
@@ -509,7 +471,13 @@ class DataEditor(QtWidgets.QWidget):
 
             line_edit.setValidator(QIntValidator(min_val, max_val, self))
 
-            input_edited = create_setter(line_edit, self.bound_to, attribute, subattr, self.catch_text_update, isFloat=False)
+            if attribute is not None:
+                input_edited = create_setter(line_edit, self.bound_to, attribute, subattr, self.catch_text_update, isFloat=False)
+            else:
+                def sub_input_edited():
+                    text = line_edit.text()
+                    set_attr_mult(self.bound_to, subattr, int(text))
+                input_edited = sub_input_edited
 
             line_edit.editingFinished.connect(input_edited)
             line_edits.append(line_edit)
@@ -683,6 +651,27 @@ class DataEditor(QtWidgets.QWidget):
         if vec.z is not None:
             inputs[2].setText(str(round(vec.z, 3)))
 
+class RoutedEditor(DataEditor):
+    def setup_widgets(self):
+        super().setup_widgets()
+        self.main_thing = QtWidgets.QTabWidget()
+        self.vbox.addWidget(self.main_thing)
+
+    def update_route(self):
+        route_obj = get_cmn_obj(self.bound_to).route_obj
+        clear_layout(self.route_edit.vbox)
+        self.route_edit.bound_to = route_obj
+        if route_obj:
+            self.route_edit.setup_widgets()
+            self.route_edit.update_data()
+        self.main_thing.setTabEnabled(1, len(route_obj) > 0)
+
+    def update_data(self):
+        self.camera_edit.update_data()
+        route_obj = get_cmn_obj(self.bound_to).route_obj
+        if route_obj:
+            self.route_edit.update_data()
+
 def create_setter_list(lineedit, bound_to, attribute, index):
     def input_edited():
         text = lineedit.text()
@@ -735,11 +724,11 @@ def choose_data_editor(obj):
     elif isinstance(obj, CheckpointGroup):
         return CheckpointGroupEdit
     elif isinstance(obj, MapObject):
-        return ObjectEdit
+        return RoutedObjectEdit
     elif isinstance(obj, Checkpoint):
         return CheckpointEdit
     elif isinstance(obj, Route):
-        return ObjectRouteEdit
+        return RouteEdit
     elif isinstance(obj, RoutePoint):
         return ObjectRoutePointEdit
     elif isinstance(obj, KMP):
@@ -751,11 +740,15 @@ def choose_data_editor(obj):
     elif isinstance(obj, Area):
         if obj.type == 0:
             return ReplayAreaEdit
+        elif obj.type == 3:
+            return RoutedAreaEdit
         else:
             return AreaEdit
     elif isinstance(obj, ReplayCamera):
-        return ReplayCameraEdit
-    elif isinstance(obj, (OpeningCamera, GoalCamera)):
+        return RoutedReplayCameraEdit
+    elif isinstance(obj, OpeningCamera):
+        return RoutedOpeningCameraEdit
+    elif isinstance(obj, GoalCamera):
         return OpeningCameraEdit
     elif isinstance(obj, Cameras):
         return CamerasEdit
@@ -930,15 +923,55 @@ class CheckpointEdit(DataEditor):
     def update_name(self):
         super().update_name()
 
-class ObjectRouteEdit(DataEditor):
+class RouteEdit(DataEditor):
     def setup_widgets(self):
         self.smooth = self.add_dropdown_input("Sharp/Smooth motion", "smooth", POTI_Setting1)
         self.cyclic = self.add_dropdown_input("Cyclic/Back and forth motion", "cycle", POTI_Setting2)
 
     def update_data(self):
-        obj: Route = self.bound_to
-        self.smooth.setCurrentIndex( min(obj.smooth, 1))
-        self.cyclic.setCurrentIndex( min(obj.cyclic, 1))
+        obj: Route = get_cmn_obj(self.bound_to)
+        if obj.smooth is not None:
+            self.smooth.setCurrentIndex( min(obj.smooth, 1))
+        if obj.cyclic is not None:
+            self.cyclic.setCurrentIndex( min(obj.cyclic, 1))
+
+class CameraRouteEdit(RouteEdit):
+    def setup_widgets(self):
+        if len(self.bound_to) == 0:
+            return
+        super().setup_widgets()
+        self.widgets = []
+
+        if len(self.bound_to) != 1:
+            return
+        for i, point in enumerate(self.bound_to[0].points):
+            routepointedit = CameraRoutePointEdit(self.parent(), [point], i, self.kmp_file)
+            self.vbox.addWidget(routepointedit)
+            self.widgets.append(routepointedit)
+
+    def update_data(self):
+        super().update_data()
+        for widget in self.widgets:
+            widget.update_data()
+
+class AreaRouteEdit(RouteEdit):
+    def setup_widgets(self):
+        if len(self.bound_to) == 0:
+            return
+        super().setup_widgets()
+        self.widgets = []
+
+        if len(self.bound_to) != 1:
+            return
+        for i, point in enumerate(self.bound_to[0].points):
+            routepointedit = AreaRoutePointEdit(self.parent(), [point], i, self.kmp_file)
+            self.vbox.addWidget(routepointedit)
+            self.widgets.append(routepointedit)
+
+    def update_data(self):
+        super().update_data()
+        for widget in self.widgets:
+            widget.update_data()
 
 class ObjectRoutePointEdit(DataEditor):
     def setup_widgets(self):
@@ -1028,6 +1061,18 @@ class KMPEdit(DataEditor):
 
             self.update_data()
 
+class RoutedObjectEdit(RoutedEditor):
+    def setup_widgets(self):
+        super().setup_widgets()
+        self.camera_edit = ObjectEdit(self.parent(), self.bound_to)
+        route_obj = get_cmn_obj(self.bound_to).route_obj
+        self.route_edit = RouteEdit(self.parent(), route_obj)
+
+        self.main_thing.addTab(self.camera_edit, "Object")
+        self.main_thing.addTab(self.route_edit, "Route")
+
+        self.main_thing.setTabEnabled(1, len(route_obj) > 0)
+
 class ObjectEdit(DataEditor):
     #want it so that in the making stage, changing the id changes the defaults
     #once the object has been created fully, then changing the id changes the defaults
@@ -1053,6 +1098,7 @@ class ObjectEdit(DataEditor):
         self.objectid.currentTextChanged.connect(self.object_id_combo_changed)
         self.objectid_edit.editingFinished.connect(self.object_id_edit_changed)
 
+        """
         self.smooth, self.smooth_label = self.add_dropdown_input("Sharp/Smooth motion", "route_obj.smooth", POTI_Setting1, return_both = True)
         self.cyclic, self.cyclic_label = self.add_dropdown_input("Cyclic/Back and forth motion", "route_obj.cyclic", POTI_Setting2, return_both = True)
 
@@ -1060,7 +1106,7 @@ class ObjectEdit(DataEditor):
             self.smooth.setVisible(False)
             self.smooth_label.setVisible(False)
             self.cyclic.setVisible(False)
-            self.cyclic_label.setVisible(False)
+            self.cyclic_label.setVisible(False)"""
 
         if (inthemaking):
             self.set_default_values()
@@ -1206,18 +1252,19 @@ class ObjectEdit(DataEditor):
             self.set_default_values()
         else:
             self.update_userdata_widgets(obj)
-
+        """
         obj: Route = obj.route_obj
 
         if len(obj) == 1:
             self.smooth.setCurrentIndex( min(obj[0].smooth, 1))
             self.cyclic.setCurrentIndex( min(obj[0].cyclic, 1))
 
+        
         has_route = len(obj) > 0
         self.smooth.setVisible(has_route)
         self.smooth_label.setVisible(has_route)
         self.cyclic.setVisible(has_route)
-        self.cyclic_label.setVisible(has_route)
+        self.cyclic_label.setVisible(has_route)"""
     def update_userdata_widgets(self, obj, values=None):
         if values is None:
             values = obj.userdata
@@ -1284,11 +1331,11 @@ class AreaEdit(DataEditor):
         self.priority = self.add_integer_input("Priority", "priority",
                                            MIN_UNSIGNED_BYTE, MAX_UNSIGNED_BYTE)
 
-        self.setting1, self.setting1_label = self.add_integer_input_hideable("Setting 1", "setting1", MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT)
-        self.setting2, self.setting2_label = self.add_integer_input_hideable("Setting 2", "setting2", MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT)
+        self.setting1, self.setting1_label = self.add_integer_input("Setting 1", "setting1", MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT, True)
+        self.setting2, self.setting2_label = self.add_integer_input("Setting 2", "setting2", MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT, True)
 
         self.area_type.currentIndexChanged.connect(self.update_name)
-
+        """
         self.smooth, self.smooth_label = self.add_dropdown_input("Sharp/Smooth motion", "route_obj.smooth", POTI_Setting1, return_both = True)
         self.cyclic, self.cyclic_label = self.add_dropdown_input("Cyclic/Back and forth motion", "route_obj.cyclic", POTI_Setting2, return_both = True)
 
@@ -1296,7 +1343,7 @@ class AreaEdit(DataEditor):
             self.smooth.setVisible(False)
             self.smooth_label.setVisible(False)
             self.cyclic.setVisible(False)
-            self.cyclic_label.setVisible(False)
+            self.cyclic_label.setVisible(False)"""
 
 
     def update_data(self):
@@ -1307,17 +1354,18 @@ class AreaEdit(DataEditor):
 
         self.shape.setCurrentIndex( obj.shape )
 
-        typeindex = self.area_type.findData(obj.type )
-        self.area_type.setCurrentIndex(typeindex if typeindex != -1 else 1)
+        if obj.type != 0:
+            typeindex = self.area_type.findData(obj.type )
+            self.area_type.setCurrentIndex(typeindex if typeindex != -1 else 1)
 
         self.area_type.setVisible(obj.type != 0)
         self.area_type_label.setVisible(obj.type != 0)
 
-        self.priority.setText(str(obj.priority))
+        if obj.priority is not None: self.priority.setText(str(obj.priority))
 
-        self.setting1.setText(str(obj.setting1))
-        self.setting2.setText(str(obj.setting2))
-
+        if obj.setting1 is not None: self.setting1.setText(str(obj.setting1))
+        if obj.setting2 is not None: self.setting2.setText(str(obj.setting2))
+        """
         obj: Route = obj.route_obj
         if len(obj) == 1:
             self.smooth.setCurrentIndex( min(obj[0].smooth, 1))
@@ -1327,25 +1375,30 @@ class AreaEdit(DataEditor):
         self.smooth.setVisible(has_route)
         self.smooth_label.setVisible(has_route)
         self.cyclic.setVisible(has_route)
-        self.cyclic_label.setVisible(has_route)
+        self.cyclic_label.setVisible(has_route)"""
 
         self.set_settings_visible()
 
     def set_settings_visible(self):
         obj: Area = get_cmn_obj(self.bound_to)
-        obj.type = self.area_type.currentIndex()
+        if obj is not None:
 
-        setting1_labels = { 2: "BFG Entry", 3: "Acceleration Modifier", 6: "BBLM Entry", 8: "Group ID", 9: "Group ID" }
-        self.setting1.setVisible(obj.type in setting1_labels )
-        if obj.type in setting1_labels:
-            self.setting1_label.setText(setting1_labels[ obj.type ])
-        self.setting1_label.setVisible(obj.type in setting1_labels)
+            setting1_labels = { 2: "BFG Entry", 3: "Acceleration Modifier", 6: "BBLM Entry", 8: "Group ID", 9: "Group ID" }
+            self.setting1.setVisible(obj.type in setting1_labels )
+            if obj.type in setting1_labels:
+                self.setting1_label.setText(setting1_labels[ obj.type ])
+            self.setting1_label.setVisible(obj.type in setting1_labels)
 
-        setting2_labels = { 3: "Moving Water Speed", 6: "Transition Time (frames)"}
-        self.setting2.setVisible(obj.type in setting2_labels)
-        if obj.type in setting2_labels:
-            self.setting2_label.setText( setting2_labels[obj.type]   )
-        self.setting2_label.setVisible(obj.type in setting2_labels)
+            setting2_labels = { 3: "Moving Water Speed", 6: "Transition Time (frames)"}
+            self.setting2.setVisible(obj.type in setting2_labels)
+            if obj.type in setting2_labels:
+                self.setting2_label.setText( setting2_labels[obj.type]   )
+            self.setting2_label.setVisible(obj.type in setting2_labels)
+        else:
+            self.setting1_label.setText("Setting 1")
+            self.setting1_label.setVisible(True)
+            self.setting1_label.setText("Setting 2")
+            self.setting2_label.setVisible(True)
 
     def update_name(self):
         self.set_settings_visible()
@@ -1358,14 +1411,60 @@ class ReplayAreaEdit(DataEditor):
         self.vbox.addWidget(self.main_thing)
 
         self.area_edit = AreaEdit(self.parent(), self.bound_to)
-        self.camera_edit = ReplayCameraEdit(self.parent(), [x.camera for x in self.bound_to])
+        cameras = [x.camera for x in self.bound_to]
+        self.camera_edit = ReplayCameraEdit(self.parent(), cameras)
+        route_obj = get_cmn_obj(cameras).route_obj
+        self.route_edit = CameraRouteEdit(self.parent(), route_obj)
 
         self.main_thing.addTab(self.area_edit, "Area")
         self.main_thing.addTab(self.camera_edit, "Camera")
+        self.main_thing.addTab(self.route_edit, "Route")
+
+        self.main_thing.setTabEnabled(2, len(route_obj) > 0)
 
     def update_data(self):
         self.area_edit.update_data()
         self.camera_edit.update_data()
+        cameras = [x.camera for x in self.bound_to]
+        route_obj = get_cmn_obj(cameras).route_obj
+        if route_obj:
+            self.route_edit.update_data()
+
+    def update_route(self):
+        cameras = [x.camera for x in self.bound_to]
+        route_obj = get_cmn_obj(cameras).route_obj
+        clear_layout(self.route_edit.vbox)
+        self.route_edit.bound_to = route_obj
+        if route_obj:
+            self.route_edit.setup_widgets()
+            self.route_edit.update_data()
+        self.main_thing.setTabEnabled(2, len(route_obj) > 0)
+
+class RoutedOpeningCameraEdit(ReplayAreaEdit):
+    def setup_widgets(self):
+        self.camera_edit = OpeningCameraEdit(self.parent(), self.bound_to)
+        route_obj = get_cmn_obj(self.bound_to).route_obj
+        self.route_edit = CameraRouteEdit(self.parent(), route_obj)
+
+        self.main_thing.addTab(self.camera_edit, "Camera")
+        self.main_thing.addTab(self.route_edit, "Route")
+
+        self.main_thing.setTabEnabled(1, len(route_obj) > 0)
+
+class RoutedReplayCameraEdit(ReplayAreaEdit):
+    def __init__(self, parent, bound_to, kmp_file=None):
+        if kmp_file:
+            self.kmp_file = kmp_file
+        else:
+            self.kmp_file = parent.parent().parent().level_file
+        areas = []
+        for cam in bound_to:
+            areas.extend(self.kmp_file.camera_used_by(cam))
+
+        super().__init__(parent, areas, kmp_file)
+    def setup_widgets(self):
+        super().setup_widgets()
+        self.main_thing.setCurrentIndex(1)
 
 class CameraEdit(DataEditor):
     def setup_widgets(self):
@@ -1392,6 +1491,7 @@ class CameraEdit(DataEditor):
         #self.startflag = self.add_integer_input("Start Flag", "startflag", MIN_UNSIGNED_BYTE, MAX_UNSIGNED_BYTE)
         #self.movieflag = self.add_integer_input("Movie Flag", "movieflag", MIN_UNSIGNED_BYTE, MAX_UNSIGNED_BYTE)
 
+        """
         self.smooth, self.smooth_label = self.add_dropdown_input("Sharp/Smooth motion", "route_obj.smooth", POTI_Setting1, return_both = True)
         self.cyclic, self.cyclic_label = self.add_dropdown_input("Cyclic/Back and forth motion", "route_obj.cyclic", POTI_Setting2, return_both = True)
 
@@ -1399,7 +1499,7 @@ class CameraEdit(DataEditor):
             "Sharp/Smooth motion", "route_obj.points.0.unk1", MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT)
         self.route_unk2, self.route_unk2_label = self.add_integer_input_hideable(\
             "Sharp/Smooth motion", "route_obj.points.0.unk2", MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT)
-
+        """
         self.type.currentIndexChanged.connect(self.update_name)
         self.type.currentIndexChanged.connect(lambda index: self.update_positions(index))
         self.follow_player.stateChanged.connect(lambda _index: self.update_positions(None))
@@ -1421,17 +1521,17 @@ class CameraEdit(DataEditor):
         self.update_vector3("position2", obj.position2)
         self.update_vector3("position3", obj.position3)
 
-        self.shake.setText(str(obj.shake))
-        self.routespeed.setText(str(obj.routespeed))
-        self.zoomspeed.setText(str(obj.zoomspeed))
-        self.viewspeed.setText(str(obj.viewspeed))
+        if obj.shake is not None: self.shake.setText(str(obj.shake))
+        if obj.routespeed is not None: self.routespeed.setText(str(obj.routespeed))
+        if obj.zoomspeed is not None: self.zoomspeed.setText(str(obj.zoomspeed))
+        if obj.viewspeed is not None: self.viewspeed.setText(str(obj.viewspeed))
         #self.startflag.setText(str(obj.startflag))
         #self.movieflag.setText(str(obj.movieflag))
 
-        self.fov[0].setText(str(obj.fov.start))
-        self.fov[1].setText(str(obj.fov.end))
+        if obj.fov.start is not None: self.fov[0].setText(str(obj.fov.start))
+        if obj.fov.end is not None: self.fov[1].setText(str(obj.fov.end))
 
-        obj: Route = obj.route_obj
+        """
         if len(obj) == 1:
             self.smooth.setCurrentIndex( min(obj[0].smooth, 1))
             self.cyclic.setCurrentIndex( min(obj[0].cyclic, 1))
@@ -1439,11 +1539,10 @@ class CameraEdit(DataEditor):
             if obj[0].points:
                 self.route_unk1.setText( str( obj[0].points[0].unk1  ))
                 self.route_unk2.setText( str( obj[0].points[0].unk2  ))
-
+        """
+        obj: Route = obj.route_obj
         has_route = len(obj) > 0
         self.set_visible_route(has_route)
-
-
 
     def update_positions(self, index):
         type = self.type.itemData(index)
@@ -1463,7 +1562,7 @@ class CameraEdit(DataEditor):
     def set_visible_route(self, vis_value):
         self.routespeed.setVisible(vis_value)
         self.routespeed_label.setVisible(vis_value)
-
+        """
         self.smooth.setVisible(vis_value)
         self.smooth_label.setVisible(vis_value)
         self.cyclic.setVisible(vis_value)
@@ -1472,7 +1571,7 @@ class CameraEdit(DataEditor):
         self.route_unk1.setVisible(vis_value)
         self.route_unk1_label.setVisible(vis_value)
         self.route_unk2.setVisible(vis_value)
-        self.route_unk2_label.setVisible(vis_value)
+        self.route_unk2_label.setVisible(vis_value)"""
 
 class ReplayCameraEdit(CameraEdit):
 
@@ -1559,30 +1658,49 @@ class OpeningCamerasEdit(DataEditor):
         for widget in self.widgets:
             widget.update_data()
 
-class RoutedOpeningCameraEdit(DataEditor):
+class CameraRoutePointEdit(DataEditor):
+    def __init__(self, parent, bound_to, idx=-1, kmp_file=None):
+        self.idx = idx
+        super().__init__(parent, bound_to, kmp_file)
+
     def setup_widgets(self):
-        self.widgets = []
+        disp_string = f"Point {self.idx} Speed" if self.idx > -1 else "Speed"
 
-        editor = OpeningCameraEdit(self.parent(), self.bound_to)
-
-        self.vbox.addWidget(editor)
-        self.widgets.append(editor)
-
-    def update_data(self):
-        for widget in self.widgets:
-            widget.update_data()
-
-class CameraRoutePointEdit(DataEditor): #will ONLY have one point
-    def setup_widgets(self):
-        obj = self.bound_to[0]
-        idx = self.kmp_file.get_route_of_point(obj).points.index(obj)
-
-        self.unk1 = self.add_integer_input("Point " + str(idx), "unk1",
+        self.unk1 = self.add_integer_input(disp_string, "unk1",
                                               MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT)
 
     def update_data(self):
         obj = self.bound_to[0]
         self.unk1.setText(str(obj.unk1))
+
+class RoutedAreaEdit(RoutedEditor):
+    def setup_widgets(self):
+        super().setup_widgets()
+        self.camera_edit = AreaEdit(self.parent(), self.bound_to)
+        route_obj = get_cmn_obj(self.bound_to).route_obj
+        self.route_edit = AreaRouteEdit(self.parent(), route_obj)
+
+        self.main_thing.addTab(self.camera_edit, "Area")
+        self.main_thing.addTab(self.route_edit, "Route")
+
+        self.main_thing.setTabEnabled(1, len(route_obj) > 0)
+
+class AreaRoutePointEdit(DataEditor):
+    def __init__(self, parent, bound_to, idx=-1, kmp_file=None):
+        self.idx = idx
+        super().__init__(parent, bound_to, kmp_file)
+
+    def setup_widgets(self):
+        disp_string = f"Point {self.idx} Settings" if self.idx > -1 else "Settings"
+
+        self.unk1, self.unk2 = self.add_multiple_integer_input(disp_string, None, ["unk1", "unk2"],
+                                              MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT)
+
+    def update_data(self):
+        obj = self.bound_to[0]
+        self.unk1.setText(str(obj.unk1))
+        self.unk2.setText(str(obj.unk2))
+
 
 class RespawnPointEdit(DataEditor):
     def setup_widgets(self):
