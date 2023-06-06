@@ -98,8 +98,6 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
     rotate_current = pyqtSignal(Vector3)
     scale_current = pyqtSignal(Vector3)
 
-    connected_to_point = pyqtSignal()
-
 
     def __init__(self, samples, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -176,7 +174,6 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
         self.setContextMenuPolicy(Qt.CustomContextMenu)
 
-        self.spawnpoint = None
         self.alternative_mesh = None
         self.highlight_colltype = None
         self.cull_faces = False
@@ -521,10 +518,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
             self.position = Vector3(0, self.position.y, 0)
             self._zoom_factor = 80
 
-        self.pikmin_generators = None
-
         self.mousemode = MOUSE_MODE_NONE
-        self.spawnpoint = None
         self.rotation_is_pressed = False
         self.connecting_mode = False
         self.connecting_start = None
@@ -747,7 +741,6 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
 
             if self.level_file is not None and hit == 0xFF and not do_gizmo:
-                #objects = self.pikmin_generators.generators
                 glDisable(GL_TEXTURE_2D)
 
 

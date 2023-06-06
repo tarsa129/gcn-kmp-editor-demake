@@ -1089,8 +1089,6 @@ class GenEditor(QMainWindow):
         #self.pik_control.lineedit_rotationz.textChanged.connect(self.create_field_edit_action("rotationz"))
 
         self.level_view.position_update.connect(self.action_update_position)
-        self.level_view.connected_to_point.connect(self.action_connectedto_end)
-
         self.level_view.customContextMenuRequested.connect(self.mapview_showcontextmenu)
 
         #self.pik_control.button_move_object.pressed.connect(self.button_move_objects)
@@ -1764,21 +1762,13 @@ class GenEditor(QMainWindow):
             #actively adding objects
             self.pik_control.button_add_object.setChecked(True)
             self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
-        elif option == "add_rarea_rout": #area camera route add
+        elif option == "add_rarea_simple": #area camera route add
             new_area = libkmp.Area.default()
             new_camera = libkmp.ReplayCamera.default(1)
-            new_camera.create_route(True)
+            if obj:
+                new_camera.create_route(True)
             new_area.camera = new_camera
             self.object_to_be_added = [new_area, True, True]
-
-            self.pik_control.button_add_object.setChecked(True)
-            self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
-        elif option == "add_rarea_stat": #area camera add
-            new_area = libkmp.Area.default()
-            new_camera = libkmp.ReplayCamera.default(1)
-            new_area.camera = new_camera
-
-            self.object_to_be_added = [new_area, True, None ]
 
             self.pik_control.button_add_object.setChecked(True)
             self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
@@ -2772,11 +2762,6 @@ class GenEditor(QMainWindow):
         self.statusbar.showMessage(display_string)
         self.update_3d()
 
-
-    def action_connectedto_end(self):
-
-        pass
-
     def action_connectedto_final(self):
         can_proceed = (self.level_view.connecting_mode) and (self.connect_start is not None)
         if not can_proceed:
@@ -2807,7 +2792,7 @@ class GenEditor(QMainWindow):
         #print( end_groupind, end_group, end_pointind )
         #print( start_groupind, start_group, start_pointind  )
         #make sure that start_group is good to add another
-        if start_group.num_next() == 6:
+        if start_group.num_next() == 6 and start_pointind == len(start_group.points) - 1:
             return
 
         #if drawing from an endpoint to a startpoint of the next group
@@ -2828,6 +2813,8 @@ class GenEditor(QMainWindow):
 
         self.split_group( start_group, startpoint )
         group_1 = to_deal_with.groups[-1]
+
+        end_groupind, end_group, end_pointind = to_deal_with.find_group_of_point(endpoint)
 
         if start_groupind == end_groupind and end_pointind > start_pointind:
             new_idx = end_pointind - 1 - len(group_1.points)
@@ -2932,7 +2919,6 @@ class GenEditor(QMainWindow):
                     to_deal_with = self.level_file.itempointgroups
                 elif isinstance(endpoint, Checkpoint) and isinstance(obj_type, Checkpoint):
                     to_deal_with = self.level_file.checkpoints
-
                 if to_deal_with is not None:
                     for obj in self.connect_start:
                         self.connect_two_groups(obj, endpoint, to_deal_with)

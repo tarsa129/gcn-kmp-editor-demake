@@ -657,8 +657,6 @@ class UserControl(object):
                 editor.selectionqueue.queue_selection(x, y, 1, 1,
                                             editor.shift_is_pressed)
                 editor.do_redraw(force=True)
-                
-            editor.connected_to_point.emit()
 
         if editor.mode == MODE_TOPDOWN:
             self.handle_release_topdown(event)
@@ -694,12 +692,13 @@ class UserControl(object):
                 else:
                     editor.position_update.emit(event, (round(mapx, 2), None, round(-mapz, 2)))
         else:
-            place_at = editor.get_3d_coordinates(event.x(), event.y())
-            if place_at is not None:
-                editor.position_update.emit(event, (round(place_at.x, 2), round(place_at.z, 2), round(-place_at.y, 2)))
-
-
-            self.handle_move_3d(event)
+            if not editor.connecting_mode:
+                self.handle_move_3d(event)
+            if default_timer() - self.last_position_update > 0.1:  # True:  # self.highlighttriangle is not None:
+                coords = editor.get_3d_coordinates(event.x(), event.y())
+                if coords is not None:
+                    self.last_position_update = default_timer()
+                    editor.position_update.emit(event, (round(coords.x, 2), round(coords.z, 2), round(-coords.y, 2)))
 
     def handle_press_topdown(self, event):
         editor = self._editor_widget
@@ -753,6 +752,9 @@ class UserControl(object):
 
     def handle_move_3d(self, event):
         editor = self._editor_widget
+        place_at = editor.get_3d_coordinates(event.x(), event.y())
+        if place_at is not None:
+            editor.position_update.emit(event, (round(place_at.x, 2), round(place_at.z, 2), round(-place_at.y, 2)))
         if editor.preview is not None:
             return
 
