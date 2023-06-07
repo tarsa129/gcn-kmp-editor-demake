@@ -1118,7 +1118,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
                     # Draw the connections between each enemy point.
 
-                    if selected_groups[i] and len(all_groups) > 1:
+                    if selected_groups[i]:
                         glLineWidth(3.0)
 
                     glBegin(GL_LINE_STRIP)
