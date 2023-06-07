@@ -1,7 +1,7 @@
 import os
 import json
 from OpenGL.GL import *
-from .model_rendering import (GenericObject, Model, TexturedModel, Cube)
+from .model_rendering import (GenericObject, Model, TexturedModel, Cube, TransModel)
 from lib.vectors import Vector3
 
 with open("lib/color_coding.json", "r") as f:
@@ -18,7 +18,6 @@ def do_rotation(rotation):
 class ObjectModels(object):
     def __init__(self):
         self.models = {}
-        self.generic = GenericObject()
 
         self.cube = Cube()
         self.enemypoint = Cube(colors["EnemyRoutes"])
@@ -50,17 +49,6 @@ class ObjectModels(object):
         self.cannons = GenericObject(colors["Cannons"])
         self.missions = GenericObject(colors["Missions"])
 
-        #self.purplecube = Cube((0.7, 0.7, 1.0, 1.0))
-
-        self.playercolors = [Cube(color) for color in ((1.0, 0.0, 0.0, 1.0),
-                                                       (0.0, 0.0, 1.0, 1.0),
-                                                       (1.0, 1.0, 0.0, 1.0),
-                                                       (0.0, 1.0, 1.0, 1.0),
-                                                       (1.0, 0.0, 1.0, 1.0),
-                                                       (1.0, 0.5, 0.0, 1.0),
-                                                       (0.0, 0.5, 1.0, 1.0),
-                                                       (1.0, 0.0, 0.5, 1.0))]
-
         with open("resources/unitsphere.obj", "r") as f:
             self.sphere = Model.from_obj(f, rotate=True)
 
@@ -76,13 +64,10 @@ class ObjectModels(object):
         with open("resources/arrow_head.obj", "r") as f:
             self.arrow_head = Model.from_obj(f, rotate=True, scale=500.0)
 
+        with open("resources/solidcylinder.obj", "r") as f:
+            self.trans_cylinder = TransModel.from_obj(f, rotate=True)
+
     def init_gl(self):
-        for dirpath, dirs, files in os.walk("resources/objectmodels"):
-            for file in files:
-                if file.endswith(".obj"):
-                    filename = os.path.basename(file)
-                    objectname = filename.rsplit(".", 1)[0]
-                    self.models[objectname] = TexturedModel.from_obj_path(os.path.join(dirpath, file), rotate=True)
         for cube in (self.cube,
                      self.enemypoint, self.enemypointfirst, self.itempoint, self.itempointfirst,
                      self.checkpointleft, self.checkpointright,
@@ -93,11 +78,6 @@ class ObjectModels(object):
                      self.areas, self.areapoint,
                      self.startpoints, self.cannons, self.missions):
             cube.generate_displists()
-
-        for cube in self.playercolors:
-            cube.generate_displists()
-
-        self.generic.generate_displists()
 
     def draw_arrow_head(self, frompos, topos):
         glPushMatrix()
@@ -147,21 +127,15 @@ class ObjectModels(object):
     def draw_wireframe_cylinder(self, position, rotation, scale):
         glPushMatrix()
         glTranslatef(position.x, -position.z, position.y)
-        #mtx = rotation.mtx
-        #glMultMatrixf(mtx)
         do_rotation(rotation)
         glTranslatef(0, 0, scale.y / 2)
-        glScalef(scale.x, scale.z, scale.y)
+        glScalef(scale.z, scale.x, scale.y)
         self.wireframe_cylinder.render()
         glPopMatrix()
 
     def draw_wireframe_cube(self, position, rotation, scale, kartstart = False):
         glPushMatrix()
         glTranslatef(position.x, -position.z, position.y)
-        #glTranslatef(position.x, position.y, position.z)
-        #mtx = rotation.mtx
-        #glMultMatrixf(mtx)
-
         do_rotation(rotation)
         glTranslatef(0, 0, scale.y/2)
 
@@ -185,9 +159,6 @@ class ObjectModels(object):
 
     def render_generic_position_colored(self, position, selected, cubename):
         self._render_generic_position(getattr(self, cubename), position, selected)
-
-    def render_player_position_colored(self, position, selected, player):
-        self._render_generic_position(self.playercolors[player], position, selected)
 
     def render_generic_position_rotation(self, position, rotation, selected, scale=Vector3(1, 1, 1)):
         self._render_generic_position_rotation("generic", position, rotation, selected, scale)
@@ -234,6 +205,15 @@ class ObjectModels(object):
         glScalef(scale.x, scale.z, scale.y)
         self.cube.render_coloredid(id)
 
+        glPopMatrix()
+
+    def render_trans_cylinder(self, position, rotation, scale):
+        glPushMatrix()
+        glTranslatef(position.x, -position.z, position.y)
+        do_rotation(rotation)
+        glTranslatef(0, 0, scale.y / 2)
+        glScalef(scale.z, scale.x, scale.y)
+        self.trans_cylinder.render()
         glPopMatrix()
 
 

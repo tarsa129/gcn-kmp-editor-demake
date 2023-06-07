@@ -3,7 +3,7 @@ better type 3 rendering:
 - do not have it actually affect the position
 
 updates:
-better area rendering - image + circle
+better area rendering - image
 improve json files
 when placing an object with a routepoint, assign to closest routepoint (new option)
 error analyzer

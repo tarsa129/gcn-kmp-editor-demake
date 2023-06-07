@@ -164,7 +164,6 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
         self.setMouseTracking(True)
 
         self.level_file:KMP = None
-        self.waterboxes = []
 
         self.mousemode = MOUSE_MODE_NONE
 
@@ -249,8 +248,6 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
         # Initialize some models
         with open("resources/gizmo.obj", "r") as f:
             self.gizmo = Gizmo.from_obj(f, rotate=True)
-
-        #self.generic_object = GenericObject()
         self.models = ObjectModels()
         self.grid = Grid(100000, 100000, 10000)
 
@@ -1775,24 +1772,27 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                     self.models.render_generic_position_rotation_colored("mission",
                                                                 object.position, object.rotation,
                                                                  object in select_optimize)
-                    
+
         if self.level_file is not None:
             if vismenu.replaycameras.is_visible():
                 for object in self.level_file.replayareas:
-                    if self.mode == MODE_TOPDOWN:
+                    if object.shape == 0 and self.mode == MODE_TOPDOWN:
                         TransPlane.render_srt(object.position, object.rotation, object.scale,
                                               Vector3(-100, 0, -100), Vector3(100, 0, 100),
                                               (1, 0.5, 0, .5))
-                    else:
+                    elif object.shape == 0:
                         TransPlane.render_box_srt(object.position, object.rotation, object.scale, (1, 0.5, 0, .5))
             if vismenu.areas.is_visible():
                 for object in self.level_file.areas:
-                    if self.mode == MODE_TOPDOWN:
-                        TransPlane.render_srt(object.position, object.rotation, object.scale,
-                                              Vector3(-100, 0, -100), Vector3(100, 0, 100),
-                                              (0, 0, 1, .5))
-                    else:
+                    if object.shape == 0 and self.mode == MODE_TOPDOWN:
+                            TransPlane.render_srt(object.position, object.rotation, object.scale,
+                                                Vector3(-100, 0, -100), Vector3(100, 0, 100),
+                                                (0, 0, 1, .5))
+                    elif object.shape == 0:
                         TransPlane.render_box_srt(object.position, object.rotation, object.scale, (0, 0, 1, .5))
+                    else:
+                        glColor4f(0, 0, 1, 0.5)
+                        self.models.render_trans_cylinder(object.position, object.rotation, object.scale*50 * 100)
             if vismenu.checkpoints.is_visible() and self.mode == MODE_3D:
                 glEnable(GL_CULL_FACE)
                 rotation = Rotation.from_euler(Vector3(0, 90, 0))

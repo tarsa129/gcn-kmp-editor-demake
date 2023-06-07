@@ -103,6 +103,12 @@ class Vector3(object):
         self.y = self.y * other_vec.y if other_vec.y > 0 else self.y
         self.z = self.z * other_vec.z if other_vec.z > 0 else self.z
 
+    def rotate_y(self, deg):
+        x = self.x * cos(deg2rad(deg)) - self.z * sin(deg2rad(deg))
+        z = self.z * cos(deg2rad(deg)) + self.x * sin(deg2rad(deg))
+        self.x = x
+        self.z = z
+
 class Vector4(Vector3):
     def __init__(self, x, y, z, w):
         Vector3.__init__(self, x, y, z)

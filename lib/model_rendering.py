@@ -75,6 +75,35 @@ class Mesh(object):
         glColor3ub((id >> 16) & 0xFF, (id >> 8) & 0xFF, (id >> 0) & 0xFF)
         self.render()
 
+class TransMesh(Mesh):
+    def generate_displist(self):
+        if self._displist is not None:
+            glDeleteLists(self._displist, 1)
+
+        displist = glGenLists(1)
+        glNewList(displist, GL_COMPILE)
+
+        glDisable(GL_ALPHA_TEST)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        glEnable(GL_BLEND)
+
+        glBegin(GL_TRIANGLES)
+        for v1, v2, v3 in self.triangles:
+            v1i, v1coord = v1
+            v2i, v2coord = v2
+            v3i, v3coord = v3
+            glVertex3f(*self.vertices[v1i])
+            glVertex3f(*self.vertices[v2i])
+            glVertex3f(*self.vertices[v3i])
+        glEnd()
+
+        glDisable(GL_BLEND)
+        glBlendFunc(GL_ZERO, GL_ONE)
+        glEnable(GL_ALPHA_TEST)
+
+
+        glEndList()
+        self._displist = displist
 
 class TexturedMesh(object):
     def __init__(self, material):
@@ -193,6 +222,7 @@ class Material(object):
 
 
 class Model(object):
+    mesh_class = Mesh
     def __init__(self):
         self.mesh_list = []
         self.named_meshes = {}
@@ -234,7 +264,7 @@ class Model(object):
                 objectname = args[1]
                 if curr_mesh is not None:
                     model.add_mesh(curr_mesh)
-                curr_mesh = Mesh(objectname)
+                curr_mesh = cls.mesh_class(objectname)
                 curr_mesh.vertices = vertices
 
             elif cmd == "v":
@@ -250,7 +280,7 @@ class Model(object):
                 curr_mesh.lines.append((int(args[1])-1, int(args[2])-1))
             elif cmd == "f":
                 if curr_mesh is None:
-                    curr_mesh = Mesh("")
+                    curr_mesh = cls.mesh_class("")
                     curr_mesh.vertices = vertices
 
                 # if it uses more than 3 vertices to describe a face then we panic!
@@ -269,6 +299,14 @@ class Model(object):
         #elif cmd == "vn":
         #    nx, ny, nz = map(float, args[1:4])
         #    normals.append((nx, ny, nz))
+
+
+class TransModel(Model):
+    mesh_class = TransMesh
+    @classmethod
+    def from_obj(cls, f, scale=1.0, rotate=False):
+        model = super().from_obj(f, scale, rotate)
+        return model
 
 
 class TexturedModel(object):
@@ -426,54 +464,6 @@ class TexturedModel(object):
 
 
 ALPHA = 0.8
-
-
-class Waterbox(Model):
-    def __init__(self, corner_bottomleft, corner_topright):
-        self.corner_bottomleft = corner_bottomleft
-        self.corner_topright = corner_topright
-
-    def render(self):
-        x1,y1,z1 = self.corner_bottomleft
-        x2,y2,z2 = self.corner_topright
-        glColor4f(0.1, 0.1875, 0.8125, ALPHA)
-        glBegin(GL_TRIANGLE_FAN) # Bottom, z1
-        glVertex3f(x2, y1, z1)
-        glVertex3f(x2, y2, z1)
-        glVertex3f(x1, y2, z1)
-        glVertex3f(x1, y1, z1)
-        glEnd()
-        glBegin(GL_TRIANGLE_FAN) # Front, x1
-        glVertex3f(x1, y1, z1)
-        glVertex3f(x1, y1, z2)
-        glVertex3f(x1, y2, z2)
-        glVertex3f(x1, y2, z1)
-        glEnd()
-
-        glBegin(GL_TRIANGLE_FAN) # Side, y1
-        glVertex3f(x1, y1, z1)
-        glVertex3f(x1, y1, z2)
-        glVertex3f(x2, y1, z2)
-        glVertex3f(x2, y1, z1)
-        glEnd()
-        glBegin(GL_TRIANGLE_FAN) # Back, x2
-        glVertex3f(x2, y1, z1)
-        glVertex3f(x2, y1, z2)
-        glVertex3f(x2, y2, z2)
-        glVertex3f(x2, y2, z1)
-        glEnd()
-        glBegin(GL_TRIANGLE_FAN) # Side, y2
-        glVertex3f(x1, y2, z1)
-        glVertex3f(x1, y2, z2)
-        glVertex3f(x2, y2, z2)
-        glVertex3f(x2, y2, z1)
-        glEnd()
-        glBegin(GL_TRIANGLE_FAN) # Top, z2
-        glVertex3f(x1, y1, z2)
-        glVertex3f(x1, y2, z2)
-        glVertex3f(x2, y2, z2)
-        glVertex3f(x2, y1, z2)
-        glEnd()
 
 
 class SelectableModel(Model):
@@ -713,7 +703,6 @@ class TransPlane(object):
         glDisable(GL_BLEND)
         glBlendFunc(GL_ZERO, GL_ONE)
         glEnable(GL_ALPHA_TEST)
-
 
 class AlphaTexture(object):
     def __init__(self, texpath=None):
