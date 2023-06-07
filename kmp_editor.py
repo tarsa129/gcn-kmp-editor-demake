@@ -1757,9 +1757,7 @@ class GenEditor(QMainWindow):
             start_groupind, start_group, start_pointind = to_deal_with.find_group_of_point(obj)
 
             thing_to_add = to_deal_with.get_new_point()
-            self.object_to_be_added = [thing_to_add, start_groupind, start_pointind + 1  ]
-            #self.object_to_be_added[0].group = obj.id
-            #actively adding objects
+            self.object_to_be_added = [thing_to_add, start_group, start_pointind + 1  ]
             self.pik_control.button_add_object.setChecked(True)
             self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
         elif option == "add_rarea_simple": #area camera route add
@@ -1913,12 +1911,7 @@ class GenEditor(QMainWindow):
                 placeobject.end.x = x
                 placeobject.end.y = y
                 placeobject.end.z = z
-                # For convenience, create a group if none exists yet.
-                if group == 0 and not self.level_file.checkpoints.groups:
-                    self.level_file.checkpoints.groups.append(libkmp.CheckpointGroup.new())
-
-
-                self.level_file.checkpoints.groups[group].points.insert(position + self.points_added, placeobject)
+                group.points.insert(position + self.points_added, placeobject)
                 self.points_added += 1
                 self.level_view.do_redraw()
                 self.set_has_unsaved_changes(True)
@@ -1949,12 +1942,9 @@ class GenEditor(QMainWindow):
             if isinstance(object, (libkmp.EnemyPoint, ItemPoint) ):
                 # For convenience, create a group if none exists yet.
                 to_deal_with = self.level_file.get_to_deal_with(object)
-                if group == 0 and not to_deal_with.groups:
-                    to_deal_with.groups.append(to_deal_with.get_new_group())
-                if isinstance(group, PointGroup):
-                    group.points.insert(position + self.points_added, placeobject)
-                else:
-                    to_deal_with.groups[group].points.insert(position + self.points_added, placeobject)
+
+                group.points.insert(position + self.points_added, placeobject)
+
                 self.points_added += 1
                 if to_deal_with.num_total_points() == 255:
                     self.button_stop_adding()
@@ -2880,7 +2870,7 @@ class GenEditor(QMainWindow):
                         group_to_add.add_new_prev(start_group)
                         start_group.add_new_next(group_to_add)
 
-                        self.object_to_be_added = [point_to_add, len(to_deal_with.groups) - 1, 0 ]
+                        self.object_to_be_added = [point_to_add, group_to_add, 0 ]
                     else:
                         self.split_group( start_group, obj )
                         to_deal_with.groups.append(group_to_add)
@@ -2888,7 +2878,7 @@ class GenEditor(QMainWindow):
                         group_to_add.add_new_prev(start_group)
                         start_group.add_new_next(group_to_add)
 
-                        self.object_to_be_added = [point_to_add, len(to_deal_with.groups) - 1, 0 ]
+                        self.object_to_be_added = [point_to_add, group_to_add, 0 ]
 
                     start_group.remove_next(start_group)
                     start_group.remove_prev(start_group)

@@ -470,7 +470,6 @@ class EnemyPointGroup(PointGroup):
 
         for i in range(start_idx, start_idx + len):
             group.points.append(points[i])
-            points[i].group = idx
 
         return group
 
@@ -651,7 +650,6 @@ class ItemPointGroup(PointGroup):
 
         for i in range(start_idx, start_idx + len):
             group.points.append(points[i])
-            points[i].group = idx
 
         return group
 
