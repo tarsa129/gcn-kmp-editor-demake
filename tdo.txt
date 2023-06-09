@@ -1,12 +1,15 @@
 better ways to handle cameras:
 better type 3 rendering:
 - do not have it actually affect the position
+- use it for camera routes for type 3!
 
 updates:
 better area rendering - image
 improve json files
 when placing an object with a routepoint, assign to closest routepoint (new option)
 error analyzer
+render itempoint scale
+force routes with fewer than 2 points to be back and forth + disable in dataeditor
 
 new features:
 handle boos automatically + handle that enemy point switching thing

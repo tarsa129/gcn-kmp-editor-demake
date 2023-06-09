@@ -492,3 +492,30 @@ class Rotation(Vector3):
 
     def copy(self):
         return deepcopy(self)
+
+
+class Vector3Relative(Vector3):
+    def __init__(self, x, y, z, base: Vector3):
+        super().__init__(x, y, z)
+        self.base = base
+
+    def absolute(self):
+        return self.base + self
+
+    def to_absolute(self):
+        self.x = self.base.x + self.x
+        self.y = self.base.y + self.y
+        self.z = self.base.z + self.z
+        self.base = Vector3(0, 0, 0)
+
+    @classmethod
+    def from_absolute(cls, base: Vector3, absol: Vector3):
+        x = absol.x - base.x
+        y = absol.y - base.y
+        z = absol.z - base.z
+        return cls(x, y, z, base)
+
+    @classmethod
+    def make_relative(cls, base: Vector3, offset: Vector3):
+        return cls(offset.x, offset.y, offset.z, base)
+

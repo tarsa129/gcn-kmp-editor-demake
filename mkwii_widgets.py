@@ -1643,10 +1643,17 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                                                                 object.position, object.rotation,
                                                                 bolded)
 
-                    if object.type == 1 and not object.follow_player:
+                    absolute_poses = object.type == 1 and not object.follow_player
+                    relative_poses = object.type == 3
+
+                    if absolute_poses or relative_poses:
                         glColor4f(*colors_replaycamera)
-                        self.models.draw_sphere(object.position3, 300)
-                        self.models.draw_sphere(object.position2, 300)
+                        pos2 = object.position2 if absolute_poses else object.position2.absolute()
+                        pos3 = object.position2 if absolute_poses else object.position3.absolute()
+
+                        self.models.draw_sphere(pos2, 300)
+                        self.models.draw_sphere(pos3, 300)
+                        
                         if bolded:
                             glLineWidth(3.0)
                         else:
@@ -1654,10 +1661,10 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                         glColor3f(0.0, 0.0, 0.0)
                         glBegin(GL_LINE_STRIP)
                         
-                        glVertex3f(object.position2.x, -object.position2.z, object.position2.y)
-                        glVertex3f(object.position3.x, -object.position3.z, object.position3.y)
+                        glVertex3f(pos2.x, -pos2.z, pos2.y)
+                        glVertex3f(pos3.x, -pos3.z, pos3.y)
                         glEnd()
-                        self.models.draw_arrow_head(object.position2, object.position3)
+                        self.models.draw_arrow_head(pos2, pos3)
 
                 for i, route in enumerate(replaycameraroutes):
                     selected = route in selected_routes

@@ -338,7 +338,8 @@ class DataEditor(QtWidgets.QWidget):
             widget_type, *widget_type_args = widget_type
 
         def set_value(value, index=index):
-            getattr(self.bound_to, attribute)[index] = value
+            for obj in self.bound_to:
+                getattr(obj, attribute)[index] = value
 
         if widget_type == "checkbox":
             widget = QtWidgets.QCheckBox()
@@ -1097,16 +1098,6 @@ class ObjectEdit(DataEditor):
 
         self.objectid.currentTextChanged.connect(self.object_id_combo_changed)
         self.objectid_edit.editingFinished.connect(self.object_id_edit_changed)
-
-        """
-        self.smooth, self.smooth_label = self.add_dropdown_input("Sharp/Smooth motion", "route_obj.smooth", POTI_Setting1, return_both = True)
-        self.cyclic, self.cyclic_label = self.add_dropdown_input("Cyclic/Back and forth motion", "route_obj.cyclic", POTI_Setting2, return_both = True)
-
-        if get_cmn_obj(self.bound_to).route_obj is None:
-            self.smooth.setVisible(False)
-            self.smooth_label.setVisible(False)
-            self.cyclic.setVisible(False)
-            self.cyclic_label.setVisible(False)"""
 
         if (inthemaking):
             self.set_default_values()

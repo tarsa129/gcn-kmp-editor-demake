@@ -1,7 +1,7 @@
 import json
 from numpy import arctan, argmin, array
 from struct import unpack, pack
-from .vectors import Vector3, Vector2, Rotation
+from .vectors import Vector3, Vector2, Rotation, Vector3Relative
 from collections import OrderedDict
 from io import BytesIO
 from copy import deepcopy
@@ -872,7 +872,7 @@ class CheckpointGroup(PointGroup):
             if point.respawn_obj is not None:
                 point.respawnid = rsps.index(point.respawn_obj)
             else:
-                point.respawnid = -1
+                point.respawnid = 0
 
     def write_ckpt(self, f, key, prev):
 
@@ -1946,8 +1946,12 @@ class Camera(RoutedObject):
         elif self.type in (4,5):
             self.follow_player = 0
             self.type = 1
+        elif self.type == 3:
+            self.position2 = Vector3Relative.make_relative(self.position, self.position2)
+            self.position3 = Vector3Relative.make_relative(self.position, self.position3)
         elif self.type == 6:
-            self.position2 = self.position
+            self.position2 = Vector3Relative.make_relative(Vector3(0, 0, 0), self.position)
+            self.position3 = Vector3Relative.make_relative(self.position, self.position3)
             self.type = 3
 
     def setup_route(self, override=True):
@@ -3143,10 +3147,3 @@ def get_kmp_name(id):
         #return
     #else:
     return OBJECTNAMES[id]
-
-
-def temp_add_invalid_id(id):
-    if id not in OBJECTNAMES:
-        name = get_kmp_name(id)
-        OBJECTNAMES[id] = name
-        REVERSEOBJECTNAMES[name] = id
