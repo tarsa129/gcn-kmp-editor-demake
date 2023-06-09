@@ -935,6 +935,9 @@ class RouteEdit(DataEditor):
             self.smooth.setCurrentIndex( min(obj.smooth, 1))
         if obj.cyclic is not None:
             self.cyclic.setCurrentIndex( min(obj.cyclic, 1))
+        has_twopoint = all(len(obj.points) > 2 for obj in self.bound_to )
+        self.smooth.setDisabled(not has_twopoint)
+
 
 class CameraRouteEdit(RouteEdit):
     def setup_widgets(self):
@@ -1034,7 +1037,7 @@ class KMPEdit(DataEditor):
 
 
     def update_data(self):
-        obj: KMP = get_cmn_obj(self.bound_to)
+        obj: KMP = self.bound_to[0]
         #self.roll.setText(str(obj.roll))
         self.lap_count.setText(str(obj.lap_count))
         self.lens_flare.setChecked(obj.lens_flare != 0)
@@ -1045,7 +1048,7 @@ class KMPEdit(DataEditor):
         self.speed_modifier.setText(str(obj.speed_modifier))
 
     def open_color_picker_light(self, attrib):
-        obj = self.bound_to
+        obj = self.bound_to[0]
 
 
         color_dia = QtWidgets.QColorDialog(self)
@@ -1168,6 +1171,7 @@ class ObjectEdit(DataEditor):
             tooltips = [None] * 8
             widgets = [None] * 8
             assets = None
+            description = None
         else:
             parameter_names = json_data["Object Parameters"]
             tooltips = json_data["Tooltips"] if "Tooltips" in json_data else [None] * 8
@@ -1431,8 +1435,9 @@ class ReplayAreaEdit(DataEditor):
             self.route_edit.update_data()
         self.main_thing.setTabEnabled(2, len(route_obj) > 0)
 
-class RoutedOpeningCameraEdit(ReplayAreaEdit):
+class RoutedOpeningCameraEdit(RoutedEditor):
     def setup_widgets(self):
+        super().setup_widgets()
         self.camera_edit = OpeningCameraEdit(self.parent(), self.bound_to)
         route_obj = get_cmn_obj(self.bound_to).route_obj
         self.route_edit = CameraRouteEdit(self.parent(), route_obj)
@@ -1498,7 +1503,8 @@ class CameraEdit(DataEditor):
     def update_data(self):
         obj: Camera = get_cmn_obj(self.bound_to)
         with QSignalBlocker(self.follow_player):
-            self.follow_player.setChecked(obj.follow_player)
+            if obj.follow_player:
+                self.follow_player.setChecked(True)
 
         typeindex = self.type.findData(obj.type )
         self.type.setCurrentIndex(typeindex if typeindex != -1 else 1)

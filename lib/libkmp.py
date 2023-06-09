@@ -599,7 +599,7 @@ class ItemPoint(KMPPoint):
 
     @classmethod
     def new(cls):
-        return cls( Vector3(0.0, 0.0, 0.0), 0, 1, 0)
+        return cls( Vector3(0.0, 0.0, 0.0), 1, 1, 0)
 
     def set_setting2(self, setting2):
         self.unknown = setting2 & 0x4
@@ -1248,7 +1248,7 @@ class MapObject(RoutedObject):
         new_object = cls(Vector3(0.0, 0.0, 0.0), obj_id)
         defaults = new_object.get_single_json_val("Default Values")
         if defaults is not None:
-            new_object.userdata = defaults
+            new_object.userdata = [0 if x is None else x for x in defaults]
         return new_object
 
     @classmethod
@@ -2404,6 +2404,11 @@ class KMP(object):
             curr_val = dict.get(key, [])
             curr_val.append(value)
             dict[key] = curr_val
+
+        #fix route headers before everything is split up
+        for route in self.routes:
+            if route.smooth == 1 and len(route.points) < 3:
+                route.smooth = 0
 
         #remove invalid objects
         to_remove = []

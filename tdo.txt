@@ -4,19 +4,21 @@ better type 3 rendering:
 - use it for camera routes for type 3!
 
 updates:
-better area rendering - image
 improve json files
 when placing an object with a routepoint, assign to closest routepoint (new option)
-error analyzer
-render itempoint scale
-force routes with fewer than 2 points to be back and forth + disable in dataeditor
+fix 3d rotation?
+selection of camera and area and route should bring up the replayareaeditor
+fix copy + paste for areas / cameras / anything that connects to another
+scale on gizmo (better)
 
 new features:
 handle boos automatically + handle that enemy point switching thing
-scale on gizmo (better) + area scale handlers
+area scale handlers
 add arrow keys for "next point" in route + linedraw increment
 load + collide on gobj collision files
 add option to select x to y points
 create dialog for auto generation and auto cleanup
 brres loading
 lookinto collision translucency
+error analyzer
+better area rendering - image

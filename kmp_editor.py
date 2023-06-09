@@ -1059,7 +1059,7 @@ class GenEditor(QMainWindow):
             view_actions[i].setChecked(option == view_string)
 
     def on_editing_setting_changed(self, setting, widget):
-        self.editorconfig["setting"] = str(widget.isChecked())
+        self.editorconfig[setting] = str(widget.isChecked())
         save_cfg(self.configuration)
 
     def setup_ui_toolbar(self):
@@ -2255,6 +2255,8 @@ class GenEditor(QMainWindow):
                 if len(group.points) < 2:
                     for object in used_by:
                         object.route_obj = None
+                elif len(group.points) == 2:
+                    group.smooth = 0
             elif isinstance(obj, libkmp.RoutePoint):
                 #areas should not have their routes deleted
                 #objects *can* have their routes deleted iff it is optional
@@ -2273,6 +2275,8 @@ class GenEditor(QMainWindow):
                     if len(group.points) == 0:
                         for object in used_by:
                             object.route_obj = None
+                    elif len(group.points) == 2:
+                        group.smooth = 0
                 #see if a route point is used
                 for mapobject in self.level_file.objects.objects:
                     if mapobject.routepoint == obj:
