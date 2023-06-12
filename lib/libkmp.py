@@ -1940,7 +1940,9 @@ class Camera(RoutedObject):
         return cam_type
 
     def from_kmp_type(self):
-        if self.type in (1, 2):
+        if self.type == 0:
+            self.type = 0
+        elif self.type in (1, 2):
             self.follow_player = 1
             self.type = 1
         elif self.type in (4,5):
@@ -2016,6 +2018,7 @@ class GoalCamera(Camera):
         cam.zoomspeed = 30
         cam.fov.start = 85
         cam.fov.end = 40
+        cam.type = 0
 
         return cam
 
@@ -2481,11 +2484,6 @@ class KMP(object):
             for obj in value:
                 obj.route_obj = route
 
-        for obj in self.objects.objects:
-            special_usersetting = obj.get_routepoint_idx()
-            if (special_usersetting is not None) and obj.userdata[special_usersetting] < len(obj.route_obj.points):
-                obj.routepoint = obj.route_obj.points[obj.userdata[special_usersetting]]
-
         #remove self-linked routes
         for grouped_things in (self.enemypointgroups.groups, self.itempointgroups.groups, self.checkpoints.groups):
             #set the proper prevnext
@@ -2583,6 +2581,7 @@ class KMP(object):
                         it has been reassigned to the closest resapwn point.\n"
                     point.assign_to_closest(self.respawnpoints)
 
+        """Convert and assign new routes"""
         new_types = ( (ObjectRoute, self.objects.get_routes()), (AreaRoute, self.areas.get_routes()),
                       (CameraRoute, self.cameras.get_routes()), (ReplayCameraRoute, self.replayareas.get_routes())  )
 
@@ -2591,6 +2590,11 @@ class KMP(object):
                 new_route = route.to_childclass(childclass)
                 for thing in self.route_used_by(route):
                     thing.route_obj = new_route
+
+        for obj in self.objects.objects:
+            special_usersetting = obj.get_routepoint_idx()
+            if (special_usersetting is not None) and obj.userdata[special_usersetting] < len(obj.route_obj.points):
+                obj.routepoint = obj.route_obj.points[obj.userdata[special_usersetting]]
 
         """snap cameras to routes"""
         for camera in self.cameras:

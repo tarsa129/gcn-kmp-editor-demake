@@ -16,6 +16,9 @@ class Vector3(object):
 
     def norm(self):
         return sqrt(self.x**2 + self.y**2 + self.z**2)
+    
+    def absolute(self):
+        return self
 
     def normalize(self):
         norm = self.norm()
@@ -78,6 +81,9 @@ class Vector3(object):
 
     def __eq__(self, other_vec):
         return self.x == other_vec.x and self.y == other_vec.y and self.z == other_vec.z
+
+    def __hash__(self):
+        return hash((self.x, self.y, self.z))
 
     def __str__(self):
         return str((self.x, self.y, self.z))
@@ -500,7 +506,7 @@ class Vector3Relative(Vector3):
         self.base = base
 
     def absolute(self):
-        return self.base + self
+        return self.base.absolute() + self
 
     def to_absolute(self):
         self.x = self.base.x + self.x
@@ -518,4 +524,10 @@ class Vector3Relative(Vector3):
     @classmethod
     def make_relative(cls, base: Vector3, offset: Vector3):
         return cls(offset.x, offset.y, offset.z, base)
+    
+    @classmethod
+    def __eq__(self, other_vec):
+        comps_same = self.x == other_vec.x and self.y == other_vec.y and self.z == other_vec.z
+        bases_same = self.base == other_vec.base
+        return comps_same and bases_same
 

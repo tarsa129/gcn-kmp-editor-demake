@@ -1800,22 +1800,27 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
         if self.level_file is not None:
             if vismenu.replaycameras.is_visible():
                 for object in self.level_file.replayareas:
+                    color = colors_json["SelectedReplayAreaFill"] if object in select_optimize else colors_json["ReplayAreaFill"]
                     if object.shape == 0 and self.mode == MODE_TOPDOWN:
                         TransPlane.render_srt(object.position, object.rotation, object.scale,
                                               Vector3(-100, 0, -100), Vector3(100, 0, 100),
-                                              (1, 0.5, 0, .5))
+                                              color)
                     elif object.shape == 0:
-                        TransPlane.render_box_srt(object.position, object.rotation, object.scale, (1, 0.5, 0, .5))
+                        TransPlane.render_box_srt(object.position, object.rotation, object.scale, color)
+                    else:
+                        glColor4f(*color)
+                        self.models.render_trans_cylinder(object.position, object.rotation, object.scale*50 * 100)
             if vismenu.areas.is_visible():
                 for object in self.level_file.areas:
+                    color = colors_json["SelectedAreaFill"] if object in select_optimize else colors_json["AreaFill"]
                     if object.shape == 0 and self.mode == MODE_TOPDOWN:
                             TransPlane.render_srt(object.position, object.rotation, object.scale,
                                                 Vector3(-100, 0, -100), Vector3(100, 0, 100),
-                                                (0, 0, 1, .5))
+                                                color)
                     elif object.shape == 0:
-                        TransPlane.render_box_srt(object.position, object.rotation, object.scale, (0, 0, 1, .5))
+                        TransPlane.render_box_srt(object.position, object.rotation, object.scale, color)
                     else:
-                        glColor4f(0, 0, 1, 0.5)
+                        glColor4f(*color)
                         self.models.render_trans_cylinder(object.position, object.rotation, object.scale*50 * 100)
             if vismenu.checkpoints.is_visible() and self.mode == MODE_3D:
                 glEnable(GL_CULL_FACE)

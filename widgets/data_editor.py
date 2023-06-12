@@ -52,6 +52,8 @@ def get_cmn_obj(objs, kmp_file=None):
                 if type( getattr(cmn_obj, member) ) == list:
                     cmn_list = getattr(cmn_obj, member)
                     obj_list = getattr(obj, member)
+                    if len(cmn_list) != len(obj_list):
+                        continue
                     for i in range(len(cmn_list)):
                         if cmn_list[i] != obj_list[i]:
                             cmn_list[i] = None

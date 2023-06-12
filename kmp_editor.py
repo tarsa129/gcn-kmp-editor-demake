@@ -2208,13 +2208,14 @@ class GenEditor(QMainWindow):
             self.level_view.gizmo.move_to_average(self.level_view.selected,
                                                   self.level_view.selected_positions)
             orig_avg = self.level_view.gizmo.position.copy()
-            for pos in self.level_view.selected_positions:
+            for pos in list(set(self.level_view.selected_positions)):
                 if deltascale.x > 0:
                     pos.x = (pos.x - orig_avg.x) *  deltascale.x + orig_avg.x
                 if deltascale.y > 0:
                     pos.y = (pos.y - orig_avg.y) *  deltascale.y + orig_avg.y
                 if deltascale.z > 0:
                     pos.z = (pos.z - orig_avg.z) *  deltascale.z + orig_avg.z
+                
 
     def action_ground_objects(self, positions=None):
         selected = (positions is None)
@@ -2247,7 +2248,6 @@ class GenEditor(QMainWindow):
                 #cameras *can* have their routes deleted
                 group = self.level_file.get_route_of_point(obj)
                 if group is None:
-                    print("what")
                     continue #probably already deleted the group
                 used_by = self.level_file.route_used_by(group)
                 group.points.remove(obj)

@@ -20,10 +20,14 @@
   "CameraRoutes": [0.7, 0.1, 1, 1],
 
   "ReplayArea": [1, 0.3, 0, 1],
+  "ReplayAreaFill": [1, 0.5, 0, 0.5],
+  "SelectedReplayAreaFill":  [1, 1, 0, 0.5],
   "ReplayCamera": [1, 0.5, 0, 1],
   "ReplayCameraRoute": [1, 0.7, 0, 1],
 
   "Areas": [0.529, 0.808, 0.922, 1.0],
+  "AreaFill": [0.0, 0.0, 1, 0.5],
+  "SelectedAreaFill": [0.7, 1, 1, 0.5],
   "AreaRoutes":   [0.0, 0.0, 1.0, 1.0],
 
   "StartPoints": [0.1, 0.1, 0.1, 1.0],
