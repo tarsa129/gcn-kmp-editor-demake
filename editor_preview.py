@@ -184,7 +184,7 @@ class ReplayPreview(PreviewParams):
             self.position = self.next_pos_verbatim(delta, cam)
         elif cam.type == 3:
             self.position = cam.position2.copy() + self.view_pos
-            self.view_pos = self.view_pos + cam.position3
+            self.view_pos = self.view_pos + cam.position3 - Vector3(0, 200, 0)
 
     def get_lookat(self, delta, enemy1:EnemyPoint) -> Vector3:
         enemy2 = self.get_next_enemy(enemy1)

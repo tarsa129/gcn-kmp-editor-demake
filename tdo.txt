@@ -1,8 +1,3 @@
-better ways to handle cameras:
-better type 3 rendering:
-- do not have it actually affect the position
-- use it for camera routes for type 3!
-
 updates:
 improve json files
 when placing an object with a routepoint, assign to closest routepoint (new option)

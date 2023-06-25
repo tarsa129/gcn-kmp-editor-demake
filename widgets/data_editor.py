@@ -1349,7 +1349,7 @@ class AreaEdit(DataEditor):
         self.update_vector3("rotation", obj.rotation)
         self.update_vector3("scale", obj.scale)
 
-        self.shape.setCurrentIndex( obj.shape )
+        if obj.shape is not None: self.shape.setCurrentIndex( obj.shape )
 
         if obj.type != 0:
             typeindex = self.area_type.findData(obj.type )
@@ -1472,9 +1472,13 @@ class CameraEdit(DataEditor):
 
         self.follow_player, self.follow_player_label = self.add_checkbox("Follow Player", "follow_player", 0, 1, True)
 
-        self.position2, self.position2_label = self.add_multiple_decimal_input("Start Point", "position2", ["x", "y", "z"],
+        self.pos2_simp, self.pos2_l_simp = self.add_multiple_decimal_input("Start Point", "position2_simple", ["x", "y", "z"],
                                                         -inf, +inf, True)
-        self.position3, self.position3_label = self.add_multiple_decimal_input("End Point", "position3", ["x", "y", "z"],
+        self.pos3_simp, self.pos3_l_simp = self.add_multiple_decimal_input("End Point", "position3_simple", ["x", "y", "z"],
+                                                        -inf, +inf, True)
+        self.pos2_play, self.pos2_l_play = self.add_multiple_decimal_input("Start Point", "position2_player", ["x", "y", "z"],
+                                                        -inf, +inf, True)
+        self.pos3_play, self.pos2_l_play= self.add_multiple_decimal_input("End Point", "position3_player", ["x", "y", "z"],
                                                         -inf, +inf, True)
         self.viewspeed, self.viewspeed_label = self.add_integer_input("View Speed", "viewspeed", MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT, True)
 
@@ -1489,18 +1493,12 @@ class CameraEdit(DataEditor):
         #self.startflag = self.add_integer_input("Start Flag", "startflag", MIN_UNSIGNED_BYTE, MAX_UNSIGNED_BYTE)
         #self.movieflag = self.add_integer_input("Movie Flag", "movieflag", MIN_UNSIGNED_BYTE, MAX_UNSIGNED_BYTE)
 
-        """
-        self.smooth, self.smooth_label = self.add_dropdown_input("Sharp/Smooth motion", "route_obj.smooth", POTI_Setting1, return_both = True)
-        self.cyclic, self.cyclic_label = self.add_dropdown_input("Cyclic/Back and forth motion", "route_obj.cyclic", POTI_Setting2, return_both = True)
-
-        self.route_unk1, self.route_unk1_label = self.add_integer_input_hideable(\
-            "Sharp/Smooth motion", "route_obj.points.0.unk1", MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT)
-        self.route_unk2, self.route_unk2_label = self.add_integer_input_hideable(\
-            "Sharp/Smooth motion", "route_obj.points.0.unk2", MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT)
-        """
         self.type.currentIndexChanged.connect(self.update_name)
         self.type.currentIndexChanged.connect(lambda index: self.update_positions(index))
         self.follow_player.stateChanged.connect(lambda _index: self.update_positions(None))
+
+        self.simp_widgets = self.pos2_simp + self.pos3_simp + [self.pos2_l_simp, self.pos3_l_simp, self.viewspeed, self.viewspeed_label]
+        self.play_widgets = self.pos2_play + self.pos3_play + [self.pos2_l_play, self.pos3_l_simp]
 
     def update_data(self):
         obj: Camera = get_cmn_obj(self.bound_to)
@@ -1511,14 +1509,15 @@ class CameraEdit(DataEditor):
         typeindex = self.type.findData(obj.type )
         self.type.setCurrentIndex(typeindex if typeindex != -1 else 1)
 
-        using_view = (obj.type == 3) or (not self.follow_player.isChecked())
-        self.set_visible_followplayer(using_view)
+        self.set_visible_followplayer(obj.type, self.follow_player.isChecked())
 
         obj: Camera = get_cmn_obj(self.bound_to)
         self.update_vector3("position", obj.position)
 
-        self.update_vector3("position2", obj.position2)
-        self.update_vector3("position3", obj.position3)
+        self.update_vector3("pos2_simp", obj.position2_simple)
+        self.update_vector3("pos3_simp", obj.position3_simple)
+        self.update_vector3("pos2_play", obj.position2_player)
+        self.update_vector3("pos3_play", obj.position3_player)
 
         if obj.shake is not None: self.shake.setText(str(obj.shake))
         if obj.routespeed is not None: self.routespeed.setText(str(obj.routespeed))
@@ -1530,15 +1529,7 @@ class CameraEdit(DataEditor):
         if obj.fov.start is not None: self.fov[0].setText(str(obj.fov.start))
         if obj.fov.end is not None: self.fov[1].setText(str(obj.fov.end))
 
-        """
-        if len(obj) == 1:
-            self.smooth.setCurrentIndex( min(obj[0].smooth, 1))
-            self.cyclic.setCurrentIndex( min(obj[0].cyclic, 1))
 
-            if obj[0].points:
-                self.route_unk1.setText( str( obj[0].points[0].unk1  ))
-                self.route_unk2.setText( str( obj[0].points[0].unk2  ))
-        """
         obj: Route = obj.route_obj
         has_route = len(obj) > 0
         self.set_visible_route(has_route)
@@ -1546,31 +1537,26 @@ class CameraEdit(DataEditor):
     def update_positions(self, index):
         type = self.type.itemData(index)
         follow_player = self.follow_player.isChecked()
-        self.set_visible_followplayer( type == 3 or not follow_player )
+        self.set_visible_followplayer( type, follow_player )
         self.update_data()
 
-    def set_visible_followplayer(self, using_view):
+    def set_visible_followplayer(self, type, follow_player):
         #different configurations:
         #1-2 doesn't use pos2, pos3, or viewspeed
         #4-5 uses pos2, pos3 and viewspeed
         #3,6 uses pos2, pos3, and viewspeed.
-        widgets = [self.position2_label, self.position3_label] + self.position2 + self.position3
-        widgets.extend( [self.viewspeed, self.viewspeed_label] )
-        [widget.setVisible(using_view) for widget in widgets]
+        if type == 1:
+            [widget.setVisible(not follow_player) for widget in self.simp_widgets]
+            [widget.setVisible(False) for widget in self.play_widgets]
+        elif type == 3:
+            [widget.setVisible(True) for widget in self.play_widgets]
+            [widget.setVisible(False) for widget in self.simp_widgets]
+
 
     def set_visible_route(self, vis_value):
         self.routespeed.setVisible(vis_value)
         self.routespeed_label.setVisible(vis_value)
-        """
-        self.smooth.setVisible(vis_value)
-        self.smooth_label.setVisible(vis_value)
-        self.cyclic.setVisible(vis_value)
-        self.cyclic_label.setVisible(vis_value)
 
-        self.route_unk1.setVisible(vis_value)
-        self.route_unk1_label.setVisible(vis_value)
-        self.route_unk2.setVisible(vis_value)
-        self.route_unk2_label.setVisible(vis_value)"""
 
 class ReplayCameraEdit(CameraEdit):
 
@@ -1586,15 +1572,12 @@ class ReplayCameraEdit(CameraEdit):
     def update_name(self):
         super().update_name()
 
-        obj: Camera = get_cmn_obj(self.bound_to)
-        self.follow_player.setVisible(obj == 1)
-        self.follow_player_label.setVisible(obj == 1)
+        type: Camera = get_cmn_obj(self.bound_to).type
+        self.follow_player.setVisible(type == 1)
+        self.follow_player_label.setVisible(type == 1)
 
-        [widget.setVisible(obj == 1) for widget in self.position]
-        self.position_label.setVisible(obj == 1)
-
-        for obj in self.bound_to:
-            obj.handle_type_change()
+        [widget.setVisible(type == 1) for widget in self.position]
+        self.position_label.setVisible(type == 1)
 
     def update_positions(self, index=None):
         if index is None:
@@ -1604,6 +1587,8 @@ class ReplayCameraEdit(CameraEdit):
         [widget.setVisible(type == 1) for widget in (self.follow_player, self.follow_player_label)]
         [widget.setVisible(type == 1) for widget in self.position]
         self.position_label.setVisible(type == 1)
+        for camera in self.bound_to:
+            camera.handle_type_change()
 
 class OpeningCameraEdit(CameraEdit):
     def setup_widgets(self):

@@ -179,7 +179,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
         self.shift_is_pressed = False
         self.rotation_is_pressed = False
-    
+
         self.last_drag_update = 0
         self.change_height_is_pressed = False
         self.last_mouse_move = None
@@ -637,7 +637,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
             gluPerspective(self.fov, width / height, 256.0, 160000.0)
 
             glMatrixMode(GL_MODELVIEW)
-            glLoadIdentity()    
+            glLoadIdentity()
             look_direction = Vector3(cos(self.camera_horiz), sin(self.camera_horiz), sin(self.camera_vertical))
             # look_direction.unify()
             fac = 1.01 - abs(look_direction.z)
@@ -797,7 +797,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                                                 pos1=obj.position,
                                                 pos2=None,
                                                 pos3=None,
-                                                rotation=None))
+                                                rotation=obj.rotation))
                         self.models.render_generic_position_rotation_colored_id(obj.position, obj.rotation, id + (offset+i) * 4, obj.scale)
                         i += 1
                 offset = len(objlist)
@@ -809,8 +809,8 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                                                     pos1=obj.position,
                                                     pos2=obj.position2,
                                                     pos3=obj.position3,
-                                                    rotation=obj.rotation))
-                        self.models.render_generic_position_rotation_colored_id(obj.position, obj.rotation,
+                                                    rotation=None))
+                        self.models.render_generic_position_colored_id(obj.position,
                                                                                 id + (offset + i) * 4)
                         self.models.render_generic_position_colored_id(obj.position2, id + (offset + i) * 4 + 1)
                         self.models.render_generic_position_colored_id(obj.position3, id + (offset + i) * 4 + 2)
@@ -832,43 +832,44 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
                 offset = len(objlist)
 
-                if vismenu.replaycameras.is_selectable():
+                if vismenu.replaycameras.is_selectable(): #routes
                     i = 0
                     for route in replaycameraroutes:
                         for obj in route.points[1:]:
+                            pos = obj.position.render()
                             objlist.append(
                                 ObjectSelectionEntry(obj=obj,
-                                                 pos1=obj.position,
+                                                 pos1=pos,
                                                  pos2=None,
                                                  pos3=None,
                                                  rotation=None))
-                            self.models.render_generic_position_colored_id(obj.position, id + (offset+i) * 4)
+                            self.models.render_generic_position_colored_id(pos, id + (offset+i) * 4)
                             i += 1
 
                 offset = len(objlist)
 
                 if vismenu.replaycameras.is_selectable():
                     for i, obj in enumerate(replaycameras):
-                        if obj.type == 1 and not obj.follow_player:
-                            objlist.append(
-                                ObjectSelectionEntry(obj=obj,
-                                                     pos1=obj.position,
-                                                     pos2=obj.position2,
-                                                     pos3=obj.position3,
-                                                     rotation=obj.rotation))
-                            self.models.render_generic_position_rotation_colored_id(obj.position, obj.rotation,
-                                                                                    id + (offset + i) * 4)
-                            self.models.render_generic_position_colored_id(obj.position2, id + (offset + i) * 4 + 1)
-                            self.models.render_generic_position_colored_id(obj.position3, id + (offset + i) * 4 + 2)
-                        else:
-                            objlist.append(
-                                ObjectSelectionEntry(obj=obj,
-                                                     pos1=obj.position,
-                                                     pos2=None,
-                                                     pos3=None,
-                                                     rotation=obj.rotation))
-                            self.models.render_generic_position_rotation_colored_id(obj.position, obj.rotation,
-                                                                                    id + (offset + i) * 4)
+                        pos1 = obj.position
+                        pos2 = None
+                        pos3 = None
+                        if (obj.type == 1 and not obj.follow_player) or obj.type == 3:
+                            pos2 = obj.position2_simple.render()
+                            pos3 = obj.position3_simple.render()
+                        if obj.type == 3:
+                            pos1 = obj.position.render()
+                            pos2 = obj.position2_player.render()
+                            pos3 = obj.position3_player.render()
+                        objlist.append( ObjectSelectionEntry(obj=obj,
+                                                    pos1=pos1,
+                                                    pos2=pos2,
+                                                    pos3=pos3,
+                                                    rotation=None))
+                        self.models.render_generic_position_colored_id(pos1, id + (offset + i) * 4)
+                        if pos2 is not None:
+                             self.models.render_generic_position_colored_id(pos2, id + (offset + i) * 4 + 1)
+                        if pos3 is not None:
+                            self.models.render_generic_position_colored_id(pos3, id + (offset + i) * 4 + 2)
 
                 offset = len(objlist)
 
@@ -955,21 +956,20 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
                     if index & 0b11 == 0:  # First object position
                         if entry.pos1 is not None and (elements_exist & 1) == 0:
-                            selected_positions.append(entry.pos1)
+                            selected_positions.append(entry.pos1.get_base())
                             if entry.rotation is not None:
                                 selected_rotations.append(entry.rotation)
                             elements_exist |= 1
                     if index & 0b11 == 1:  # Second object position
                         if entry.pos2 is not None and (elements_exist & 2) == 0:
-                            selected_positions.append(entry.pos2)
+                            selected_positions.append(entry.pos2.get_base())
                             elements_exist |= 2
                     if index & 0b11 == 2:  # Third object position
                         if entry.pos3 is not None and (elements_exist & 4) == 0:
-                            selected_positions.append(entry.pos3)
+                            selected_positions.append(entry.pos3.get_base())
                             elements_exist |= 4
 
                     selected[obj] = elements_exist
-
                 #print("select time taken", default_timer() - start)
                 #print("result:", selected)
                 selected = [x for x in selected.keys()]
@@ -989,7 +989,6 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                     for rot in selected_rotations:
                         if rot not in self.selected_rotations:
                             self.selected_rotations.append(rot)
-
                 # Store selection in a logical order that matches the order of the objects in their
                 # respective groups. This is relevant to ensure that potentially copied, route-like
                 # objects, where order matters, are pasted in the same order.
@@ -1221,7 +1220,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                             glColor3f(1.0, 0.0, 0.0)
                             self.models.draw_cylinder(point.position, 800, 800)
 
-                        if point.scale > 0:
+                        if point.scale > 0 and point in select_optimize:
                             self.models.draw_sphere(point.position, point.scale * 50)
 
 
@@ -1637,9 +1636,8 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
                 for object in self.level_file.replayareas:
                     bolded = object in linked_areas
-                    self.models.render_generic_position_rotation_colored("replayareas",
-                                                                object.position, object.rotation,
-                                                                bolded)
+                    self.models.render_generic_position_colored(object.position,
+                                                                bolded, "replayareas")
                     if bolded:
                         glColor4f(*colors_selection)
                         glLineWidth(3.0)
@@ -1656,32 +1654,41 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                 for i, object in enumerate(replaycameras):
                     selected = object in selected_cameras
                     bolded = object in linked_cameras
-                    self.models.render_generic_position_rotation_colored("replaycameras",
-                                                                object.position, object.rotation,
-                                                                bolded)
 
-                    absolute_poses = object.type == 1 and not object.follow_player
-                    relative_poses = object.type == 3
+                    if object.type == 1:
+                        self.models.render_generic_position_colored(object.position, bolded, "replaycameras")
+                        if not object.follow_player:
+                            glColor4f(*colors_replaycamera)
+                            pos2 = object.position2_simple.render() #if absolute_poses else object.position2.absolute()
+                            pos3 = object.position3_simple.render() #if absolute_poses else object.position3.absolute()
 
-                    if absolute_poses: #or relative_poses:
-                        glColor4f(*colors_replaycamera)
-                        pos2 = object.position2 #if absolute_poses else object.position2.absolute()
-                        pos3 = object.position3 #if absolute_poses else object.position3.absolute()
+                            self.models.draw_sphere(pos2, 300)
+                            self.models.draw_sphere(pos3, 300)
 
+                            if bolded:
+                                glLineWidth(3.0)
+                            else:
+                                glLineWidth(1.0)
+                            glColor3f(0.0, 0.0, 0.0)
+                            glBegin(GL_LINE_STRIP)
+
+                            glVertex3f(pos2.x, -pos2.z, pos2.y)
+                            glVertex3f(pos3.x, -pos3.z, pos3.y)
+                            glEnd()
+                            self.models.draw_arrow_head(pos2, pos3)
+
+                    elif object.type == 3:
+                        self.models.render_generic_position_colored(object.position,
+                                                                bolded, "replaycameras")
+                        pos2 = object.position2_player.render()
+                        pos3 = object.position3_player.render()
                         self.models.draw_sphere(pos2, 300)
                         self.models.draw_sphere(pos3, 300)
-                        
-                        if bolded:
-                            glLineWidth(3.0)
-                        else:
-                            glLineWidth(1.0)
-                        glColor3f(0.0, 0.0, 0.0)
                         glBegin(GL_LINE_STRIP)
-                        
+
                         glVertex3f(pos2.x, -pos2.z, pos2.y)
                         glVertex3f(pos3.x, -pos3.z, pos3.y)
                         glEnd()
-                        self.models.draw_arrow_head(pos2, pos3)
 
                 for i, route in enumerate(replaycameraroutes):
                     selected = route in selected_routes
@@ -1689,9 +1696,9 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
                     last_point = None
                     for point in route.points:
-                        self.models.render_generic_position_colored(point.position, bolded, "replaycamerapoint")
+                        self.models.render_generic_position_colored(point.position.render(), bolded, "replaycamerapoint")
                         if last_point is not None:
-                            self.models.draw_arrow_head(last_point.position, point.position)
+                            self.models.draw_arrow_head(last_point.position.render(), point.position.render())
                         last_point = point
                     if bolded:
                         glLineWidth(3.0)
@@ -1700,7 +1707,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                     if len(route.points) == 2 and route.smooth != 0:
                         glColor3f(1.0, 0.0, 0.0 )
                     for point in route.points:
-                        pos = point.position
+                        pos = point.position.render()
                         glVertex3f(pos.x, -pos.z, pos.y)
                     glEnd()
                     if bolded:
@@ -1710,9 +1717,9 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                 for i, object in enumerate(self.level_file.cameras):
                     if object.type == 0:
                         continue
-                    self.models.render_generic_position_rotation_colored("camera",
-                                                                object.position, object.rotation,
-                                                                 object in select_optimize)
+                    self.models.render_generic_position_colored(object.position,
+                                                                 object in select_optimize,
+                                                                 "camera")
                     if object in select_optimize:
                         glColor3f(1.0, 0.0, 1.0)
                     else:

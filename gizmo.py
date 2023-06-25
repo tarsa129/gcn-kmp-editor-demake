@@ -70,14 +70,15 @@ class Gizmo(Model):
         avgz = None
 
         for position in positions:
+            pos = position.absolute()
             if avgx is None:
-                avgx = position.x
-                avgy = position.y
-                avgz = position.z
+                avgx = pos.x
+                avgy = pos.y
+                avgz = pos.z
             else:
-                avgx += position.x
-                avgy += position.y
-                avgz += position.z
+                avgx += pos.x
+                avgy += pos.y
+                avgz += pos.z
         self.position.x = avgx / len(positions)
         self.position.y = avgy / len(positions)
         self.position.z = avgz / len(positions)

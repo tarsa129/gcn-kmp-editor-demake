@@ -153,6 +153,9 @@ class RoutedObject(object):
     def route_info(self):
         return 0
 
+    def has_route(self):
+        return self.route_obj is not None and self.route_obj.points
+
 
 class KMPPoint(object):
     def __init__(self):
@@ -1780,7 +1783,7 @@ class Camera(RoutedObject):
         self.movieflag = 0
 
         self.position = position
-        self.rotation = Rotation.default()
+        self.rot = Rotation.default()
 
         self.fov = FOV()
         self.fov.start = 30
@@ -1794,8 +1797,8 @@ class Camera(RoutedObject):
 
         self.widget = None
         self.routeclass = CameraRoute
-        self.position2_simple = Vector3(0.0, 0.0, 0.0)
-        self.position3_simple = Vector3(0.0, 0.0, 0.0)
+        self.position2_simple = self.position2
+        self.position3_simple = self.position3
         self.position2_player = Vector3(0.0, 0.0, 0.0)
         self.position3_player = Vector3(0.0, 0.0, 0.0)
 
@@ -1841,12 +1844,18 @@ class Camera(RoutedObject):
 
 
         #print(rotation)
-        cam.rotation = Rotation.from_file(f)
+        cam.rot = Rotation.from_file(f)
 
         cam.fov.start = read_float(f)
         cam.fov.end = read_float(f)
         cam.position2 = Vector3(*unpack(">fff", f.read(12)))
         cam.position3 = Vector3(*unpack(">fff", f.read(12)))
+        if cam.type in (0, 1,2, 4, 5):
+            cam.position2_simple = cam.position2.copy()
+            cam.position3_simple = cam.position3.copy()
+        else:
+            cam.position2_player = Vector3Relative(cam.position2, cam.position)
+            cam.position3_player = Vector3Relative(cam.position3, cam.position)
         cam.camduration = read_float(f)
 
         return cam
@@ -1892,12 +1901,14 @@ class Camera(RoutedObject):
 
 
         f.write(pack(">fff", self.position.x, self.position.y, self.position.z))
-        self.rotation.write(f)
+        self.rot.write(f)
 
         f.write(pack(">ff", self.fov.start, self.fov.end))
 
-        f.write(pack(">fff", self.position2.x, self.position2.y, self.position2.z))
-        f.write(pack(">fff", self.position3.x, self.position3.y, self.position3.z))
+        position2 = self.position2_player if self.type == 3 else self.position2_simple
+        position3 = self.position3_player if self.type == 3 else self.position3_simple
+        f.write(pack(">fff", position2.x, position2.y, position2.z))
+        f.write(pack(">fff", position3.x, position3.y, position3.z))
 
         f.write(pack(">f", self.camduration) )
 
@@ -1948,31 +1959,25 @@ class Camera(RoutedObject):
         elif self.type in (4,5):
             self.follow_player = 0
             self.type = 1
-        elif self.type == 3:
-            self.position2 = Vector3Relative.make_relative(self.position, self.position2)
-            self.position3 = Vector3Relative.make_relative(self.position, self.position3)
         elif self.type == 6:
-            self.position2 = Vector3Relative.make_relative(Vector3(0, 0, 0), self.position)
-            self.position3 = Vector3Relative.make_relative(self.position, self.position3)
             self.type = 3
 
+    def handle_type_change(self):
+        if self.route_obj is None or not self.route_obj.points:
+            return
+        #has a route
+        if self.type == 1:
+            self.create_route(True, None, True, True)
+        else:
+            self.create_route(True, None, False, True)
+            for point in self.route_obj.points:
+                point.position = Vector3Relative(point.position, self.position)
     def setup_route(self, override=True):
         if not (self.route_obj is None and override):
             return
         self.route_obj = self.routeclass()
         new_point = self.route_obj.pointclass(self.position)
         self.route_obj.points.append(new_point)
-
-    def handle_type_change(self):
-        if self.type == 3: #changed from 1 to three
-            self.position2_simple = self.position2.copy()
-            self.position3_simple = self.position3.copy()
-            self.position2 = self.position
-            self.position3 = self.position3_player.copy()
-        else: #changed from 3 to 1
-            self.position3_player = self.position3.copy()
-            self.position2 = self.position2_simple.copy()
-            self.position3 = self.position3_simple.copy()
 
 class ReplayCamera(Camera):
     def __init__(self, position):
@@ -2601,9 +2606,18 @@ class KMP(object):
             if camera.route_obj is not None and camera.route_obj.points:
                 camera.position = camera.route_obj.points[0].position
 
+        #set position2 and position3
         for camera in self.replayareas.get_cameras():
-            if camera.route_obj is not None and camera.route_obj.points:
+            has_route = camera.route_obj is not None and camera.route_obj.points
+            if not has_route:
+                continue
+            if camera.type == 1:
                 camera.position = camera.route_obj.points[0].position
+                continue
+            elif camera.type == 3:
+                for point in camera.route_obj.points:
+                    point.position = Vector3Relative(point.position, camera.position)
+                camera.position2_player = camera.route_obj.points[0].position
         return return_string
 
     @classmethod

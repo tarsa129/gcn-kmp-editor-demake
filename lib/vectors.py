@@ -1,6 +1,7 @@
 from math import sqrt
 from io import StringIO
 from numpy import arctan2, ndarray, matmul, deg2rad, cos, sin
+from math import atan2
 from copy import deepcopy
 from struct import unpack, pack
 from scipy.spatial.transform import Rotation as R
@@ -105,15 +106,32 @@ class Vector3(object):
         return horiz, verti
 
     def scale_by(self, other_vec):
-        self.x = self.x * other_vec.x if other_vec.x > 0 else self.x
-        self.y = self.y * other_vec.y if other_vec.y > 0 else self.y
-        self.z = self.z * other_vec.z if other_vec.z > 0 else self.z
+        self.x = self.x * other_vec.x
+        self.y = self.y * other_vec.y
+        self.z = self.z * other_vec.z
 
     def rotate_y(self, deg):
         x = self.x * cos(deg2rad(deg)) - self.z * sin(deg2rad(deg))
         z = self.z * cos(deg2rad(deg)) + self.x * sin(deg2rad(deg))
         self.x = x
         self.z = z
+
+    def rotate_around_point(self, point, axis, delta):
+        diff = self - point
+        setattr(diff, axis, 0)
+        length = diff.norm()
+        if length > 0:
+            diff.normalize()
+            angle = atan2(diff.x, diff.z) + delta
+            self.x = point.x + length * sin(angle)
+            self.z = point.z + length * cos(angle)
+
+    def get_base(self):
+        return self
+    
+    def render(self):
+        return self
+
 
 class Vector4(Vector3):
     def __init__(self, x, y, z, w):
@@ -501,9 +519,14 @@ class Rotation(Vector3):
 
 
 class Vector3Relative(Vector3):
-    def __init__(self, x, y, z, base: Vector3):
-        super().__init__(x, y, z)
+    def __init__(self, orig: Vector3, base: Vector3):
+        super().__init__(orig.x, orig.y, orig.z)
         self.base = base
+
+    def render(self):
+        absol = self.absolute()
+        vec = self.__class__(absol, self)
+        return vec
 
     def absolute(self):
         return self.base.absolute() + self
@@ -514,20 +537,10 @@ class Vector3Relative(Vector3):
         self.z = self.base.z + self.z
         self.base = Vector3(0, 0, 0)
 
-    @classmethod
-    def from_absolute(cls, base: Vector3, absol: Vector3):
-        x = absol.x - base.x
-        y = absol.y - base.y
-        z = absol.z - base.z
-        return cls(x, y, z, base)
-
-    @classmethod
-    def make_relative(cls, base: Vector3, offset: Vector3):
-        return cls(offset.x, offset.y, offset.z, base)
-    
-    @classmethod
     def __eq__(self, other_vec):
         comps_same = self.x == other_vec.x and self.y == other_vec.y and self.z == other_vec.z
-        bases_same = self.base == other_vec.base
+        bases_same = self.base == other_vec.get_base()
         return comps_same and bases_same
 
+    def get_base(self):
+        return self.base

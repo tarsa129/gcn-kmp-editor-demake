@@ -39,7 +39,7 @@ class ObjectModels(object):
         self.camerapoint = Cube(colors["CameraRoutes"])
 
         self.replayareas = GenericObject(colors["ReplayArea"])
-        self.replaycameras = GenericObject(colors["ReplayCamera"])
+        self.replaycameras = Cube(colors["ReplayCamera"])
         self.replaycamerapoint = Cube(colors["ReplayCameraRoute"])
 
         self.areas = GenericObject(colors["Areas"])

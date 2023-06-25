@@ -387,7 +387,7 @@ class GenEditor(QMainWindow):
 
         if selected_only:
             for selected_position in self.level_view.selected_positions:
-                extend(selected_position)
+                extend(selected_position.absolute())
             return tuple(extent) or (0, 0, 0, 0, 0, 0)
 
         if self.visibility_menu.enemyroutes.is_visible():
@@ -420,7 +420,7 @@ class GenEditor(QMainWindow):
                 extend(camera.position)
                 for route in self.level_file.replayareas.get_routes():
                     for point in route.points:
-                        extend(point.position)
+                        extend(point.position.absolute())
         if self.visibility_menu.cameras.is_visible():
             for camera in self.level_file.cameras:
                 extend(camera.position)
@@ -1340,7 +1340,7 @@ class GenEditor(QMainWindow):
 
     def load_archive_file(self, filepath, add_to_ini=True):
         clear_temp_folder()
-        os.system(f"wszst extract '{filepath}' -d lib/szsdump -o" )
+        os.system(f'wszst extract "{filepath}" -d lib/szsdump -o' )
         full_path = os.path.join(os.getcwd(), "lib\szsdump")
         self.root_directory = Directory.from_dir(full_path)
 
@@ -1382,7 +1382,7 @@ class GenEditor(QMainWindow):
                 self.set_has_unsaved_changes(False)
                 self.statusbar.showMessage("Saved to {0}".format(self.current_gen_path))
                 szs_path = dump_path = os.path.join(os.getcwd(), "lib\szsdump")
-                os.system(f"wszst create {szs_path} -d {self.current_gen_path}.szs -o" )
+                os.system(f'wszst create "{szs_path}" -d "{self.current_gen_path}.szs" -o' )
             else:
                 gen_path = self.current_gen_path[:-3] + "backup.kmp"
                 with open(gen_path, "wb") as f:
@@ -2002,6 +2002,8 @@ class GenEditor(QMainWindow):
         added_pos = []
 
         for pos in self.level_view.selected_positions:
+            if isinstance(pos, Vector3Relative) and pos.get_base() in self.level_view.selected_positions:
+                continue
             if pos not in added_pos:
                 pos.x += deltax
                 pos.y += deltay
@@ -2176,16 +2178,8 @@ class GenEditor(QMainWindow):
                 if position in moved_positions:
                     continue
                 moved_positions.append(position)
-                diff = position - middle
-                diff.y = 0.0
-
-                length = diff.norm()
-                if length > 0:
-                    diff.normalize()
-                    angle = atan2(diff.x, diff.z)
-                    angle += deltarotation.y
-                    position.x = middle.x + length * sin(angle)
-                    position.z = middle.z + length * cos(angle)
+                if deltarotation.y != 0:
+                    position.rotate_around_point(middle, "y", deltarotation.y)
 
         #self.pikmin_gen_view.update()
         self.level_view.do_redraw()

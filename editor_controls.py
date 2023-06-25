@@ -222,7 +222,7 @@ class Gizmo2DScaleX(Gizmo2DMoveX):
             editor.gizmo.set_render_axis(AXIS_X)
             delta = 1 + ((event.x() - self.first_click.x) * SCALE_CONSTANT)
             self.first_click = Vector2(event.x(), event.y())
-            editor.scale_current.emit(Vector3(delta, 0, 0))
+            editor.scale_current.emit(Vector3(delta, 1, 1))
 
     def just_released(self, editor, buttons, event):
         super().just_released(editor, buttons, event)
@@ -234,7 +234,7 @@ class Gizmo2DScaleZ(Gizmo2DScaleX):
             editor.gizmo.set_render_axis(AXIS_Z)
             delta = 1 + ( (self.first_click.y - event.y()) * SCALE_CONSTANT)
             self.first_click = Vector2(event.x(), event.y())
-            editor.scale_current.emit(Vector3(0, 0, delta))
+            editor.scale_current.emit(Vector3(1, 1, delta))
 
 
 class AddObjectTopDown(ClickAction):
@@ -552,7 +552,7 @@ class Gizmo3DScaleX(Gizmo2DMoveX):
         self.dir = numpy.array([1, 0, 0, 0])
 
     def do_delta(self, delta):
-        return Vector3(delta, 0, 0)
+        return Vector3(delta, 1, 1)
 
     def move(self, editor, buttons, event):
         if editor.gizmo.was_hit[self.axis_name]:
@@ -576,7 +576,7 @@ class Gizmo3DScaleY(Gizmo3DScaleX):
         self.dir = numpy.array([0, 1, 0, 0])
 
     def do_delta(self, delta):
-        return Vector3(0, delta, 0)
+        return Vector3(1, delta, 1)
 
 class Gizmo3DScaleZ(Gizmo3DScaleX):
     def __init__(self, *args, **kwargs):
@@ -586,7 +586,7 @@ class Gizmo3DScaleZ(Gizmo3DScaleX):
         self.dir = numpy.array([0, 0, 1, 0])
 
     def do_delta(self, delta):
-        return Vector3(0, 0, delta)
+        return Vector3(1, 1, delta)
 
 class UserControl(object):
     def __init__(self, editor_widget):
