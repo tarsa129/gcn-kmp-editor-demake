@@ -807,13 +807,13 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                         objlist.append(
                             ObjectSelectionEntry(obj=obj,
                                                     pos1=obj.position,
-                                                    pos2=obj.position2,
-                                                    pos3=obj.position3,
+                                                    pos2=obj.position2_simple,
+                                                    pos3=obj.position3_simple,
                                                     rotation=None))
                         self.models.render_generic_position_colored_id(obj.position,
                                                                                 id + (offset + i) * 4)
-                        self.models.render_generic_position_colored_id(obj.position2, id + (offset + i) * 4 + 1)
-                        self.models.render_generic_position_colored_id(obj.position3, id + (offset + i) * 4 + 2)
+                        self.models.render_generic_position_colored_id(obj.position2_simple, id + (offset + i) * 4 + 1)
+                        self.models.render_generic_position_colored_id(obj.position3_simple, id + (offset + i) * 4 + 2)
 
                 offset = len(objlist)
 
@@ -1636,8 +1636,9 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
                 for object in self.level_file.replayareas:
                     bolded = object in linked_areas
-                    self.models.render_generic_position_colored(object.position,
-                                                                bolded, "replayareas")
+                    self.models.render_generic_position_rotation_colored( "replayareas",
+                                                                object.position, object.rotation,
+                                                                bolded)
                     if bolded:
                         glColor4f(*colors_selection)
                         glLineWidth(3.0)
@@ -1724,8 +1725,8 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                         glColor3f(1.0, 0.0, 1.0)
                     else:
                         glColor3f(0.749, 0.616, 0.467)
-                    pos1 = object.position2
-                    pos2 = object.position3
+                    pos1 = object.position2_simple
+                    pos2 = object.position3_simple
                     self.models.draw_sphere(pos1, 300)
                     self.models.draw_sphere(pos2, 300)
                     glLineWidth(2.0)
@@ -1870,7 +1871,27 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
         self.gizmo.render_scaled(gizmo_scale, is3d=self.mode == MODE_3D, hover_id=gizmo_hover_id)
 
         glDisable(GL_DEPTH_TEST)
-        if not self.connecting_mode:
+        if self.connecting_mode:
+            mouse_pos = self.mapFromGlobal(QtGui.QCursor.pos())
+            if self.mode == MODE_TOPDOWN:
+                mapx, mapz = self.mouse_coord_to_world_coord(mouse_pos.x(), mouse_pos.y())
+                pos2 = Vector3( mapx, 0, -mapz)
+            elif self.mode == MODE_3D:
+                pos2 = self.get_3d_coordinates(mouse_pos.x(), mouse_pos.y())
+                pos2 = Vector3(pos2.x, pos2.z, -pos2.y)
+
+            if pos2 is not None:
+                for pos1 in self.connecting_start:
+                    if self.mode == MODE_TOPDOWN:
+                        pos2.y = pos1.y
+                    glLineWidth(5.0)
+                    glBegin(GL_LINES)
+                    glColor3f(0.0, 0.0, 0.0)
+                    glVertex3f(pos1.x, -pos1.z, pos1.y)
+                    glVertex3f(pos2.x, -pos2.z, pos2.y)
+                    glEnd()
+                    self.models.draw_arrow_head(pos1, pos2)
+        else: 
             if self.selectionbox_start is not None and self.selectionbox_end is not None:
                 #print("drawing box")
                 startx, startz = self.selectionbox_start

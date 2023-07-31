@@ -32,13 +32,18 @@ def set_userdata_mult(objs:list[MapObject], idx, value):
 def get_cmn_obj(objs, kmp_file=None):
     if isinstance(objs[0], (KartStartPoints, Cameras)):
         return objs[0]
+
     try:
         cmn_obj = objs[0].copy()
     except:
         cmn_obj = deepcopy(objs[0])
 
-    if hasattr(objs[0],"route_obj"):
+    if hasattr(cmn_obj, "route_obj"):
         cmn_obj.route_obj = [objs[0].route_obj]
+        cmn_obj.route_obj = [x for x in cmn_obj.route_obj if x is not None]
+
+    if len(objs) == 1:
+        return cmn_obj
 
     members = [attr for attr in dir(cmn_obj) if not callable(getattr(cmn_obj, attr)) and not attr.startswith("__")]
     #print(members)
@@ -74,12 +79,6 @@ def get_cmn_obj(objs, kmp_file=None):
     if hasattr(cmn_obj,"route_obj"):
         cmn_obj.route_obj = list(set(cmn_obj.route_obj ))
         cmn_obj.route_obj = [x for x in cmn_obj.route_obj if x is not None]
-    if isinstance(cmn_obj, RoutePoint):
-        routes = []
-        for obj in objs:
-            routes.append( kmp_file.get_route_of_point(obj)  )
-        cmn_obj.partof = list(set(routes))
-
     return cmn_obj
 
 def load_parameter_names(objectid):
@@ -948,7 +947,7 @@ class CameraRouteEdit(RouteEdit):
         super().setup_widgets()
         self.widgets = []
 
-        if len(self.bound_to) != 1:
+        if len(self.bound_to) != 1 or self.bound_to[0] is None:
             return
         for i, point in enumerate(self.bound_to[0].points):
             routepointedit = CameraRoutePointEdit(self.parent(), [point], i, self.kmp_file)
@@ -985,10 +984,13 @@ class ObjectRoutePointEdit(DataEditor):
                                                         -inf, +inf)
         labels = [[], []]
 
-        obj: RoutePoint = get_cmn_obj(self.bound_to, self.kmp_file)
-        used_by = []
+        #obj: RoutePoint = get_cmn_obj(self.bound_to, self.kmp_file)
+        routes = []
+        for point in self.bound_to:
+            routes.append(self.kmp_file.get_route_of_point(point))
 
-        for route in obj.partof:
+        used_by = []
+        for route in routes:
             used_by.extend(self.kmp_file.route_used_by(route))
 
         for mapobject in used_by:
@@ -1410,7 +1412,9 @@ class ReplayAreaEdit(DataEditor):
         self.area_edit = AreaEdit(self.parent(), self.bound_to)
         cameras = [x.camera for x in self.bound_to]
         self.camera_edit = ReplayCameraEdit(self.parent(), cameras)
+        #the problem call
         route_obj = get_cmn_obj(cameras).route_obj
+  
         self.route_edit = CameraRouteEdit(self.parent(), route_obj)
 
         self.main_thing.addTab(self.area_edit, "Area")
@@ -1418,12 +1422,12 @@ class ReplayAreaEdit(DataEditor):
         self.main_thing.addTab(self.route_edit, "Route")
 
         self.main_thing.setTabEnabled(2, len(route_obj) > 0)
-
     def update_data(self):
         self.area_edit.update_data()
         self.camera_edit.update_data()
         cameras = [x.camera for x in self.bound_to]
         route_obj = get_cmn_obj(cameras).route_obj
+
         if route_obj:
             self.route_edit.update_data()
 
@@ -1478,7 +1482,7 @@ class CameraEdit(DataEditor):
                                                         -inf, +inf, True)
         self.pos2_play, self.pos2_l_play = self.add_multiple_decimal_input("Start Point", "position2_player", ["x", "y", "z"],
                                                         -inf, +inf, True)
-        self.pos3_play, self.pos2_l_play= self.add_multiple_decimal_input("End Point", "position3_player", ["x", "y", "z"],
+        self.pos3_play, self.pos3_l_play= self.add_multiple_decimal_input("End Point", "position3_player", ["x", "y", "z"],
                                                         -inf, +inf, True)
         self.viewspeed, self.viewspeed_label = self.add_integer_input("View Speed", "viewspeed", MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT, True)
 
@@ -1497,8 +1501,8 @@ class CameraEdit(DataEditor):
         self.type.currentIndexChanged.connect(lambda index: self.update_positions(index))
         self.follow_player.stateChanged.connect(lambda _index: self.update_positions(None))
 
-        self.simp_widgets = self.pos2_simp + self.pos3_simp + [self.pos2_l_simp, self.pos3_l_simp, self.viewspeed, self.viewspeed_label]
-        self.play_widgets = self.pos2_play + self.pos3_play + [self.pos2_l_play, self.pos3_l_simp]
+        self.simp_widgets = self.pos2_simp + self.pos3_simp + [self.pos2_l_simp, self.pos3_l_simp, self.viewspeed, self.viewspeed_label, self.follow_player, self.follow_player_label]
+        self.play_widgets = self.pos2_play + self.pos3_play + [self.pos2_l_play, self.pos3_l_play]
 
     def update_data(self):
         obj: Camera = get_cmn_obj(self.bound_to)
@@ -1507,7 +1511,8 @@ class CameraEdit(DataEditor):
                 self.follow_player.setChecked(True)
 
         typeindex = self.type.findData(obj.type )
-        self.type.setCurrentIndex(typeindex if typeindex != -1 else 1)
+        with QSignalBlocker(self.type):
+            self.type.setCurrentIndex(typeindex if typeindex != -1 else 1)
 
         self.set_visible_followplayer(obj.type, self.follow_player.isChecked())
 
@@ -1545,13 +1550,12 @@ class CameraEdit(DataEditor):
         #1-2 doesn't use pos2, pos3, or viewspeed
         #4-5 uses pos2, pos3 and viewspeed
         #3,6 uses pos2, pos3, and viewspeed.
-        if type == 1:
+        if type < 2:
             [widget.setVisible(not follow_player) for widget in self.simp_widgets]
             [widget.setVisible(False) for widget in self.play_widgets]
         elif type == 3:
             [widget.setVisible(True) for widget in self.play_widgets]
             [widget.setVisible(False) for widget in self.simp_widgets]
-
 
     def set_visible_route(self, vis_value):
         self.routespeed.setVisible(vis_value)
@@ -1605,6 +1609,19 @@ class OpeningCameraEdit(CameraEdit):
         obj: Camera = get_cmn_obj(self.bound_to)
         self.camduration.setText(str(obj.camduration))
 
+class GoalCameraEdit(CameraEdit):
+    def setup_widgets(self):
+        super().setup_widgets()
+        self.type.setVisible(False)
+        self.type_label.setVisible(False)
+        self.follow_player.setVisible(False)
+        self.follow_player_label.setVisible(False)
+
+    def update_data(self):
+        super().update_data()
+        obj: Camera = get_cmn_obj(self.bound_to)
+        self.camduration.setText(str(obj.camduration))
+
 class CamerasEdit(DataEditor):
     def setup_widgets(self):
         self.bound_to = self.bound_to[0]
@@ -1612,8 +1629,7 @@ class CamerasEdit(DataEditor):
         self.vbox.addWidget(self.main_thing)
 
         self.seq_edit = OpeningCamerasEdit(self.parent(), [self.bound_to])
-        if self.bound_to.goalcam is not None:
-            self.camera_edit = OpeningCameraEdit(self.parent(), [self.bound_to.goalcam])
+        self.camera_edit = GoalCameraEdit(self.parent(), [self.bound_to.goalcam])
 
         self.main_thing.addTab(self.seq_edit, "Opening Cameras")
         self.main_thing.addTab(self.camera_edit, "Goal Camera")

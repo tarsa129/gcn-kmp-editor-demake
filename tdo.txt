@@ -1,7 +1,9 @@
 updates:
+
+fix everything about cameras
+
 improve json files
 when placing an object with a routepoint, assign to closest routepoint (new option)
-fix 3d rotation?
 selection of camera and area and route should bring up the replayareaeditor
 fix copy + paste for areas / cameras / anything that connects to another
 scale on gizmo (better)

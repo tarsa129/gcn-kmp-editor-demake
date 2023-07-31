@@ -122,13 +122,22 @@ class Vector3(object):
         length = diff.norm()
         if length > 0:
             diff.normalize()
-            angle = atan2(diff.x, diff.z) + delta
-            self.x = point.x + length * sin(angle)
-            self.z = point.z + length * cos(angle)
+            if axis == "y":
+                angle = atan2(diff.x, diff.z) + delta
+                self.x = point.x + length * sin(angle)
+                self.z = point.z + length * cos(angle)
+            elif axis == "x":
+                angle = atan2(diff.y, diff.z) - delta
+                self.y = point.y + length * sin(angle)
+                self.z = point.z + length * cos(angle)
+            elif axis == "z":
+                angle = atan2(diff.x, diff.y) - delta
+                self.x = point.x + length * sin(angle)
+                self.y = point.y + length * cos(angle)
 
     def get_base(self):
         return self
-    
+
     def render(self):
         return self
 

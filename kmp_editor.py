@@ -2178,8 +2178,12 @@ class GenEditor(QMainWindow):
                 if position in moved_positions:
                     continue
                 moved_positions.append(position)
-                if deltarotation.y != 0:
+                if deltarotation.x != 0:
+                    position.rotate_around_point(middle, "x", deltarotation.x)
+                elif deltarotation.y != 0:
                     position.rotate_around_point(middle, "y", deltarotation.y)
+                elif deltarotation.z != 0:
+                    position.rotate_around_point(middle, "z", deltarotation.z)
 
         #self.pikmin_gen_view.update()
         self.level_view.do_redraw()
