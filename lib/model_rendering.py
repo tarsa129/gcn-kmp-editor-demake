@@ -138,7 +138,7 @@ class TexturedMesh(object):
             vn.normalize()
 
             for vi, ti in triangle:
-                if self.material.tex is not None and ti is not None:
+                if self.material.tex is not None and t < len(self.vertex_texcoords):
                     glTexCoord2f(*self.vertex_texcoords[ti])
                 glNormal3f(vn.x, vn.y, vn.z)
                 glVertex3f(*self.vertex_positions[vi])
@@ -539,6 +539,24 @@ class Cube(SelectableModel):
     def __init__(self, color=(1.0, 1.0, 1.0, 1.0)):
         super().__init__()
         with open("resources/cube.obj", "r") as f:
+            model = Model.from_obj(f, scale=150, rotate=True)
+        self.mesh_list = model.mesh_list
+        self.named_meshes = model.mesh_list
+
+        self.color = color
+
+    def _render_outline(self):
+        self.mesh_list[0].render()
+
+    def _render_body(self):
+        glColor4f(*self.color)
+        self.mesh_list[0].render()
+
+
+class Cylinder(SelectableModel):
+    def __init__(self, color=(1.0, 1.0, 1.0, 1.0)):
+        super().__init__()
+        with open("resources/cylinder.obj", "r", encoding='utf-8') as f:
             model = Model.from_obj(f, scale=150, rotate=True)
         self.mesh_list = model.mesh_list
         self.named_meshes = model.mesh_list

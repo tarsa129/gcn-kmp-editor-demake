@@ -5,8 +5,13 @@ import numpy
 
 class Collision(object):
     def __init__(self, faces):
+        self.vertices = []
+
+
         self.faces = faces
         self.triangles = []
+        self.face_centers = []
+        self.edge_centers = []
         #print(self.faces)
         for face in self.faces:
             v1, v2, v3 = face[0:3]
@@ -19,9 +24,20 @@ class Collision(object):
             v2 = Vector3(v2.x, -v2.z, v2.y)
             v3 = Vector3(v3.x, -v3.z, v3.y)
 
+            self.vertices.extend( [v1, v2, v3] )
+
+            face_center = (v1 + v2 + v3) / 3.0
+            self.face_centers.append(Vector3(face_center.x, face_center.y, face_center.z))
+
+            for edge_center in ((v1 + v2) / 2.0, (v1 + v3) / 2.0, (v2 + v3) / 2.0):
+                self.edge_centers.append(Vector3(edge_center.x, edge_center.y, edge_center.z))
+
             triangle = Triangle(v1,v2,v3,col_type)
             if not triangle.normal.is_zero():
                 self.triangles.append(triangle)
+
+        self.vertices = list(set(self.vertices))
+        self.hash = hash((tuple(self.vertices), tuple(faces)))
 
         self.flat_triangles = []
         for t in self.triangles:
@@ -78,6 +94,7 @@ class Collision(object):
     def get_closest_point(ray, points):
         distances_and_points = []
         for point in points:
+            tuple_point = (point.x, point.y, point.z)
             try:
                 distance = _distance_between_line_and_point(
                     ray.origin.x,
@@ -86,12 +103,12 @@ class Collision(object):
                     ray.direction.x,
                     ray.direction.y,
                     ray.direction.z,
-                    *point,
+                    *tuple_point
                 )
             except Exception:
                 continue
             if distance is not math.nan:
-                distances_and_points.append((distance, point))
+                distances_and_points.append((distance, tuple_point))
 
         if not distances_and_points:
             return None

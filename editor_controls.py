@@ -164,6 +164,12 @@ class Gizmo2DMoveX(ClickDragAction):
 class Gizmo2DMoveXZ(Gizmo2DMoveX):
     def move(self, editor, buttons, event):
         if editor.gizmo.was_hit["middle"]:
+            if editor.snapping_enabled and editor.collision is not None:
+                coords = editor.get_closest_snapping_point(event.x(), event.y(), is3d=False)
+                if coords is not None:
+                    editor.move_points_to.emit(coords.x, coords.y, coords.z)
+                return
+
             #editor.gizmo.set_render_axis(AXIS_X)
             delta_x = event.x() - self.first_click.x()
             delta_z = event.y() - self.first_click.y()
@@ -435,11 +441,16 @@ class Gizmo3DMove(Gizmo3DMoveX):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.axis_name = "middle"
+
     def move(self, editor, buttons, event):
         if editor.gizmo.was_hit["middle"]:
-            #editor.gizmo.set_render_axis(AXIS_X)
-            coords = editor.get_3d_coordinates(event.x(), event.y())
-            editor.move_points_to.emit(coords.x, coords.y, coords.z)
+            if editor.snapping_enabled and editor.collision is not None:
+                coords = editor.get_closest_snapping_point(event.x(), event.y())
+            else:
+                coords = editor.get_3d_coordinates(event.x(), event.y())
+
+            if coords is not None:
+                editor.move_points_to.emit(coords.x, coords.y, coords.z)
 
 class Gizmo3DRotateY(Gizmo2DRotateY):
     def __init__(self, *args, **kwargs):

@@ -1,6 +1,6 @@
 updates:
 
-fix everything about cameras
+fix respawn filter view
 
 improve json files
 when placing an object with a routepoint, assign to closest routepoint (new option)

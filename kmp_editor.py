@@ -24,7 +24,7 @@ from configuration import read_config, make_default_config, save_cfg
 import mkwii_widgets
 from widgets.side_widget import PikminSideWidget
 from widgets.editor_widgets import open_error_dialog, catch_exception_with_dialog
-from mkwii_widgets import KMPMapViewer, MODE_TOPDOWN
+from mkwii_widgets import KMPMapViewer, MODE_TOPDOWN, SnappingMode
 from lib.libkmp import *
 import lib.libkmp as libkmp
 from lib.libkcl import RacetrackCollision
@@ -407,15 +407,15 @@ class GenEditor(QtWidgets.QMainWindow):
                 for route in self.level_file.replayareas.get_routes():
                     for point in route.points:
                         extend(point.position.absolute())
+        if self.visibility_menu.respawnpoints.is_visible():
+            for point in self.level_file.respawnpoints:
+                extend(point.position)
         if self.visibility_menu.cameras.is_visible():
             for camera in self.level_file.cameras:
                 extend(camera.position)
             for route in self.level_file.cameras.get_routes():
                 for point in route.points:
                     extend(point.position)
-        if self.visibility_menu.checkpoints.is_visible():
-            for respawn_point in self.level_file.respawnpoints:
-                extend(respawn_point.position)
         if self.visibility_menu.kartstartpoints.is_visible():
             for karts_point in self.level_file.kartpoints.positions:
                 extend(karts_point.position)
@@ -517,6 +517,12 @@ class GenEditor(QtWidgets.QMainWindow):
         self.pik_control = PikminSideWidget(self)
         self.horizontalLayout.addWidget(self.pik_control)
 
+        snapping_toggle_shortcut = QtGui.QShortcut(QtGui.QKeySequence(QtCore.Qt.Key_V), self)
+        snapping_toggle_shortcut.activated.connect(self.level_view.toggle_snapping)
+        snapping_cycle_shortcut = QtGui.QShortcut(
+            QtGui.QKeySequence(QtCore.Qt.Key_V | QtCore.Qt.SHIFT), self)
+        snapping_cycle_shortcut.activated.connect(self.level_view.cycle_snapping_mode)
+
         QtGui.QShortcut(QtCore.Qt.Key_G, self).activated.connect(self.action_ground_objects)
         self.statusbar = QtWidgets.QStatusBar(self)
         self.statusbar.setObjectName("statusbar")
@@ -611,6 +617,19 @@ class GenEditor(QtWidgets.QMainWindow):
         self.autoground_mode.triggered.connect(lambda: self.on_editing_setting_changed(
             "autoground_2d",  self.autoground_mode) )
         self.edit_menu.addAction(self.autoground_mode)
+
+        self.snapping_menu = self.edit_menu.addMenu('Snapping\tV')
+        self.snapping_menu.setToolTipsVisible(True)
+        self.snapping_menu.aboutToShow.connect(self.on_snapping_menu_aboutToShow)
+        self.snapping_menu.addAction('Disabled')
+        for snapping_mode in SnappingMode:
+            self.snapping_menu.addAction(f'Snap to {snapping_mode.value}').setObjectName(
+                snapping_mode.name)
+        self.snapping_menu_action_group = QtGui.QActionGroup(self)
+        for action in self.snapping_menu.actions():
+            action.triggered.connect(self.on_snapping_menu_action_triggered)
+            action.setCheckable(True)
+            self.snapping_menu_action_group.addAction(action)
 
         self.visibility_menu = mkwii_widgets.FilterViewMenu(self)
         self.visibility_menu.filter_update.connect(self.on_filter_update)
@@ -1011,6 +1030,18 @@ class GenEditor(QtWidgets.QMainWindow):
 
         for i, option in enumerate(collision_options):
             collision_actions[i].setChecked(option == default_filetype)
+
+    def on_snapping_menu_aboutToShow(self):
+        if self.level_view.snapping_enabled:
+            for action in self.snapping_menu.actions():
+                if action.objectName() == self.level_view.snapping_mode.name:
+                    action.setChecked(True)
+                    return
+
+        self.snapping_menu.actions()[0].setChecked(True)
+
+    def on_snapping_menu_action_triggered(self):
+        self.level_view.set_snapping_mode(self.sender().objectName())
 
     def change_to_topdownview(self, checked):
         if checked and self.level_view.preview is None:
