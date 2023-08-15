@@ -60,7 +60,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
     mouse_dragged = QtCore.Signal(QtGui.QMouseEvent)
     mouse_released = QtCore.Signal(QtGui.QMouseEvent)
     mouse_wheel = QtCore.Signal(QtGui.QWheelEvent)
-    position_update = QtCore.Signal(QtGui.QMouseEvent, tuple)
+    position_update = QtCore.Signal(tuple)
     height_update = QtCore.Signal(float)
     select_update = QtCore.Signal()
     move_points = QtCore.Signal(float, float, float)
@@ -209,7 +209,6 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
         self.selectionbox_projected_up = None
         self.selectionbox_projected_right = None
         self.selectionbox_projected_coords = None
-        self.last_position_update = 0
         self.move_collision_plane = Plane(Vector3(0.0, 0.0, 0.0), Vector3(1.0, 0.0, 0.0), Vector3(0.0, 0.0, 1.0))
 
         #self.paths = Paths()

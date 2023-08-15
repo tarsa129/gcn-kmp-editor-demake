@@ -172,7 +172,7 @@ class GenEditor(QtWidgets.QMainWindow):
             msgbox.setText('Are you sure you want to exit the application?')
             msgbox.addButton('Cancel', QtWidgets.QMessageBox.RejectRole)
             exit_button = msgbox.addButton('Exit', QtWidgets.QMessageBox.DestructiveRole)
-            msgbox.exec_()
+            msgbox.exec()
             if msgbox.clickedButton() != exit_button:
                 event.ignore()
                 return
@@ -2683,7 +2683,7 @@ class GenEditor(QtWidgets.QMainWindow):
         to_deal_with = self.level_file.get_to_deal_with(obj)
         to_deal_with.set_this_as_first(obj)
 
-    def action_update_position(self, event, pos):
+    def action_update_position(self, pos):
         self.current_coordinates = pos
 
         y_coord = f"{pos[1]:.2f}" if pos[1] is not None else "-"
