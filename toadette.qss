@@ -1,4 +1,4 @@
-QMainWindow, QGridLayout::handle {
+QMainWindow, QtWidgets.QGridLayout::handle {
 	background: white;
 }
 QWidget {
@@ -18,7 +18,7 @@ QWidget#white_bg {
 QWidget#clear_bg {
 	background-color: white;
 }
-QMenu, QMenuBar {
+QtWidgets.QMenu, QtWidgets.QMenuBar {
 	background-color: white;
 }
 QHeaderView::section {
@@ -55,11 +55,11 @@ QPushButton:disabled {
 QPushButton:enabled {
 	background: #c73a5a;
 }	
-QLineEdit::disabled, QComboBox::disabled, QLabel::disabled {
+QLineEdit::disabled, QComboBox::disabled, QtWidgets.QLabel::disabled {
 	background: #F0F0F0;
 	color: #EEEEEE;
 }
-QTreeView, QListWidget, QLabel, QLineEdit, QComboBox::item {
+QTreeView, QListWidget, QtWidgets.QLabel, QtWidgets.QLineEdit, QComboBox::item {
 	background-color: #ffffff;
 }
 QComboBox, QListWidget::item {

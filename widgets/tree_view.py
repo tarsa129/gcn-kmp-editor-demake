@@ -1,26 +1,23 @@
-from PyQt5.QtWidgets import QTreeWidget, QTreeWidgetItem, QPushButton, QHBoxLayout, QWidget
+from PySide6 import QtCore, QtGui, QtWidgets
 from lib.libkmp import KMP,  get_kmp_name, KMPPoint, Area, Camera, PointGroups, MapObject
 from widgets.data_editor_options import AREA_TYPES, CAME_TYPES, routed_cameras
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import QAction, QMenu
-from PyQt5.QtGui import QIcon
 import widgets.tooltip_list as ttl
 
-class BaseTreeWidgetItem(QTreeWidgetItem):
+class BaseTreeWidgetItem(QtWidgets.QTreeWidgetItem):
 
     def get_index_in_parent(self):
         return self.parent().indexOfChild(self)
 
-class ToggleButton(QPushButton):
+class ToggleButton(QtWidgets.QPushButton):
     def __init__(self, text, status) -> None:
         super().__init__()
 
         if text == "V":
-            self.yes_icon = QIcon('resources/visible.png')
-            self.no_icon = QIcon('resources/novis.png')
+            self.yes_icon = QtGui.QIcon('resources/visible.png')
+            self.no_icon = QtGui.QIcon('resources/novis.png')
         elif text == "S":
-            self.yes_icon = QIcon('resources/select.png')
-            self.no_icon = QIcon('resources/noselec.png')
+            self.yes_icon = QtGui.QIcon('resources/select.png')
+            self.no_icon = QtGui.QIcon('resources/noselec.png')
 
         self.set_state(status)
 
@@ -31,10 +28,10 @@ class ToggleButton(QPushButton):
         else:
             self.setIcon(self.no_icon)
 
-class VisiSelecButtons(QWidget):
+class VisiSelecButtons(QtWidgets.QWidget):
     def __init__(self, signal, element, status):
         super().__init__()
-        self.hlayout = QHBoxLayout()
+        self.hlayout = QtWidgets.QHBoxLayout()
         self.visbutton = ToggleButton("V", status[0])
         self.visbutton.clicked.connect(lambda: self.emit_change(0))
         self.selbutton = ToggleButton("S", status[1])
@@ -62,7 +59,7 @@ class VisiSelecButtons(QWidget):
 
         self.emitter.emit(self.element, index)
 
-class KMPHeader(QTreeWidgetItem):
+class KMPHeader(QtWidgets.QTreeWidgetItem):
     def __init__(self):
         super().__init__()
 
@@ -95,7 +92,7 @@ class ObjectGroupObjects(ObjectGroup):
 
         for item in items:
             self.addChild(item)"""
-        self.sortChildren(0, 0)
+        self.sortChildren(0, QtCore.Qt.SortOrder.AscendingOrder)
 
 class ObjectGroupKartPoints(ObjectGroup):
     def set_name(self):
@@ -386,17 +383,17 @@ class MissionEntry(NamedItem):
                 self.setText(0, "Mission ID: ({0})".format(self.bound_to.mission_id))
                 break
 
-class LevelDataTreeView(QTreeWidget):
-    select_all = pyqtSignal(ObjectGroup)
-    reverse = pyqtSignal(ObjectGroup)
-    duplicate = pyqtSignal(ObjectGroup)
-    split = pyqtSignal(PointGroup, RoutePoint)
-    remove_type = pyqtSignal(NamedItem)
-    select_type = pyqtSignal(NamedItem)
-    remove_all = pyqtSignal(PointGroups)
+class LevelDataTreeView(QtWidgets.QTreeWidget):
+    select_all = QtCore.Signal(ObjectGroup)
+    reverse = QtCore.Signal(ObjectGroup)
+    duplicate = QtCore.Signal(ObjectGroup)
+    split = QtCore.Signal(PointGroup, RoutePoint)
+    remove_type = QtCore.Signal(NamedItem)
+    select_type = QtCore.Signal(NamedItem)
+    remove_all = QtCore.Signal(PointGroups)
 
-    visible_changed = pyqtSignal(str, int)
-    #split_checkpoint = pyqtSignal(CheckpointGroup, Checkpoint)
+    visible_changed = QtCore.Signal(str, int)
+    #split_checkpoint = QtCore.Signal(CheckpointGroup, Checkpoint)
 
     def __init__(self, central_widget, vis_menu):
         super().__init__(central_widget)
@@ -425,15 +422,15 @@ class LevelDataTreeView(QTreeWidget):
         self.cannons = self._add_group("Cannon Points")
         self.missions = self._add_group("Mission Success Points")
 
-        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.run_context_menu)
 
     def run_context_menu(self, pos):
         item = self.itemAt(pos)
 
         if isinstance(item, (EnemyRoutePoint, ItemRoutePoint, Checkpoint)):
-            context_menu = QMenu(self)
-            split_action = QAction("Split Group At", self)
+            context_menu = QtWidgets.QMenu(self)
+            split_action = QtGui.QAction("Split Group At", self)
 
             def emit_current_split():
                 item = self.itemAt(pos)
@@ -447,9 +444,9 @@ class LevelDataTreeView(QTreeWidget):
             context_menu.destroy()
             del context_menu
         elif isinstance(item, (EnemyPointGroup, ItemPointGroup, ObjectPointGroup, CameraPointGroup, CheckpointGroup)):
-            context_menu = QMenu(self)
-            remove_all_type = QAction("Select All", self)
-            reverse_action = QAction("Reverse", self)
+            context_menu = QtWidgets.QMenu(self)
+            remove_all_type = QtGui.QAction("Select All", self)
+            reverse_action = QtGui.QAction("Reverse", self)
 
             def emit_remove_tupeall():
                 item = self.itemAt(pos)
@@ -470,7 +467,7 @@ class LevelDataTreeView(QTreeWidget):
                     item = self.itemAt(pos)
                     self.duplicate.emit(item)
 
-                duplicate_action = QAction("Duplicate", self)
+                duplicate_action = QtGui.QAction("Duplicate", self)
                 duplicate_action.triggered.connect(emit_current_duplicate)
                 context_menu.addAction(duplicate_action)
 
@@ -478,9 +475,9 @@ class LevelDataTreeView(QTreeWidget):
             context_menu.destroy()
             del context_menu
         elif isinstance(item, (ObjectEntry, AreaEntry)):
-            context_menu = QMenu(self)
-            remove_all_type = QAction("Remove All of Type", self)
-            select_all_type = QAction("Select All of Type", self)
+            context_menu = QtWidgets.QMenu(self)
+            remove_all_type = QtGui.QAction("Remove All of Type", self)
+            select_all_type = QtGui.QAction("Select All of Type", self)
 
             def emit_remove_typeall():
                 item = self.itemAt(pos)
@@ -500,8 +497,8 @@ class LevelDataTreeView(QTreeWidget):
             context_menu.destroy()
             del context_menu
         elif isinstance(item, ObjectGroup) and isinstance( item.bound_to, PointGroups):
-            context_menu = QMenu(self)
-            remove_all = QAction("Delete All", self)
+            context_menu = QtWidgets.QMenu(self)
+            remove_all = QtGui.QAction("Delete All", self)
             def emit_remove_all_points():
                 self.remove_all.emit(item.bound_to)
 
@@ -625,14 +622,14 @@ class LevelDataTreeView(QTreeWidget):
         self.cannons.bound_to = levelfile.cannonpoints
         self.missions.bound_to = levelfile.missionpoints
 
-    def _get_expansion_states(self, parent_item: QTreeWidgetItem) -> 'tuple[bool]':
+    def _get_expansion_states(self, parent_item: QtWidgets.QTreeWidgetItem) -> 'tuple[bool]':
         expansion_states = []
         for i in range(parent_item.childCount()):
             item = parent_item.child(i)
             expansion_states.append(item.isExpanded())
         return expansion_states
 
-    def _set_expansion_states(self, parent_item: QTreeWidgetItem, expansion_states: 'tuple[bool]'):
+    def _set_expansion_states(self, parent_item: QtWidgets.QTreeWidgetItem, expansion_states: 'tuple[bool]'):
         item_count = parent_item.childCount()
         if item_count != len(expansion_states):
             # If the number of children has changed, it is not possible to reliably restore the

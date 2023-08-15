@@ -10,14 +10,7 @@ import json
 from OpenGL.GL import *
 from OpenGL.GLU import *
 
-from PyQt5 import QtGui
-from PyQt5.QtGui import QCursor, QMouseEvent, QWheelEvent
-from PyQt5.QtWidgets import (QMenu, QAction)
-import PyQt5.QtWidgets as QtWidgets
-import PyQt5.QtCore as QtCore
-from PyQt5.QtCore import QSize, pyqtSignal, QPoint, QRect
-from PyQt5.QtCore import Qt
-
+from PySide6 import QtCore, QtGui, QtOpenGLWidgets, QtWidgets
 
 from helper_functions import calc_zoom_in_factor, calc_zoom_out_factor
 from lib.collision import Collision
@@ -56,47 +49,28 @@ with open("lib/color_coding.json", "r") as f:
 
 
 class SelectionQueue(list):
-    def __init__(self):
-        super().__init__()
-
     def queue_selection(self, x, y, width, height, shift_pressed, do_gizmo=False):
-        if do_gizmo:
-            for i in self:
-                if i[-1] is True:
-                    return
+        if do_gizmo and any(entry[-1] for entry in self):
+            return
         self.append((x, y, width, height, shift_pressed, do_gizmo))
 
-    def clear(self):
-        tmp = [x for x in self]
-        for val in tmp:
-            if tmp[-1] is True:
-                self.remove(tmp)
+class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
+    mouse_clicked = QtCore.Signal(QtGui.QMouseEvent)
+    entity_clicked = QtCore.Signal(QtGui.QMouseEvent, str)
+    mouse_dragged = QtCore.Signal(QtGui.QMouseEvent)
+    mouse_released = QtCore.Signal(QtGui.QMouseEvent)
+    mouse_wheel = QtCore.Signal(QtGui.QWheelEvent)
+    position_update = QtCore.Signal(QtGui.QMouseEvent, tuple)
+    height_update = QtCore.Signal(float)
+    select_update = QtCore.Signal()
+    move_points = QtCore.Signal(float, float, float)
+    move_points_to = QtCore.Signal(float, float, float)
+    connect_update = QtCore.Signal(int, int)
+    create_waypoint = QtCore.Signal(float, float)
+    create_waypoint_3d = QtCore.Signal(float, float, float)
 
-    def queue_pop(self):
-        if len(self) > 0:
-            return self.pop(0)
-
-        else:
-            return None
-
-
-class KMPMapViewer(QtWidgets.QOpenGLWidget):
-    mouse_clicked = pyqtSignal(QMouseEvent)
-    entity_clicked = pyqtSignal(QMouseEvent, str)
-    mouse_dragged = pyqtSignal(QMouseEvent)
-    mouse_released = pyqtSignal(QMouseEvent)
-    mouse_wheel = pyqtSignal(QWheelEvent)
-    position_update = pyqtSignal(QMouseEvent, tuple)
-    height_update = pyqtSignal(float)
-    select_update = pyqtSignal()
-    move_points = pyqtSignal(float, float, float)
-    move_points_to = pyqtSignal(float, float, float)
-    connect_update = pyqtSignal(int, int)
-    create_waypoint = pyqtSignal(float, float)
-    create_waypoint_3d = pyqtSignal(float, float, float)
-
-    rotate_current = pyqtSignal(Vector3)
-    scale_current = pyqtSignal(Vector3)
+    rotate_current = QtCore.Signal(Vector3)
+    scale_current = QtCore.Signal(Vector3)
 
 
     def __init__(self, samples, *args, **kwargs):
@@ -118,15 +92,15 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
         self.pick_depth_texture = None
 
         self._zoom_factor = 80
-        self.setFocusPolicy(Qt.ClickFocus)
+        self.setFocusPolicy(QtCore.Qt.ClickFocus)
 
         self.SIZEX = 1024#768#1024
         self.SIZEY = 1024#768#1024
 
         self.canvas_width, self.canvas_height = self.width(), self.height()
         self.resize(600, self.canvas_height)
-        #self.setMinimumSize(QSize(self.SIZEX, self.SIZEY))
-        #self.setMaximumSize(QSize(self.SIZEX, self.SIZEY))
+        #self.setMinimumSize(QtCore.QSize(self.SIZEX, self.SIZEY))
+        #self.setMaximumSize(QtCore.QSize(self.SIZEX, self.SIZEY))
         self.setObjectName("bw_map_screen")
 
         self.origin_x = self.SIZEX//2
@@ -143,10 +117,6 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
         self.selected_positions = []
         self.selected_rotations = []
         self.selected_scales = []
-
-        #self.p = QPainter()
-        #self.p2 = QPainter()
-        # self.show_terrain_mode = SHOW_TERRAIN_REGULAR
 
         self.selectionbox_start = None
         self.selectionbox_end = None
@@ -171,7 +141,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
         self.editorconfig = None
         self.visibility_menu = None
 
-        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
 
         self.alternative_mesh = None
         self.highlight_colltype = None
@@ -330,7 +300,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
             self.mode = MODE_3D
 
             if self.mousemode == MOUSE_MODE_NONE:
-                self.setContextMenuPolicy(Qt.DefaultContextMenu)
+                self.setContextMenuPolicy(QtCore.Qt.DefaultContextMenu)
 
             # This is necessary so that the position of the 3d camera equals the middle of the topdown view
             self.position.x += 1
@@ -345,7 +315,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
             self.mode = MODE_TOPDOWN
             if self.mousemode == MOUSE_MODE_NONE:
-                self.setContextMenuPolicy(Qt.CustomContextMenu)
+                self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
             #self.position.x *= -1
             self.do_redraw()
 
@@ -531,6 +501,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
     def clear_collision(self):
         self.alternative_mesh = None
+        self.collision = None
 
         if self.main_model is not None:
             glDeleteLists(self.main_model, 1)
@@ -556,9 +527,9 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
         self.mousemode = mode
 
         if self.mousemode == MOUSE_MODE_NONE and self.mode == MODE_TOPDOWN:
-            self.setContextMenuPolicy(Qt.CustomContextMenu)
+            self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         else:
-            self.setContextMenuPolicy(Qt.DefaultContextMenu)
+            self.setContextMenuPolicy(QtCore.Qt.DefaultContextMenu)
 
         cursor_shape = QtCore.Qt.ArrowCursor if mode == MOUSE_MODE_NONE else QtCore.Qt.CrossCursor
         self.setCursor(cursor_shape)
@@ -605,13 +576,10 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
     #@catch_exception_with_dialog
     #@catch_exception
     def paintGL(self):
-        #start = default_timer()
         offset_x = self.position.x
         offset_z = self.position.z
 
-        #start = default_timer()
         glClearColor(1.0, 1.0, 1.0, 0.0)
-        #glClearColor(*self.backgroundcolor)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         width, height = self.canvas_width, self.canvas_height
 
@@ -676,11 +644,12 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
         if use_pick_framebuffer:
             glBindFramebuffer(GL_FRAMEBUFFER, self.pick_framebuffer)
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-
         gizmo_hover_id = 0xFF
+        #print("do we get here? 2")
+
         if not self.selectionqueue and check_gizmo_hover_id:
             self.gizmo.render_collision_check(gizmo_scale, is3d=self.mode == MODE_3D)
-            mouse_pos = self.mapFromGlobal(QCursor.pos())
+            mouse_pos = self.mapFromGlobal(QtGui.QCursor.pos())
             pixels = glReadPixels(mouse_pos.x(), self.canvas_height - mouse_pos.y(), 1, 1, GL_RGB, GL_UNSIGNED_BYTE)
             gizmo_hover_id = pixels[2]
 
@@ -691,12 +660,16 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
         replaycameras = self.level_file.replayareas.get_cameras()
 
-        #print(self.gizmo.position, campos)
         vismenu: FilterViewMenu = self.visibility_menu
-        while len(self.selectionqueue) > 0:
+
+        if self.selectionqueue:
             glClearColor(1.0, 1.0, 1.0, 1.0)
-            #
-            click_x, click_y, clickwidth, clickheight, shiftpressed, do_gizmo = self.selectionqueue.queue_pop()
+            glDisable(GL_TEXTURE_2D)
+
+        #print("do we get here?")
+
+        while len(self.selectionqueue) > 0:
+            click_x, click_y, clickwidth, clickheight, shiftpressed, do_gizmo = self.selectionqueue.pop()
             click_y = height - click_y
 
             # Clamp to viewport dimensions.
@@ -711,16 +684,14 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
             if not clickwidth or not clickheight:
                 continue
 
-            hit = 0xFF
+            if do_gizmo and clickwidth == 1 and clickheight == 1:
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-            #print("received request", do_gizmo)
-
-            if clickwidth == 1 and clickheight == 1:
                 self.gizmo.render_collision_check(gizmo_scale, is3d=self.mode == MODE_3D)
                 pixels = glReadPixels(click_x, click_y, clickwidth, clickheight, GL_RGB, GL_UNSIGNED_BYTE)
-                #print(pixels)
+
                 hit = pixels[2]
-                if do_gizmo and hit != 0xFF:
+                if hit != 0xFF:
                     self.gizmo.run_callback(hit)
                     self.gizmo.was_hit_at_all = True
 
@@ -731,15 +702,18 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                     self.selectionbox_start = self.selectionbox_end = None
                     self.selectionbox_projected_origin = self.selectionbox_projected_coords = None
 
-                #if hit != 0xFF and do_:
 
-            glClearColor(1.0, 1.0, 1.0, 1.0)
+                    self.selectionqueue.clear()
+                    break
+                continue
 
+            selected = {}
+            selected_positions = []
+            selected_rotations = []
 
-
-            if self.level_file is not None and hit == 0xFF and not do_gizmo:
-                glDisable(GL_TEXTURE_2D)
-
+            continue_picking = not do_gizmo
+            while continue_picking:
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
                 id = 0x100000
 
@@ -747,10 +721,9 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                 offset = 0
 
                 #self.dolphin.render_collision(self, objlist)
-                offset = len(objlist)
 
                 if vismenu.enemyroutes.is_selectable():
-                    for i, obj in enumerate(self.level_file.enemypointgroups.points()):
+                    for i, obj in enumerate(obj for obj in self.level_file.enemypointgroups.points() if obj not in selected):
                         objlist.append(
                             ObjectSelectionEntry(obj=obj,
                                                  pos1=obj.position,
@@ -760,10 +733,10 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                         )
                         self.models.render_generic_position_colored_id(obj.position, id + (offset+i) * 4)
 
-                offset = len(objlist)
+                    offset = len(objlist)
 
                 if vismenu.itemroutes.is_selectable():
-                    for i, obj in enumerate(self.level_file.itempointgroups.points()):
+                    for i, obj in enumerate(obj for obj in self.level_file.itempointgroups.points() if obj not in selected):
                         objlist.append(
                             ObjectSelectionEntry(obj=obj,
                                                  pos1=obj.position,
@@ -773,12 +746,14 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                         )
                         self.models.render_generic_position_colored_id(obj.position, id + (offset+i) * 4)
 
-                offset = len(objlist)
+                    offset = len(objlist)
 
                 if vismenu.objects.is_selectable(): #object routes
                     i = 0
                     for route in objectroutes:
                         for obj in route.points:
+                            if obj in selected:
+                                continue
                             objlist.append(
                                 ObjectSelectionEntry(obj=obj,
                                                  pos1=obj.position,
@@ -787,11 +762,10 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                                                  rotation=None))
                             self.models.render_generic_position_colored_id(obj.position, id + (offset+i) * 4)
                             i += 1
-                offset = len(objlist)
+                    offset = len(objlist)
 
                 if vismenu.objects.is_selectable(): #object routes
-                    i = 0
-                    for obj in self.level_file.objects.objects:
+                    for i, obj in enumerate(obj for obj in self.level_file.objects.objects if obj not in selected):
                         objlist.append(
                             ObjectSelectionEntry(obj=obj,
                                                 pos1=obj.position,
@@ -800,10 +774,10 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                                                 rotation=obj.rotation))
                         self.models.render_generic_position_rotation_colored_id(obj.position, obj.rotation, id + (offset+i) * 4, obj.scale)
                         i += 1
-                offset = len(objlist)
+                    offset = len(objlist)
 
                 if vismenu.cameras.is_selectable():
-                    for i, obj in enumerate(self.level_file.cameras):
+                    for i, obj in enumerate(obj for obj in self.level_file.cameras if obj not in selected):
                         objlist.append(
                             ObjectSelectionEntry(obj=obj,
                                                     pos1=obj.position,
@@ -815,12 +789,14 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                         self.models.render_generic_position_colored_id(obj.position2_simple, id + (offset + i) * 4 + 1)
                         self.models.render_generic_position_colored_id(obj.position3_simple, id + (offset + i) * 4 + 2)
 
-                offset = len(objlist)
+                    offset = len(objlist)
 
                 if vismenu.cameras.is_selectable(): #camera routes
                     i = 0
                     for route in cameraroutes:
                         for obj in route.points[1:]:
+                            if obj in selected:
+                                continue
                             objlist.append(
                                 ObjectSelectionEntry(obj=obj,
                                                  pos1=obj.position,
@@ -830,12 +806,14 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                             self.models.render_generic_position_colored_id(obj.position, id + (offset+i) * 4)
                             i += 1
 
-                offset = len(objlist)
+                    offset = len(objlist)
 
                 if vismenu.replaycameras.is_selectable(): #routes
                     i = 0
                     for route in replaycameraroutes:
                         for obj in route.points[1:]:
+                            if obj in selected:
+                                continue
                             pos = obj.position.render()
                             objlist.append(
                                 ObjectSelectionEntry(obj=obj,
@@ -846,10 +824,10 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                             self.models.render_generic_position_colored_id(pos, id + (offset+i) * 4)
                             i += 1
 
-                offset = len(objlist)
+                    offset = len(objlist)
 
                 if vismenu.replaycameras.is_selectable():
-                    for i, obj in enumerate(replaycameras):
+                    for i, obj in enumerate(obj for obj in replaycameras if obj not in selected):
                         pos1 = obj.position
                         pos2 = None
                         pos3 = None
@@ -871,13 +849,13 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                         if pos3 is not None:
                             self.models.render_generic_position_colored_id(pos3, id + (offset + i) * 4 + 2)
 
-                offset = len(objlist)
+                    offset = len(objlist)
 
                 if vismenu.areas.is_selectable():
 
                     i = 0
                     for route in arearoutes:
-                        for obj in route.points:
+                        for obj in [point for point in  route.points if point not in selected]:
                             objlist.append(
                                 ObjectSelectionEntry(obj=obj,
                                                  pos1=obj.position,
@@ -887,10 +865,10 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                             self.models.render_generic_position_colored_id(obj.position, id + (offset+i) * 4)
                             i += 1
 
-                offset = len(objlist)
+                    offset = len(objlist)
 
                 if vismenu.checkpoints.is_selectable():
-                    for i, obj in enumerate(self.level_file.objects_with_2positions()):
+                    for i, obj in enumerate(obj for obj in self.level_file.objects_with_2positions() if obj not in selected):
                         objlist.append(
                             ObjectSelectionEntry(obj=obj,
                                              pos1=obj.start,
@@ -899,6 +877,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                                              rotation=None))
                         self.models.render_generic_position_colored_id(obj.start, id+(offset+i)*4)
                         self.models.render_generic_position_colored_id(obj.end, id+(offset+i)*4 + 1)
+                    offset = len(objlist)
 
                 for is_selectable, collection in (
                         (vismenu.kartstartpoints.is_selectable(), self.level_file.kartpoints.positions),
@@ -909,11 +888,10 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                         (vismenu.missionsuccesspoints.is_selectable(), self.level_file.missionpoints)
 
                         ):
-                    offset = len(objlist)
                     if not is_selectable:
                         continue
 
-                    for i, obj in enumerate(collection):
+                    for i, obj in enumerate(obj for obj in collection if obj not in selected):
                         objlist.append(
                             ObjectSelectionEntry(obj=obj,
                                                  pos1=obj.position,
@@ -922,22 +900,9 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                                                  rotation=obj.rotation))
                         self.models.render_generic_position_rotation_colored_id(obj.position, obj.rotation,
                                                                                 id + (offset + i) * 4)
-                for entry in objlist:
-                    assert isinstance(entry, ObjectSelectionEntry)
+                    offset = len(objlist)
 
-
-                #actually find what is selected
-                self.objlist = objlist
-                assert len(objlist)*4 < id
-                #print("We queued up", len(objlist))
                 pixels = glReadPixels(click_x, click_y, clickwidth, clickheight, GL_RGB, GL_UNSIGNED_BYTE)
-
-                #print(pixels, click_x, click_y, clickwidth, clickheight)
-                selected = {}
-                selected_positions = []
-                selected_rotations = []
-                #for i in range(0, clickwidth*clickheight, 4):
-                #start = default_timer()
 
                 indexes = set()
                 for i in range(0, clickwidth * clickheight):
@@ -970,54 +935,55 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                             elements_exist |= 4
 
                     selected[obj] = elements_exist
-                #print("select time taken", default_timer() - start)
-                #print("result:", selected)
-                selected = [x for x in selected.keys()]
-                if not shiftpressed:
-                    self.selected = selected
-                    self.selected_positions = selected_positions
-                    self.selected_rotations = selected_rotations
 
-                else:
-                    for obj in selected:
-                        if obj not in self.selected:
-                            self.selected.append(obj)
-                    for pos in selected_positions:
-                        if pos not in self.selected_positions:
-                            self.selected_positions.append(pos)
+                continue_picking = (clickwidth > 1 or clickheight > 1) and indexes
 
-                    for rot in selected_rotations:
-                        if rot not in self.selected_rotations:
-                            self.selected_rotations.append(rot)
-                # Store selection in a logical order that matches the order of the objects in their
-                # respective groups. This is relevant to ensure that potentially copied, route-like
-                # objects, where order matters, are pasted in the same order.
-                # Objects that are not part of the BOL document are kept at the end of the list in
-                # the same initial, arbitrary pick order.
-                selected = self.selected
-                self.selected = []
-                selected_set = set(selected)
-                for obj in self.level_file.get_all_objects():
-                    if obj in selected_set:
-                        self.selected.append(obj)
-                        selected_set.remove(obj)
+            selected = list(selected)
+            if not shiftpressed:
+                self.selected = selected
+                self.selected_positions = selected_positions
+                self.selected_rotations = selected_rotations
+
+            else:
                 for obj in selected:
-                    if obj in selected_set:
+                    if obj not in self.selected:
                         self.selected.append(obj)
+                for pos in selected_positions:
+                    if pos not in self.selected_positions:
+                        self.selected_positions.append(pos)
 
-                self.select_update.emit()
+                for rot in selected_rotations:
+                    if rot not in self.selected_rotations:
+                        self.selected_rotations.append(rot)
+            # Store selection in a logical order that matches the order of the objects in their
+            # respective groups. This is relevant to ensure that potentially copied, route-like
+            # objects, where order matters, are pasted in the same order.
+            # Objects that are not part of the BOL document are kept at the end of the list in
+            # the same initial, arbitrary pick order.
+            selected = self.selected
+            self.selected = []
+            selected_set = set(selected)
+            for obj in self.level_file.get_all_objects():
+                if obj in selected_set:
+                    self.selected.append(obj)
+                    selected_set.remove(obj)
+            for obj in selected:
+                if obj in selected_set:
+                    self.selected.append(obj)
 
-                self.gizmo.move_to_average(self.selected, self.selected_positions)
-                if len(selected) == 0:
-                    #print("Select did register")
-                    self.gizmo.hidden = True
-                if self.mode == MODE_3D: # In case of 3D mode we need to update scale due to changed gizmo position
-                    gizmo_scale = (self.gizmo.position - campos).norm() / 130.0
-                #print("total time taken", default_timer() - start)
+            self.select_update.emit()
+
+            self.gizmo.move_to_average(self.selected, self.selected_positions)
+            if len(selected) == 0:
+                self.gizmo.hidden = True
+            if self.mode == MODE_3D: # In case of 3D mode we need to update scale due to changed gizmo position
+                gizmo_scale = (self.gizmo.position - campos).norm() / 130.0
 
         # Restore the default framebuffer of the GL widget.
         if use_pick_framebuffer:
             glBindFramebuffer(GL_FRAMEBUFFER, self.defaultFramebufferObject())
+
+        
 
         #print("gizmo status", self.gizmo.was_hit_at_all)
         #glClearColor(1.0, 1.0, 1.0, 0.0)
@@ -1286,15 +1252,8 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
             #draw checkpoint groups first the points themselves and then the connections
             if vismenu.checkpoints.is_visible():
                 checkpoints_to_highlight = set()
-
-                num_respawns = len(self.level_file.respawnpoints )
-
                 count = 0
                 for i, group in enumerate(all_groups):
-
-                    if group in self.selected and len(all_groups) > 1:
-                        selected_groups[i] = True
-
                     prev = None
                     #draw checkpoint points
                     for checkpoint in group.points:
@@ -1304,9 +1263,6 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
                         self.models.render_generic_position_colored(checkpoint.end, end_point_selected, "checkpointright")
 
                         if start_point_selected or end_point_selected:
-
-                            selected_groups[i] = selected_groups[i] and len(all_groups) > 1
-
                             respawns_to_highlight.add(checkpoint.respawn_obj)
                             checkpoints_to_highlight.add(count)
 
@@ -1929,7 +1885,7 @@ class KMPMapViewer(QtWidgets.QOpenGLWidget):
 
         #connections?
         if self.connecting_mode:
-            mouse_pos = self.mapFromGlobal(QCursor.pos())
+            mouse_pos = self.mapFromGlobal(QtGui.QCursor.pos())
             if self.mode == MODE_TOPDOWN:
                 mapx, mapz = self.mouse_coord_to_world_coord(mouse_pos.x(), mouse_pos.y())
                 pos2 = Vector3( mapx, 0, -mapz)
@@ -2166,8 +2122,8 @@ class ObjectViewSelectionToggle(object):
         for size in (16, 22, 24, 28, 32, 40, 48, 64, 80, 96):
             icon.addPixmap(create_object_type_pixmap(size, directed, colors))
 
-        self.action_view_toggle = QAction("{0}".format(name), menuparent)
-        self.action_select_toggle = QAction("{0} selectable".format(name), menuparent)
+        self.action_view_toggle = QtGui.QAction("{0}".format(name), menuparent)
+        self.action_select_toggle = QtGui.QAction("{0} selectable".format(name), menuparent)
         self.action_view_toggle.setCheckable(True)
         self.action_view_toggle.setChecked(True)
         self.action_view_toggle.setIcon(icon)
@@ -2213,18 +2169,18 @@ class ObjectViewSelectionToggle(object):
         return self.action_select_toggle.isChecked()
 
 
-class FilterViewMenu(QMenu):
-    filter_update = pyqtSignal()
+class FilterViewMenu(QtWidgets.QMenu):
+    filter_update = QtCore.Signal()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setTitle("Filter View")
 
-        self.show_all = QAction("Show All", self)
+        self.show_all = QtGui.QAction("Show All", self)
         self.show_all.triggered.connect(self.handle_show_all)
         self.addAction(self.show_all)
 
-        self.hide_all = QAction("Hide All", self)
+        self.hide_all = QtGui.QAction("Hide All", self)
         self.hide_all.triggered.connect(self.handle_hide_all)
         self.addAction(self.hide_all)
 
@@ -2295,7 +2251,7 @@ class FilterViewMenu(QMenu):
             if action and action.isEnabled():
                 action.trigger()
             else:
-                QMenu.mouseReleaseEvent(self, e)
+                QtWidgets.QMenu.mouseReleaseEvent(self, e)
         except:
             traceback.print_exc()
 

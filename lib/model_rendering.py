@@ -6,7 +6,7 @@ import sys
 from OpenGL.GL import *
 from PIL import Image
 from .vectors import Vector3
-from PyQt5 import QtGui
+from PySide6 import QtGui
 
 
 with open("lib/color_coding.json") as f:

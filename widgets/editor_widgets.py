@@ -11,14 +11,7 @@ import sys
 
 from PIL import Image
 
-from PyQt5.QtGui import QMouseEvent, QWheelEvent, QPainter, QColor, QFont, QFontMetrics, QPolygon, QImage, QPixmap, QKeySequence
-from PyQt5.QtWidgets import (QWidget, QListWidget, QListWidgetItem, QDialog, QMenu, QLineEdit, QFileDialog, QScrollArea,
-                            QMdiSubWindow, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QTextEdit, QAction, QShortcut)
-import PyQt5.QtWidgets as QtWidgets
-import PyQt5.QtCore as QtCore
-from PyQt5.QtCore import QSize, pyqtSignal, QPoint, QRect
-from PyQt5.QtCore import Qt
-import PyQt5.QtGui as QtGui
+from PySide6 import QtCore, QtGui, QtWidgets
 
 import lib.libkmp as libkmp
 from widgets.data_editor import choose_data_editor, ObjectEdit
@@ -65,21 +58,21 @@ def open_error_dialog(errormsg, self):
     errorbox.critical(self, "Error", errormsg)
     errorbox.setFixedSize(500, 200)
 
-class LoadingFix(QDialog):
+class LoadingFix(QtWidgets.QDialog):
     def __init__(self, kmp, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        font = QFont()
+        font = QtGui.QFont()
         font.setFamily("Consolas")
-        font.setStyleHint(QFont.Monospace)
+        font.setStyleHint(QtGui.QFont.Monospace)
         font.setFixedPitch(True)
         font.setPointSize(10)
 
         self.setWindowTitle("Initial Errors Fixed")
         self.text_widget = QTextEdit(self)
-        layout = QHBoxLayout(self)
+        layout = QtWidgets.QHBoxLayout()(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.text_widget)
-        self.setMinimumSize(QSize(300, 300))
+        self.setMinimumSize(QtCore.QSize(300, 300))
         self.text_widget.setFont(font)
         self.text_widget.setReadOnly(True)
 
@@ -96,22 +89,22 @@ def open_info_dialog(msg, self):
     box.setFixedSize(500, 200)
 
 
-class ErrorAnalyzer(QDialog):
+class ErrorAnalyzer(QtWidgets.QDialog):
     @catch_exception
     def __init__(self, kmp, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        font = QFont()
+        font = QtGui.QFont()
         font.setFamily("Consolas")
-        font.setStyleHint(QFont.Monospace)
+        font.setStyleHint(QtGui.QFont.Monospace)
         font.setFixedPitch(True)
         font.setPointSize(10)
 
         self.setWindowTitle("Analysis Results")
         self.text_widget = QTextEdit(self)
-        layout = QHBoxLayout(self)
+        layout = QtWidgets.QHBoxLayout()(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.text_widget)
-        self.setMinimumSize(QSize(300, 300))
+        self.setMinimumSize(QtCore.QSize(300, 300))
         self.text_widget.setFont(font)
         self.text_widget.setReadOnly(True)
 
@@ -225,71 +218,6 @@ def check_box_convex(c1, c2):
             if not (lastsign == (prod > 0)):
                 return True
 
-class SpecificAddOWindow(QMdiSubWindow):
-    triggered = pyqtSignal(object)
-    closing = pyqtSignal()
-
-    def closeEvent(self, event):
-        self.closing.emit()
-        super().closeEvent(event)
-
-    @catch_exception
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if "windowtype" in kwargs:
-            self.window_name = kwargs["windowtype"]
-        else:
-            self.window_name = "Add Object"
-
-        self.resize(900, 500)
-        self.setMinimumSize(QSize(300, 300))
-
-        self.centralwidget = QWidget(self)
-        self.setWidget(self.centralwidget)
-        self.entity = None
-
-        font = QFont()
-        font.setFamily("Consolas")
-        font.setStyleHint(QFont.Monospace)
-        font.setFixedPitch(True)
-        font.setPointSize(10)
-
-        self.verticalLayout = QVBoxLayout(self.centralwidget)
-        self.verticalLayout.setAlignment(Qt.AlignTop)
-
-        self.editor_widget = None
-        self.editor_layout = QScrollArea()#QVBoxLayout(self.centralwidget)
-        palette = self.editor_layout.palette()
-        palette.setBrush(self.editor_layout.backgroundRole(), palette.dark())
-        self.editor_layout.setPalette(palette)
-        self.editor_layout.setWidgetResizable(True)
-        self.verticalLayout.addWidget(self.editor_layout)
-        #self.textbox_xml = QTextEdit(self.centralwidget)
-        button_area_layout = QHBoxLayout()
-        self.button_savetext = QPushButton(self.centralwidget)
-        self.button_savetext.setText("Add Object")
-        self.button_savetext.setToolTip("Hotkey: Ctrl+S")
-        self.button_savetext.setDisabled(True)
-        button_area_layout.addStretch()
-        button_area_layout.addWidget(self.button_savetext)
-
-        self.verticalLayout.addLayout(button_area_layout)
-        self.setWindowTitle(self.window_name)
-        self.created_object = None
-        #QtWidgets.QShortcut(Qt.CTRL + Qt.Key_S, self).activated.connect(self.emit_add_object)
-
-    def keyPressEvent(self, event: QtGui.QKeyEvent):
-        if event.key() == Qt.CTRL + Qt.Key_S:
-            self.emit_add_object()
-        else:
-            super().keyPressEvent(event)
-
-    def emit_add_object(self):
-        self.button_savetext.pressed.emit()
-
-    def get_content(self):
-        return self.created_object
-
 class ErrorAnalyzerButton(QtWidgets.QPushButton):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
@@ -312,7 +240,7 @@ class ErrorAnalyzerButton(QtWidgets.QPushButton):
             self.setText(str())
         self.setEnabled(True)
 
-class AddPikObjectWindow(QDialog):
+class AddPikObjectWindow(QtWidgets.QDialog):
     @catch_exception
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -324,22 +252,22 @@ class AddPikObjectWindow(QDialog):
         width = self.fontMetrics().averageCharWidth() * 80
         height = self.fontMetrics().height() * 42
         self.resize(width, height)
-        self.setMinimumSize(QSize(300, 300))
+        self.setMinimumSize(QtCore.QSize(300, 300))
 
         self.entity = None
 
-        font = QFont()
+        font = QtGui.QFont()
         font.setFamily("Consolas")
-        font.setStyleHint(QFont.Monospace)
+        font.setStyleHint(QtGui.QFont.Monospace)
         font.setFixedPitch(True)
         font.setPointSize(10)
 
-        self.dummywidget = QWidget(self)
+        self.dummywidget = QtWidgets.QWidget(self)
         self.dummywidget.setMaximumSize(0,0)
 
 
-        self.verticalLayout = QVBoxLayout(self)
-        self.verticalLayout.setAlignment(Qt.AlignTop)
+        self.verticalLayout = QtWidgets.QVBoxLayout(self)
+        self.verticalLayout.setAlignment(QtCore.Qt.AlignTop)
         self.verticalLayout.addWidget(self.dummywidget)
 
 
@@ -348,23 +276,23 @@ class AddPikObjectWindow(QDialog):
 
 
 
-        self.hbox1 = QHBoxLayout()
-        self.hbox2 = QHBoxLayout()
+        self.hbox1 = QtWidgets.QHBoxLayout()
+        self.hbox2 = QtWidgets.QHBoxLayout()
 
-        self.label1 = QLabel(self)
-        self.label2 = QLabel(self)
-        self.label3 = QLabel(self)
+        self.label1 = QtWidgets.QLabel(self)
+        self.label2 = QtWidgets.QLabel(self)
+        self.label3 = QtWidgets.QLabel(self)
         self.label1.setText("Group")
         self.label2.setText("Position in Group")
         self.label3.setText("(-1 means end of Group)")
-        self.group_edit = QLineEdit(self)
-        self.position_edit = QLineEdit(self)
+        self.group_edit = QtWidgets.QLineEdit(self)
+        self.position_edit = QtWidgets.QLineEdit(self)
 
         self.group_edit.setValidator(QtGui.QIntValidator(0, 2**31-1))
         self.position_edit.setValidator(QtGui.QIntValidator(-1, 2**31-1))
 
-        self.hbox1.setAlignment(Qt.AlignRight)
-        self.hbox2.setAlignment(Qt.AlignRight)
+        self.hbox1.setAlignment(QtCore.Qt.AlignRight)
+        self.hbox2.setAlignment(QtCore.Qt.AlignRight)
 
         self.verticalLayout.addLayout(self.hbox1)
         self.verticalLayout.addLayout(self.hbox2)
@@ -382,10 +310,10 @@ class AddPikObjectWindow(QDialog):
 
 
         self.editor_widget = None
-        self.editor_layout = QScrollArea()#QVBoxLayout(self.centralwidget)
+        self.editor_layout = QtWidgets.QScrollArea()#QVBoxLayout(self.centralwidget)
         self.verticalLayout.addWidget(self.editor_layout)
         #self.textbox_xml = QTextEdit(self.centralwidget)
-        self.button_savetext = QPushButton(self)
+        self.button_savetext = QtWidgets.QPushButton(self)
         self.button_savetext.setText("Add Object")
         self.button_savetext.setToolTip("Hotkey: Ctrl+S")
         self.button_savetext.setMaximumWidth(400)
@@ -395,7 +323,6 @@ class AddPikObjectWindow(QDialog):
         self.verticalLayout.addWidget(self.button_savetext)
         self.setWindowTitle(self.window_name)
         self.created_object = None
-        #QtWidgets.QShortcut(Qt.CTRL + Qt.Key_S, self).activated.connect(self.emit_add_object)
 
     def keyPressEvent(self, event: QtGui.QKeyEvent):
         if event.key() == Qt.CTRL + Qt.Key_S:
@@ -536,59 +463,9 @@ class AddPikObjectWindow(QDialog):
         self.label2.setVisible(self.position_edit.isVisible())
         self.label3.setVisible(self.position_edit.isVisible())
 
-class SpawnpointEditor(QMdiSubWindow):
-    triggered = pyqtSignal(object)
-    closing = pyqtSignal()
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.centralwidget = QWidget(self)
-        self.setWidget(self.centralwidget)
-        self.entity = None
-        self.resize(400, 200)
-
-        font = QFont()
-        font.setFamily("Consolas")
-        font.setStyleHint(QFont.Monospace)
-        font.setFixedPitch(True)
-        font.setPointSize(10)
-        self.verticalLayout = QVBoxLayout(self.centralwidget)
-
-        self.position = QLineEdit(self.centralwidget)
-        self.rotation = QLineEdit(self.centralwidget)
-
-        self.button_savetext = QPushButton(self.centralwidget)
-        self.button_savetext.setText("Set Data")
-        self.button_savetext.setMaximumWidth(400)
-
-        self.verticalLayout.addWidget(QLabel("startPos"))
-        self.verticalLayout.addWidget(self.position)
-        self.verticalLayout.addWidget(QLabel("startDir"))
-        self.verticalLayout.addWidget(self.rotation)
-        self.verticalLayout.addWidget(self.button_savetext)
-        self.setWindowTitle("Edit startPos/Dir")
-
-    def closeEvent(self, event):
-        self.closing.emit()
-
-    def get_pos_dir(self):
-        pos = self.position.text().strip()
-        direction = float(self.rotation.text().strip())
-
-        if "," in pos:
-            pos = [float(x.strip()) for x in pos.split(",")]
-        else:
-            pos = [float(x.strip()) for x in pos.split(" ")]
-
-        assert len(pos) == 3
-
-        return pos, direction
-
-
 @contextlib.contextmanager
 def blocked_signals(obj: QtCore.QObject):
-    # QSignalBlocker may or may not be available in some versions of the different Qt bindings.
+    # QtCore.QSignalBlocker may or may not be available in some versions of the different Qt bindings.
     signals_were_blocked = obj.blockSignals(True)
     try:
         yield

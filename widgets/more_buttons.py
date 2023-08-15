@@ -3,9 +3,8 @@ import json
 
 from collections import OrderedDict
 from typing import Any
-from PyQt5.QtWidgets import QSizePolicy, QWidget, QVBoxLayout, QPushButton, QGridLayout, QLabel, QScrollArea, QFrame
+from PySide6 import QtWidgets
 from lib.vectors import Vector3
-from PyQt5.QtCore import pyqtSignal
 from lib.libkmp import *
 from widgets.tree_view import KMPHeader, EnemyRoutePoint
 from widgets.objlists import *
@@ -19,23 +18,23 @@ def clear_layout(layout):
         if widget is not None:
             widget.deleteLater()
 
-class ButtonSelectPanel(QWidget):
+class ButtonSelectPanel(QtWidgets.QWidget):
     def __init__(self, text, revealed, options):
         super().__init__()
 
-        vbox = QVBoxLayout(self)
-        label = QLabel("Add from " + text)
+        vbox = QtWidgets.QVBoxLayout(self)
+        label = QtWidgets.QLabel("Add from " + text)
         vbox.addWidget(label)
 
-        options_widg = QWidget()
-        options_grid = QGridLayout(options_widg)
+        options_widg = QtWidgets.QWidget()
+        options_grid = QtWidgets.QGridLayout(options_widg)
 
-        specific_widg = QWidget()
-        specific_grid = QGridLayout(specific_widg)
+        specific_widg = QtWidgets.QWidget()
+        specific_grid = QtWidgets.QGridLayout(specific_widg)
         grid_widgets = (options_widg, specific_widg)
 
         #add buttons to reveal / hide the whole thing
-        course_btn_ctrl = QPushButton(self)
+        course_btn_ctrl = QtWidgets.QPushButton(self)
         if revealed:
             course_btn_ctrl.setText("Hide " + text)
             course_btn_ctrl.clicked.connect(
@@ -70,7 +69,7 @@ class ButtonSelectPanel(QWidget):
                 lambda: self.hide_self(True, btn, widgets, text ))
 
     def add_obj_group_button(self, text, widget, objids = (101, 102)):
-        new_enemy_group = QPushButton(self)
+        new_enemy_group = QtWidgets.QPushButton(self)
         new_enemy_group.setText(text)
         if text in objidlist.keys():
             objids = objidlist[text]
@@ -83,7 +82,7 @@ class ButtonSelectPanel(QWidget):
         layout = widget.layout()
         clear_layout(layout)
         for i, objid in enumerate(objids):
-            new_object_button = QPushButton(self)
+            new_object_button = QtWidgets.QPushButton(self)
             new_object_button.setText("Add " + OBJECTNAMES[objid])
             new_object_button.clicked.connect( self.geneditor_add(objid))
             layout.addWidget(new_object_button, int(i/2), i % 2)
@@ -92,19 +91,19 @@ class ButtonSelectPanel(QWidget):
         gen_editor = self.parent().parent().parent().parent()
         return lambda: gen_editor.button_add_object( obj )
 
-class MoreButtons(QWidget):
+class MoreButtons(QtWidgets.QWidget):
     def __init__(self, parent, option = 0):
         super().__init__(parent)
         #self.parent = parent
 
-        self.vbox = QVBoxLayout(self)
+        self.vbox = QtWidgets.QVBoxLayout(self)
 
     def add_label(self, text):
-        label = QLabel( text)
+        label = QtWidgets.QLabel( text)
         self.vbox.addWidget(label)
 
     def add_button(self, text, option, obj):
-        new_enemy_group = QPushButton(self)
+        new_enemy_group = QtWidgets.QPushButton(self)
         new_enemy_group.setText(text)
         gen_editor = self.parent().parent().parent()
         new_enemy_group.clicked.connect(
@@ -112,7 +111,7 @@ class MoreButtons(QWidget):
         self.vbox.addWidget(new_enemy_group)
 
     def add_multi_button(self, text, option, objs):
-        new_enemy_group = QPushButton(self)
+        new_enemy_group = QtWidgets.QPushButton(self)
         new_enemy_group.setText(text)
         gen_editor = self.parent().parent().parent()
         new_enemy_group.clicked.connect(

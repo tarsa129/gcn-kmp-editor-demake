@@ -3,12 +3,10 @@ import json
 from copy import copy, deepcopy
 import widgets.tooltip_list as ttl
 
-import PyQt5.QtWidgets as QtWidgets
-from PyQt5.QtGui import QIntValidator, QDoubleValidator, QValidator, QColor, QPixmap
+from PySide6 import QtCore, QtGui, QtWidgets
 from math import inf
 from lib.libkmp import *
 from lib.vectors import Vector3
-from PyQt5.QtCore import pyqtSignal, Qt, QSignalBlocker
 from widgets.data_editor_options import *
 
 def set_attr_mult(objs, attr, value):
@@ -100,7 +98,7 @@ def clear_layout(layout):
             child.layout().deleteLater()
         layout.takeAt(0)
 
-class PythonIntValidator(QValidator):
+class PythonIntValidator(QtGui.QValidator):
     def __init__(self, min, max, parent):
         super().__init__(parent)
         self.min = min
@@ -108,17 +106,17 @@ class PythonIntValidator(QValidator):
 
     def validate(self, p_str, p_int):
         if p_str == "" or p_str == "-":
-            return QValidator.Intermediate, p_str, p_int
+            return QtGui.QValidator.Intermediate, p_str, p_int
 
         try:
             result = int(p_str)
         except:
-            return QValidator.Invalid, p_str, p_int
+            return QtGui.QValidator.Invalid, p_str, p_int
 
         if self.min <= result <= self.max:
-            return QValidator.Acceptable, p_str, p_int
+            return QtGui.QValidator.Acceptable, p_str, p_int
         else:
-            return QValidator.Invalid, p_str, p_int
+            return QtGui.QValidator.Invalid, p_str, p_int
 
     def fixup(self, s):
         pass
@@ -126,7 +124,7 @@ class PythonIntValidator(QValidator):
 
 class ClickableLabel(QtWidgets.QLabel):
 
-    clicked = pyqtSignal()
+    clicked = QtCore.Signal()
 
     def mouseReleaseEvent(self, event):
 
@@ -137,21 +135,21 @@ class ClickableLabel(QtWidgets.QLabel):
 
 class ColorPicker(ClickableLabel):
 
-    color_changed = pyqtSignal(QColor)
-    color_picked = pyqtSignal(QColor)
+    color_changed = QtCore.Signal(QtGui.QColor)
+    color_picked = QtCore.Signal(QtGui.QColor)
 
     def __init__(self, with_alpha=False):
         super().__init__()
 
         height = int(self.fontMetrics().height() / 1.5)
-        pixmap = QPixmap(height, height)
-        pixmap.fill(Qt.black)
+        pixmap = QtGui.QPixmap(height, height)
+        pixmap.fill(QtCore.Qt.black)
         self.setPixmap(pixmap)
         self.setFixedWidth(height)
 
-        self.color = QColor(0, 0, 0, 0)
+        self.color = QtGui.QColor(0, 0, 0, 0)
         self.with_alpha = with_alpha
-        self.tmp_color = QColor(0, 0, 0, 0)
+        self.tmp_color = QtGui.QColor(0, 0, 0, 0)
 
         self.clicked.connect(self.show_color_dialog)
 
@@ -177,7 +175,7 @@ class ColorPicker(ClickableLabel):
 
     def update_color(self, color):
         self.tmp_color = color
-        color = QColor(color)
+        color = QtGui.QColor(color)
         color.setAlpha(255)
         pixmap = self.pixmap()
         pixmap.fill(color)
@@ -185,7 +183,7 @@ class ColorPicker(ClickableLabel):
 
 
 class DataEditor(QtWidgets.QWidget):
-    emit_3d_update = pyqtSignal()
+    emit_3d_update = QtCore.Signal()
 
     def __init__(self, parent, bound_to, kmp_file=None):
         super().__init__(parent)
@@ -300,7 +298,7 @@ class DataEditor(QtWidgets.QWidget):
         line_edit = QtWidgets.QLineEdit(self)
         layout = self.create_labeled_widget(self, text, line_edit)
 
-        line_edit.setValidator(QIntValidator(min_val, max_val, self))
+        line_edit.setValidator(QtGui.QIntValidator(min_val, max_val, self))
 
         def input_edited():
             text = line_edit.text()
@@ -319,7 +317,7 @@ class DataEditor(QtWidgets.QWidget):
         line_edit = QtWidgets.QLineEdit(self)
         layout = self.create_labeled_widget(self, text, line_edit)
 
-        line_edit.setValidator(QDoubleValidator(min_val, max_val, 6, self))
+        line_edit.setValidator(QtGui.QDoubleValidator(min_val, max_val, 6, self))
 
         def input_edited():
             text = line_edit.text()
@@ -357,7 +355,7 @@ class DataEditor(QtWidgets.QWidget):
                 lambda index: set_value(widget.itemData(index)))
         else:
             widget = QtWidgets.QLineEdit()
-            widget.setValidator(QIntValidator(MIN_SIGNED_SHORT, MAX_SIGNED_SHORT))
+            widget.setValidator(QtGui.QIntValidator(MIN_SIGNED_SHORT, MAX_SIGNED_SHORT))
             widget.textChanged.connect(lambda text: set_value(int(text)))
 
         layout.addLayout(self.create_labeled_widget(None, text, widget))
@@ -471,7 +469,7 @@ class DataEditor(QtWidgets.QWidget):
             if max_val <= MAX_UNSIGNED_BYTE:
                 line_edit.setMaximumWidth(90)
 
-            line_edit.setValidator(QIntValidator(min_val, max_val, self))
+            line_edit.setValidator(QtGui.QIntValidator(min_val, max_val, self))
 
             if attribute is not None:
                 input_edited = create_setter(line_edit, self.bound_to, attribute, subattr, self.catch_text_update, isFloat=False)
@@ -493,9 +491,9 @@ class DataEditor(QtWidgets.QWidget):
     def add_multiple_decimal_input(self, text, attribute, subattributes, min_val, max_val, return_both = False):
         line_edits = []
         for subattr in subattributes:
-            line_edit =QtWidgets. QLineEdit(self)
+            line_edit = QtWidgets.QLineEdit(self)
 
-            line_edit.setValidator(QDoubleValidator(min_val, max_val, 6, self))
+            line_edit.setValidator(QtGui.QDoubleValidator(min_val, max_val, 6, self))
 
             input_edited = create_setter(line_edit, self.bound_to, attribute, subattr, self.catch_text_update, isFloat=True)
             line_edit.editingFinished.connect(input_edited)
@@ -515,7 +513,7 @@ class DataEditor(QtWidgets.QWidget):
             line_edit = QtWidgets.QLineEdit(self)
             line_edit.setMaximumWidth(30)
 
-            line_edit.setValidator(QIntValidator(min_val, max_val, self))
+            line_edit.setValidator(QtGui.QIntValidator(min_val, max_val, self))
 
             input_edited = create_setter_list(line_edit, self.bound_to, attribute, i)
             line_edit.editingFinished.connect(input_edited)
@@ -534,7 +532,7 @@ class DataEditor(QtWidgets.QWidget):
             if max_val <= MAX_UNSIGNED_BYTE:
                 line_edit.setMaximumWidth(90)
 
-            line_edit.setValidator(QIntValidator(min_val, max_val, self))
+            line_edit.setValidator(QtGui.QIntValidator(min_val, max_val, self))
 
             input_edited = create_setter(line_edit, self.bound_to, attribute, subattr, self.catch_text_update, isFloat=False)
 
@@ -603,8 +601,8 @@ class DataEditor(QtWidgets.QWidget):
         angle_edits = [] #these are the checkboxes
         for attr in ("x", "y", "z"):
             line_edit = QtWidgets.QLineEdit(self)
-            validator = QDoubleValidator(-360.0, 360.0, 9999, self)
-            validator.setNotation(QDoubleValidator.StandardNotation)
+            validator = QtGui.QDoubleValidator(-360.0, 360.0, 9999, self)
+            validator.setNotation(QtGui.QDoubleValidator.StandardNotation)
             line_edit.setValidator(validator)
 
             angle_edits.append(line_edit)
@@ -1056,7 +1054,6 @@ class KMPEdit(DataEditor):
 
 
         color_dia = QtWidgets.QColorDialog(self)
-        #color_dia.setCurrentColor( QColor(curr_color.r, curr_color.g, curr_color.b, curr_color.a) )
 
         color = color_dia.getColor()
         if color.isValid():
@@ -1271,7 +1268,7 @@ class ObjectEdit(DataEditor):
             widget = self.userdata[i]
             if widget is None or value is None:
                 continue
-            with QSignalBlocker(widget):
+            with QtCore.QSignalBlocker(widget):
                 if isinstance(widget, QtWidgets.QCheckBox):
                     widget.setChecked(bool(value))
                 elif isinstance(widget, QtWidgets.QComboBox):
@@ -1506,12 +1503,12 @@ class CameraEdit(DataEditor):
 
     def update_data(self):
         obj: Camera = get_cmn_obj(self.bound_to)
-        with QSignalBlocker(self.follow_player):
+        with QtCore.QSignalBlocker(self.follow_player):
             if obj.follow_player:
                 self.follow_player.setChecked(True)
 
         typeindex = self.type.findData(obj.type )
-        with QSignalBlocker(self.type):
+        with QtCore.QSignalBlocker(self.type):
             self.type.setCurrentIndex(typeindex if typeindex != -1 else 1)
 
         self.set_visible_followplayer(obj.type, self.follow_player.isChecked())

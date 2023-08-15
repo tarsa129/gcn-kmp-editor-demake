@@ -1,7 +1,6 @@
-from PyQt5.Qt import QDialog, QWidget, QVBoxLayout, QListWidget
+from PySide6 import QtOpenGLWidgets, QtWidgets
 
-
-class FileSelect(QDialog):
+class FileSelect(QtWidgets.QDialog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         layout = QVBoxLayout(self)

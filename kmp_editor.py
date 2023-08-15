@@ -9,15 +9,8 @@ from io import TextIOWrapper, BytesIO, StringIO
 from math import sin, cos, atan2
 import json
 from PIL import Image
-import PyQt5.QtWidgets as QtWidgets
-import PyQt5.QtCore as QtCore
-from PyQt5.QtCore import Qt
 
-from PyQt5.QtWidgets import (QWidget, QMainWindow, QFileDialog, QSplitter,
-                             QSpacerItem, QLabel, QPushButton, QSizePolicy, QVBoxLayout, QHBoxLayout,
-                             QScrollArea, QGridLayout, QMenuBar, QMenu, QAction, QApplication, QStatusBar, QLineEdit)
-from PyQt5.QtGui import QMouseEvent, QImage
-import PyQt5.QtGui as QtGui
+from PySide6 import QtCore, QtGui, QtWidgets
 
 import opengltext
 import py_obj
@@ -39,11 +32,10 @@ from lib.model_rendering import TexturedModel, CollisionModel
 from widgets.editor_widgets import ErrorAnalyzer, ErrorAnalyzerButton, LoadingFix
 from widgets.file_select import FileSelect
 from widgets.data_editor_options import routed_cameras
-from PyQt5.QtWidgets import QTreeWidgetItem
 from lib.vectors import Vector3
 from lib.file_system import *
 
-def get_treeitem(root:QTreeWidgetItem, obj):
+def get_treeitem(root:QtWidgets.QTreeWidgetItem, obj):
     for i in range(root.childCount()):
         child = root.child(i)
         if child.bound_to == obj:
@@ -62,7 +54,7 @@ class UndoEntry:
     def __eq__(self, other) -> bool:
         return self.hash == other.hash
 
-class GenEditor(QMainWindow):
+class GenEditor(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
         self.level_file = KMP.make_useful()
@@ -96,8 +88,6 @@ class GenEditor(QMainWindow):
         self.add_object_window = AddPikObjectWindow(self)
         self.add_object_window.setWindowIcon(self.windowIcon())
         self.object_to_be_added = None
-
-        self.edit_spawn_window = None
 
         self._window_title = ""
         self._user_made_change = False
@@ -202,10 +192,6 @@ class GenEditor(QMainWindow):
             val.destroy()
 
         self.editing_windows = {}
-
-        if self.edit_spawn_window is not None:
-            self.edit_spawn_window.destroy()
-            self.edit_spawn_window = None
 
         self.current_gen_path = None
         self.pik_control.reset_info()
@@ -511,10 +497,7 @@ class GenEditor(QMainWindow):
         self.setup_ui_menubar()
         self.setup_ui_toolbar()
 
-        #self.centralwidget = QWidget(self)
-        #self.centralwidget.setObjectName("centralwidget")
-
-        self.horizontalLayout = QSplitter()
+        self.horizontalLayout = QtWidgets.QSplitter()
         self.centralwidget = self.horizontalLayout
         self.setCentralWidget(self.horizontalLayout)
         self.leveldatatreeview = LevelDataTreeView(self.centralwidget, self.visibility_menu)
@@ -530,16 +513,12 @@ class GenEditor(QMainWindow):
         self.horizontalLayout.addWidget(self.leveldatatreeview)
         self.horizontalLayout.addWidget(self.level_view)
         self.leveldatatreeview.resize(200, self.leveldatatreeview.height())
-        #self.leveldatatreeview.resize(200, 2500)
-        spacerItem = QSpacerItem(10, 20, QSizePolicy.Minimum, QSizePolicy.Expanding)
-        #self.horizontalLayout.addItem(spacerItem)
 
         self.pik_control = PikminSideWidget(self)
         self.horizontalLayout.addWidget(self.pik_control)
 
-        QtWidgets.QShortcut(Qt.Key_G, self).activated.connect(self.action_ground_objects)
-        #QtWidgets.QShortcut(Qt.CTRL + Qt.Key_A, self).activated.connect(self.shortcut_open_add_item_window)
-        self.statusbar = QStatusBar(self)
+        QtGui.QShortcut(QtCore.Qt.Key_G, self).activated.connect(self.action_ground_objects)
+        self.statusbar = QtWidgets.QStatusBar(self)
         self.statusbar.setObjectName("statusbar")
         self.setStatusBar(self.statusbar)
 
@@ -551,17 +530,17 @@ class GenEditor(QMainWindow):
 
     @catch_exception_with_dialog
     def setup_ui_menubar(self):
-        self.menubar = QMenuBar(self)
-        self.file_menu = QMenu(self)
+        self.menubar = QtWidgets.QMenuBar(self)
+        self.file_menu = QtWidgets.QMenu(self)
         self.file_menu.setTitle("File")
 
-        save_file_shortcut = QtWidgets.QShortcut(Qt.CTRL + Qt.Key_S, self.file_menu)
+        save_file_shortcut = QtGui.QShortcut(QtCore.Qt.CTRL | QtCore.Qt.Key_S, self.file_menu)
         save_file_shortcut.activated.connect(self.button_save_level)
 
-        self.file_load_action = QAction("Load", self)
-        self.file_load_recent_menu = QMenu("Load Recent", self)
-        self.save_file_action = QAction("Save", self)
-        self.save_file_as_action = QAction("Save As", self)
+        self.file_load_action = QtGui.QAction("Load", self)
+        self.file_load_recent_menu = QtWidgets.QMenu("Load Recent", self)
+        self.save_file_action = QtGui.QAction("Save", self)
+        self.save_file_as_action = QtGui.QAction("Save As", self)
         self.save_file_action.setShortcut("Ctrl+S")
         self.file_load_action.setShortcut("Ctrl+O")
         self.save_file_as_action.setShortcut("Ctrl+Alt+S")
@@ -578,7 +557,7 @@ class GenEditor(QMainWindow):
 
         self.file_menu.aboutToShow.connect(self.on_file_menu_aboutToShow)
 
-        self.edit_menu = QMenu(self)
+        self.edit_menu = QtWidgets.QMenu(self)
         self.edit_menu.setTitle("Edit")
         self.undo_action = self.edit_menu.addAction('Undo')
         self.undo_action.setShortcut(QtGui.QKeySequence('Ctrl+Z'))
@@ -609,7 +588,7 @@ class GenEditor(QMainWindow):
 
         self.edit_menu.addSeparator()
 
-        self.rotation_mode = QAction("Rotate Positions around Pivot", self)
+        self.rotation_mode = QtGui.QAction("Rotate Positions around Pivot", self)
         self.rotation_mode.setCheckable(True)
         self.rotation_mode.setChecked(self.editorconfig.get("rotate_around_pivot") == "True" )
         self.rotation_mode.setShortcut(QtGui.QKeySequence('Ctrl+J'))
@@ -617,7 +596,7 @@ class GenEditor(QMainWindow):
             "rotate_around_pivot",  self.rotation_mode))
         self.edit_menu.addAction(self.rotation_mode)
 
-        self.scale_mode = QAction("Edit Scales around Pivot", self)
+        self.scale_mode = QtGui.QAction("Edit Scales around Pivot", self)
         self.scale_mode.setCheckable(True)
         self.scale_mode.setChecked(self.editorconfig.get("scale_around_pivot") == "True")
         self.scale_mode.setShortcut(QtGui.QKeySequence('Ctrl+L'))
@@ -625,7 +604,7 @@ class GenEditor(QMainWindow):
             "scale_around_pivot",  self.scale_mode))
         self.edit_menu.addAction(self.scale_mode)
 
-        self.autoground_mode = QAction("Autoground in 2D", self)
+        self.autoground_mode = QtGui.QAction("Autoground in 2D", self)
         self.autoground_mode.setCheckable(True)
         self.autoground_mode.setChecked(self.editorconfig.get("autoground_2d") == "True")
         self.autoground_mode.setShortcut(QtGui.QKeySequence('Ctrl+G'))
@@ -647,27 +626,27 @@ class GenEditor(QMainWindow):
                 object_toggle.action_select_toggle.blockSignals(False)
 
         # ------ Collision Menu
-        self.collision_menu = QMenu(self.menubar)
+        self.collision_menu = QtWidgets.QMenu(self.menubar)
         self.collision_menu.setTitle("Geometry")
-        self.collision_load_action = QAction("Load OBJ", self)
+        self.collision_load_action = QtGui.QAction("Load OBJ", self)
         self.collision_load_action.triggered.connect(self.button_load_collision)
         self.collision_menu.addAction(self.collision_load_action)
-        self.collision_load_grid_action = QAction("Load KCL", self)
+        self.collision_load_grid_action = QtGui.QAction("Load KCL", self)
         self.collision_load_grid_action.triggered.connect(self.button_load_collision_kcl)
         self.collision_menu.addAction(self.collision_load_grid_action)
 
         self.collision_menu.addSeparator()
 
-        self.choose_bco_area = QAction("Collision Areas (KCL)")
+        self.choose_bco_area = QtGui.QAction("Collision Areas (BCO)")
         self.choose_bco_area.triggered.connect(self.action_choose_kcl_flag)
         self.collision_menu.addAction(self.choose_bco_area)
         self.choose_bco_area.setShortcut("Ctrl+K")
 
         # ------ View
-        self.view_menu = QMenu(self.menubar)
+        self.view_menu = QtWidgets.QMenu(self.menubar)
         self.view_menu.setTitle("View")
 
-        self.frame_action = QAction("Frame Selection/All", self)
+        self.frame_action = QtGui.QAction("Frame Selection/All", self)
         self.frame_action.triggered.connect(
             lambda _checked: self.frame_selection(adjust_zoom=True))
         self.frame_action.setShortcut("F")
@@ -677,9 +656,9 @@ class GenEditor(QMainWindow):
                 "Frame Selection" if self.level_view.selected_positions else "Frame All"))
         self.view_menu.addAction(self.frame_action)
 
-        self.view_action_group = QtWidgets.QActionGroup(self)
+        self.view_action_group = QtGui.QActionGroup(self)
 
-        self.change_to_topdownview_action = QAction("Topdown View", self)
+        self.change_to_topdownview_action = QtGui.QAction("Topdown View", self)
         self.view_action_group.addAction(self.change_to_topdownview_action)
         self.change_to_topdownview_action.triggered.connect(self.change_to_topdownview)
         self.view_menu.addAction(self.change_to_topdownview_action)
@@ -687,14 +666,14 @@ class GenEditor(QMainWindow):
         self.change_to_topdownview_action.setChecked(True)
         self.change_to_topdownview_action.setShortcut("Ctrl+1")
 
-        self.change_to_3dview_action = QAction("3D View", self)
+        self.change_to_3dview_action = QtGui.QAction("3D View", self)
         self.view_action_group.addAction(self.change_to_3dview_action)
         self.change_to_3dview_action.triggered.connect(self.change_to_3dview)
         self.view_menu.addAction(self.change_to_3dview_action)
         self.change_to_3dview_action.setCheckable(True)
         self.change_to_3dview_action.setShortcut("Ctrl+2")
 
-        self.choose_default_view = QMenu("Choose Default View")
+        self.choose_default_view = QtWidgets.QMenu("Choose Default View")
         self.load_as_topdown = self.choose_default_view.addAction("Topdown View")
         self.load_as_topdown.setCheckable(True)
         self.load_as_topdown.setChecked( self.editorconfig.get("default_view") == "topdownview" )
@@ -708,20 +687,20 @@ class GenEditor(QMainWindow):
         self.view_menu.addMenu(self.choose_default_view)
 
         # --------------- Generation
-        self.generation_menu = QMenu(self.menubar)
+        self.generation_menu = QtWidgets.QMenu(self.menubar)
         self.generation_menu.setTitle("Generation")
 
-        self.do_generation = QAction("Run Generation")
+        self.do_generation = QtGui.QAction("Run Generation")
         self.do_generation.triggered.connect(self.auto_generation)
         self.generation_menu.addAction(self.do_generation)
         self.do_generation.setShortcut("Ctrl+3")
 
-        self.do_cleanup = QAction("Run Cleanup")
+        self.do_cleanup = QtGui.QAction("Run Cleanup")
         self.do_cleanup.triggered.connect(self.auto_cleanup)
         self.generation_menu.addAction(self.do_cleanup)
         self.do_cleanup.setShortcut("Ctrl+4")
 
-        self.analyze_action = QAction("Analyze for common mistakes", self)
+        self.analyze_action = QtGui.QAction("Analyze for common mistakes", self)
         self.analyze_action.triggered.connect(self.analyze_for_mistakes)
         self.generation_menu.addAction(self.analyze_action)
 
@@ -1101,7 +1080,7 @@ class GenEditor(QMainWindow):
         self.pik_control.button_remove_object.clicked.connect(
             lambda _checked: self.action_delete_objects())
 
-        delete_shortcut = QtWidgets.QShortcut(QtGui.QKeySequence(Qt.Key_Delete), self)
+        delete_shortcut = QtGui.QShortcut(QtGui.QKeySequence(QtCore.Qt.Key_Delete), self)
         delete_shortcut.activated.connect(self.action_delete_objects)
 
 
@@ -1222,18 +1201,6 @@ class GenEditor(QMainWindow):
         self.leveldatatreeview.set_objects(self.level_file)
         self.set_has_unsaved_changes(True)
 
-    def action_open_rotationedit_window(self):
-        if self.edit_spawn_window is None:
-            self.edit_spawn_window = mkwii_widgets.SpawnpointEditor()
-            self.edit_spawn_window.position.setText("{0}, {1}, {2}".format(
-                self.pikmin_gen_file.startpos_x, self.pikmin_gen_file.startpos_y, self.pikmin_gen_file.startpos_z
-            ))
-            self.edit_spawn_window.rotation.setText(str(self.pikmin_gen_file.startdir))
-            self.edit_spawn_window.closing.connect(self.action_close_edit_startpos_window)
-            self.edit_spawn_window.button_savetext.clicked.connect(
-                lambda _checked: self.action_save_startpos())
-            self.edit_spawn_window.show()
-
     def update_recent_files_list(self, filepath):
         filepath = os.path.abspath(os.path.normpath(filepath))
 
@@ -1267,7 +1234,7 @@ class GenEditor(QMainWindow):
     #@catch_exception
     def button_load_level(self, checked=False, filepath=None, add_to_ini=True ):
         if filepath is None:
-            filepath, chosentype = QFileDialog.getOpenFileName(
+            filepath, chosentype = QtWidgets.QFileDialog.getOpenFileName(
                 self, "Open File",
                 self.pathsconfig["kmp"],
                 "KMP(*.kmp);;szs files (*.szs);;All files (*)",
@@ -1401,7 +1368,7 @@ class GenEditor(QMainWindow):
 
     @catch_exception_with_dialog
     def _button_save_level_as(self, modify_current_path, *args, **kwargs):
-        filepath, choosentype = QFileDialog.getSaveFileName(
+        filepath, choosentype = QtWidgets.QFileDialog.getSaveFileName(
             self, "Save File",
             self.pathsconfig["kmp"],
             "KMP(*.kmp);;All files (*)",
@@ -1442,7 +1409,7 @@ class GenEditor(QMainWindow):
 
     def button_load_collision(self):
         try:
-            filepath, choosentype = QFileDialog.getOpenFileName(
+            filepath, choosentype = QtWidgets.QFileDialog.getOpenFileName(
                 self, "Open File",
                 self.pathsconfig["collision"],
                 "Collision (*.obj);;All files (*)")
@@ -1465,7 +1432,7 @@ class GenEditor(QMainWindow):
 
     def button_load_collision_kcl(self):
         try:
-            filepath, choosentype = QFileDialog.getOpenFileName(
+            filepath, choosentype = QtWidgets.QFileDialog.getOpenFileName(
                 self, "Open File",
                 self.pathsconfig["collision"],
                 "MKWII Collision (*.kcl);;All files (*)")
@@ -1516,22 +1483,6 @@ class GenEditor(QMainWindow):
         self.level_view.collision.hidden_colgroups = \
             set(int(t) for t in editor_config.get("hidden_collision_type_groups", "").split(",") if t)
         save_cfg(self.configuration)
-
-    def action_close_edit_startpos_window(self):
-        self.edit_spawn_window.destroy()
-        self.edit_spawn_window = None
-
-    @catch_exception_with_dialog
-    def action_save_startpos(self):
-        pos, direction = self.edit_spawn_window.get_pos_dir()
-        self.pikmin_gen_file.startpos_x = pos[0]
-        self.pikmin_gen_file.startpos_y = pos[1]
-        self.pikmin_gen_file.startpos_z = pos[2]
-        self.pikmin_gen_file.startdir = direction
-
-        #self.pikmin_gen_view.update()
-        self.pikmin_gen_view.do_redraw()
-        self.set_has_unsaved_changes(True)
 
     def button_open_add_item_window(self):
         self.next_checkpoint_start_position = None
@@ -1651,7 +1602,6 @@ class GenEditor(QMainWindow):
                 self.pik_control.button_add_object.setChecked(True)
                 self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
 
-                #self.pikmin_gen_view.setContextMenuPolicy(Qt.DefaultContextMenu)
 
     @catch_exception
     def button_stop_adding(self):
@@ -2058,39 +2008,39 @@ class GenEditor(QMainWindow):
 
     def keyPressEvent(self, event: QtGui.QKeyEvent):
 
-        if event.key() == Qt.Key_Escape:
+        if event.key() == QtCore.Qt.Key_Escape:
             self.action_stop_adding()
-        elif event.key() == Qt.Key_V:
+        elif event.key() == QtCore.Qt.Key_V:
             self.button_open_add_item_window()
 
-        if event.key() == Qt.Key_Shift:
+        if event.key() == QtCore.Qt.Key_Shift:
             self.level_view.shift_is_pressed = True
-        elif event.key() == Qt.Key_R:
+        elif event.key() == QtCore.Qt.Key_R:
             self.level_view.rotation_is_pressed = True
-        elif event.key() == Qt.Key_H:
+        elif event.key() == QtCore.Qt.Key_H:
             self.level_view.change_height_is_pressed = True
 
-        if event.key() == Qt.Key_W:
+        if event.key() == QtCore.Qt.Key_W:
             self.level_view.MOVE_FORWARD = 1
-        elif event.key() == Qt.Key_S:
+        elif event.key() == QtCore.Qt.Key_S:
             self.level_view.MOVE_BACKWARD = 1
-        elif event.key() == Qt.Key_A:
+        elif event.key() == QtCore.Qt.Key_A:
             self.level_view.MOVE_LEFT = 1
-        elif event.key() == Qt.Key_D:
+        elif event.key() == QtCore.Qt.Key_D:
             self.level_view.MOVE_RIGHT = 1
-        elif event.key() == Qt.Key_Q:
+        elif event.key() == QtCore.Qt.Key_Q:
             self.level_view.MOVE_UP = 1
-        elif event.key() == Qt.Key_E:
+        elif event.key() == QtCore.Qt.Key_E:
             self.level_view.MOVE_DOWN = 1
 
-        if event.key() == Qt.Key_Plus:
+        if event.key() == QtCore.Qt.Key_Plus:
             self.level_view.zoom_in()
-        elif event.key() == Qt.Key_Minus:
+        elif event.key() == QtCore.Qt.Key_Minus:
             self.level_view.zoom_out()
 
         #C IS FOR "connecting"
         #
-        if event.key() == Qt.Key_C and self.level_view.selected and all_of_same_type(self.level_view.selected):
+        if event.key() == QtCore.Qt.Key_C and self.level_view.selected and all_of_same_type(self.level_view.selected):
             sel_obj = self.level_view.selected[0]
             if isinstance(sel_obj, Checkpoint):
                 self.connect_start = [x for x in self.level_view.selected]
@@ -2108,10 +2058,10 @@ class GenEditor(QMainWindow):
                     self.connect_start.append( obj )
                     self.level_view.connecting_start.append(obj.position)
                 self.level_view.connecting_mode = "connect"
-        elif event.key() == Qt.Key_B and self.level_view.selected:
+        elif event.key() == QtCore.Qt.Key_B and self.level_view.selected:
             if self.select_start is not None:
                 self.select_start = [x for x in self.level_view.selected]
-        elif event.key() == Qt.Key_L and len(self.level_view.selected) == 1:
+        elif event.key() == QtCore.Qt.Key_L and len(self.level_view.selected) == 1:
             sel_obj = self.level_view.selected[0]
             if isinstance(sel_obj, MapObject):
                 self.connect_start = sel_obj
@@ -2120,32 +2070,32 @@ class GenEditor(QMainWindow):
                 self.level_view.connecting_rotation = self.connect_start.rotation
             pass
     def keyReleaseEvent(self, event: QtGui.QKeyEvent):
-        if event.key() == Qt.Key_Shift:
+        if event.key() == QtCore.Qt.Key_Shift:
             self.level_view.shift_is_pressed = False
-        elif event.key() == Qt.Key_R:
+        elif event.key() == QtCore.Qt.Key_R:
             self.level_view.rotation_is_pressed = False
-        elif event.key() == Qt.Key_H:
+        elif event.key() == QtCore.Qt.Key_H:
             self.level_view.change_height_is_pressed = False
 
-        if event.key() == Qt.Key_W:
+        if event.key() == QtCore.Qt.Key_W:
             self.level_view.MOVE_FORWARD = 0
-        elif event.key() == Qt.Key_S:
+        elif event.key() == QtCore.Qt.Key_S:
             self.level_view.MOVE_BACKWARD = 0
-        elif event.key() == Qt.Key_A:
+        elif event.key() == QtCore.Qt.Key_A:
             self.level_view.MOVE_LEFT = 0
-        elif event.key() == Qt.Key_D:
+        elif event.key() == QtCore.Qt.Key_D:
             self.level_view.MOVE_RIGHT = 0
-        elif event.key() == Qt.Key_Q:
+        elif event.key() == QtCore.Qt.Key_Q:
             self.level_view.MOVE_UP = 0
-        elif event.key() == Qt.Key_E:
+        elif event.key() == QtCore.Qt.Key_E:
             self.level_view.MOVE_DOWN = 0
 
-        if event.key() == Qt.Key_C:
+        if event.key() == QtCore.Qt.Key_C:
             self.level_view.connecting_mode = False
             self.level_view.connecting_start = None
             self.connect_start = None
             self.connect_mode = None
-        if event.key() == Qt.Key_B:
+        if event.key() == QtCore.Qt.Key_B:
             self.select_start = None
 
     def reset_move_flags(self):
@@ -2628,59 +2578,59 @@ class GenEditor(QMainWindow):
     @catch_exception
     def mapview_showcontextmenu(self, position):
         self.reset_move_flags()
-        context_menu = QMenu(self)
-        action = QAction("Copy Coordinates", self)
+        context_menu = QtWidgets.QMenu(self)
+        action = QtGui.QAction("Copy Coordinates", self)
         action.triggered.connect(self.action_copy_coords_to_clipboard)
         context_menu.addAction(action)
 
         if len(self.level_view.selected) == 1:
             obj = self.level_view.selected[0]
             if isinstance(obj, RoutedObject):
-                select_linked = QAction("Select Linked", self)
+                select_linked = QtGui.QAction("Select Linked", self)
                 select_linked.triggered.connect(lambda: self.select_linked(obj))
                 context_menu.addAction(select_linked)
 
                 if obj.route_obj is not None and (not isinstance(obj, Camera) or len(obj.route_obj.points) > 1):
-                    select_route = QAction("Select Route", self)
+                    select_route = QtGui.QAction("Select Route", self)
                     select_route.triggered.connect(lambda: self.select_linked(obj, upper=False))
                     context_menu.addAction(select_route)
 
 
             if isinstance(obj, RoutePoint):
-                select_all = QAction("Select All in Route", self)
+                select_all = QtGui.QAction("Select All in Route", self)
                 select_all.triggered.connect(lambda: self.select_route_from_point(obj))
                 context_menu.addAction(select_all)
 
-                delete_all = QAction("Delete Route", self)
+                delete_all = QtGui.QAction("Delete Route", self)
                 delete_all.triggered.connect(lambda: self.delete_route_from_point(obj))
                 context_menu.addAction(delete_all)
             elif isinstance(obj, OpeningCamera):
-                set_first = QAction("Make First Cam", self)
+                set_first = QtGui.QAction("Make First Cam", self)
                 set_first.triggered.connect(lambda: self.make_first_cam(obj))
                 context_menu.addAction(set_first)
 
-                preview_cam = QAction("Preview Camera", self)
+                preview_cam = QtGui.QAction("Preview Camera", self)
                 preview_cam.triggered.connect( lambda:
                     self.level_view.preview_opening_cameras([obj]))
                 context_menu.addAction(preview_cam)
             elif isinstance(obj, EnemyPoint) or isinstance(obj, ItemPoint):
-                set_as_first = QAction("Set as First", self)
+                set_as_first = QtGui.QAction("Set as First", self)
                 set_as_first.triggered.connect(lambda: self.set_as_first(obj))
                 context_menu.addAction(set_as_first)
 
-                select_all_group = QAction("Select All in Group", self)
+                select_all_group = QtGui.QAction("Select All in Group", self)
                 select_all_group.triggered.connect(lambda: self.select_all_of_group(obj))
                 context_menu.addAction(select_all_group)
 
-                delete_all_group = QAction("Delete All in Group", self)
+                delete_all_group = QtGui.QAction("Delete All in Group", self)
                 delete_all_group.triggered.connect(lambda: self.delete_all_of_group(obj))
                 context_menu.addAction(delete_all_group)
             elif isinstance(obj, MapObject):
-                select_type = QAction("Select All of Type", self)
+                select_type = QtGui.QAction("Select All of Type", self)
                 select_type.triggered.connect(lambda: self.select_all_of_type(obj))
                 context_menu.addAction(select_type)
             elif isinstance(obj, Area) and obj.type == 0:
-                select_type = QAction("Preview Camera", self)
+                select_type = QtGui.QAction("Preview Camera", self)
                 select_type.triggered.connect(lambda: 
                     self.level_view.preview_replay_cameras([obj], self.level_file.enemypointgroups, True))
                 context_menu.addAction(select_type)
@@ -2689,7 +2639,7 @@ class GenEditor(QMainWindow):
 
     def action_copy_coords_to_clipboard(self):
         if self.current_coordinates is not None:
-            QApplication.clipboard().setText(", ".join(str(x) for x in self.current_coordinates))
+            QtWidgets.QApplication.clipboard().setText(", ".join(str(x) for x in self.current_coordinates))
 
     def select_route_from_point(self, obj : RoutePoint):
         route : Route = self.level_file.get_route_of_point(obj)
@@ -3029,7 +2979,7 @@ POTENTIALLY_EDITING_EVENTS = (
 
 class Application(QtWidgets.QApplication):
 
-    document_potentially_changed = QtCore.pyqtSignal()
+    document_potentially_changed = QtCore.Signal()
 
     def notify(self, receiver: QtCore.QObject, event: QtCore.QEvent) -> bool:
         if event.type() in POTENTIALLY_EDITING_EVENTS:
@@ -3046,9 +2996,8 @@ if __name__ == "__main__":
     import platform
     import signal
     import argparse
-    from PyQt5.QtCore import QLocale
 
-    QLocale.setDefault(QLocale(QLocale.English))
+    QtCore.QLocale.setDefault(QtCore.QLocale(QtCore.QLocale.English))
 
     sys.excepthook = except_hook
 
@@ -3066,39 +3015,6 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, lambda _signal, _frame: app.quit())
     app.setStyle(QtWidgets.QStyleFactory.create("Fusion"))
 
-
-    role_colors = []
-    role_colors.append((QtGui.QPalette.Window, QtGui.QColor(60, 60, 60)))
-    role_colors.append((QtGui.QPalette.WindowText, QtGui.QColor(200, 200, 200)))
-    role_colors.append((QtGui.QPalette.Base, QtGui.QColor(25, 25, 25)))
-    role_colors.append((QtGui.QPalette.AlternateBase, QtGui.QColor(60, 60, 60)))
-    role_colors.append((QtGui.QPalette.ToolTipBase, QtGui.QColor(40, 40, 40)))
-    role_colors.append((QtGui.QPalette.ToolTipText, QtGui.QColor(200, 200, 200)))
-    try:
-        role_colors.append((QtGui.QPalette.PlaceholderText, QtGui.QColor(160, 160, 160)))
-    except AttributeError:
-        pass
-    role_colors.append((QtGui.QPalette.Text, QtGui.QColor(200, 200, 200)))
-    role_colors.append((QtGui.QPalette.Button, QtGui.QColor(55, 55, 55)))
-    role_colors.append((QtGui.QPalette.ButtonText, QtGui.QColor(200, 200, 200)))
-    role_colors.append((QtGui.QPalette.BrightText, Qt.red))
-    role_colors.append((QtGui.QPalette.Light, QtGui.QColor(65, 65, 65)))
-    role_colors.append((QtGui.QPalette.Midlight, QtGui.QColor(60, 60, 60)))
-    role_colors.append((QtGui.QPalette.Dark, QtGui.QColor(45, 45, 45)))
-    role_colors.append((QtGui.QPalette.Mid, QtGui.QColor(50, 50, 50)))
-    role_colors.append((QtGui.QPalette.Shadow, Qt.black))
-    role_colors.append((QtGui.QPalette.Highlight, QtGui.QColor(45, 140, 225)))
-    role_colors.append((QtGui.QPalette.HighlightedText, Qt.black))
-    role_colors.append((QtGui.QPalette.Link, QtGui.QColor(40, 130, 220)))
-    role_colors.append((QtGui.QPalette.LinkVisited, QtGui.QColor(110, 70, 150)))
-    palette = QtGui.QPalette()
-    for role, color in role_colors:
-        palette.setColor(QtGui.QPalette.Disabled, role, QtGui.QColor(color).darker())
-        palette.setColor(QtGui.QPalette.Active, role, color)
-        palette.setColor(QtGui.QPalette.Inactive, role, color)
-    app.setPalette(palette)
-
-    QtWidgets.QToolTip.setPalette(palette)
     padding = app.fontMetrics().height() // 2
     app.setStyleSheet(f'QToolTip {{ padding: {padding}px; }}')
 
