@@ -1934,6 +1934,7 @@ class GenEditor(QtWidgets.QMainWindow):
                 self.points_added += 1
             elif isinstance(object, libkmp.MapObject):
                 self.level_file.objects.objects.append(placeobject)
+                placeobject.reassign_routepoint()
             elif isinstance(object, libkmp.KartStartPoint):
                 self.level_file.kartpoints.positions.append(placeobject)
             elif isinstance(object, libkmp.JugemPoint):

@@ -1,8 +1,6 @@
 updates:
 
 improve json files
-when placing an object with a routepoint, assign to closest routepoint (new option)
-selection of camera and area and route should bring up the replayareaeditor
 scale on gizmo (better)
 
 new features:
