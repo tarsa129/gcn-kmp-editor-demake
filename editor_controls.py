@@ -218,7 +218,7 @@ class Gizmo2DScaleX(Gizmo2DMoveX):
     def move(self, editor, buttons, event):
         if editor.gizmo.was_hit["scale_x"]:
             editor.gizmo.set_render_axis(AXIS_X)
-            delta = 1 + ((event.x() - self.first_click.x) * SCALE_CONSTANT)
+            delta = 1 + ((event.x() - self.first_click.x()) * SCALE_CONSTANT)
             self.first_click = event.pos()
             editor.scale_current.emit(Vector3(delta, 1, 1))
 
@@ -230,7 +230,7 @@ class Gizmo2DScaleZ(Gizmo2DScaleX):
     def move(self, editor, buttons, event):
         if editor.gizmo.was_hit["scale_z"]:
             editor.gizmo.set_render_axis(AXIS_Z)
-            delta = 1 + ( (self.first_click.y - event.y()) * SCALE_CONSTANT)
+            delta = 1 + ( (self.first_click.y() - event.y()) * SCALE_CONSTANT)
             self.first_click = event.pos()
             editor.scale_current.emit(Vector3(1, 1, delta))
 
@@ -562,7 +562,7 @@ class Gizmo3DScaleX(Gizmo2DMoveX):
             proj = numpy.dot(editor.modelviewmatrix, self.dir)
             proj[2] = proj[3] = 0.0
             proj = proj/numpy.linalg.norm(proj)
-            delta = numpy.array([event.x() - self.first_click.x, event.y() - self.first_click.y, 0, 0])
+            delta = numpy.array([event.x() - self.first_click.x(), event.y() - self.first_click.y(), 0, 0])
             delta[1] = -delta[1]
             self.first_click = event.pos()
             delta = 1 + (numpy.dot(delta, proj) * SCALE_CONSTANT)

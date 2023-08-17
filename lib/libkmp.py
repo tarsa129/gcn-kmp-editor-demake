@@ -1819,7 +1819,7 @@ class Camera(RoutedObject):
 
         self.fov = FOV()
         self.fov.start = 30
-        self.fov.end = 50
+        self.fov.end = 20
 
         self.position2 = Vector3(0.0, 0.0, 0.0)
         self.position3 = Vector3(0.0, 0.0, 0.0)

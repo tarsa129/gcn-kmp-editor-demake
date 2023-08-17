@@ -2182,7 +2182,7 @@ class GenEditor(QtWidgets.QMainWindow):
             if isinstance(scale, Vector3):
                 scale.scale_by(deltascale)
             else:
-                obj.scale *= (deltascale.x + deltascale.y + deltascale.z)
+                obj.scale *= (deltascale.x * deltascale.y * deltascale.z)
         if self.scale_mode.isChecked(): #edit scales around pivot. ONLY edit translations
             self.level_view.gizmo.move_to_average(self.level_view.selected,
                                                   self.level_view.selected_positions)
@@ -2298,9 +2298,9 @@ class GenEditor(QtWidgets.QMainWindow):
         # recursively, as top-level groups main contain points associated with widgets too.
 
         object_to_widget = {}
-        object_to_routeobj = {}
-        object_to_enemypoint = {}
-        object_to_camera = {}
+        #object_to_routeobj = {}
+        #object_to_enemypoint = {}
+        #object_to_camera = {}
         pending = list(self.level_view.selected)
 
         while pending:
@@ -2308,10 +2308,10 @@ class GenEditor(QtWidgets.QMainWindow):
             if hasattr(obj, 'widget'):
                 object_to_widget[obj] = obj.widget
                 obj.widget = None
+            """
             if hasattr(obj, 'route_obj'):
+                obj.route = id(obj.route_obj)
                 object_to_routeobj[obj] = obj.route_obj
-                route_collec = self.level_file.get_route_collec_for(obj)
-                obj.route = obj.set_route( route_collec  )
                 obj.route_obj = None
             if hasattr(obj, 'enemypoint'):
                 object_to_enemypoint[obj] = obj.enemypoint
@@ -2319,8 +2319,8 @@ class GenEditor(QtWidgets.QMainWindow):
                 obj.enemypoint = None
             if hasattr(obj, 'camera'):
                 object_to_camera[obj] = obj.camera
-                obj.cameraid = obj.set_camera(self.level_file.replayareas.get_cameras())
-                obj.camera = None
+                obj.cameraid = id(obj.camera)
+                obj.camera = None"""
 
             if hasattr(obj, '__dict__'):
                 pending.extend(list(obj.__dict__.values()))
@@ -2333,12 +2333,13 @@ class GenEditor(QtWidgets.QMainWindow):
             # Restore the widgets and usedby.
             for obj, widget in object_to_widget.items():
                 obj.widget = widget
+            """
             for obj, route_obj in object_to_routeobj.items():
                 obj.route_obj = route_obj
             for obj, enemypoint in object_to_enemypoint.items():
                 obj.enemypoint = enemypoint
             for obj, camera in object_to_camera.items():
-                obj.camera = camera
+                obj.camera = camera"""
         mimedata = QtCore.QMimeData()
         mimedata.setData("application/mkwii-track-editor", QtCore.QByteArray(data))
         QtWidgets.QApplication.instance().clipboard().setMimeData(mimedata)
@@ -2412,8 +2413,6 @@ class GenEditor(QtWidgets.QMainWindow):
             # Autonomous objects.
             elif isinstance(obj, libkmp.MapObject):
                 self.level_file.objects.objects.append(obj)
-                if obj.route > -1:
-                    obj.route_obj = self.level_file.get_route_collec_for(obj)[obj.route]
             elif isinstance(obj, libkmp.KartStartPoint):
                 self.level_file.kartpoints.positions.append(obj)
             elif isinstance(obj, libkmp.JugemPoint):
@@ -2422,18 +2421,14 @@ class GenEditor(QtWidgets.QMainWindow):
             elif isinstance(obj, libkmp.Area):
                 if obj.type == 0:
                     self.level_file.replayareas.append(obj)
-                    if obj.cameraid > -1:
-                        obj.camera = self.level_file.replayareas.get_cameras()[obj.cameraid]
+                    #if obj.cameraid > -1:
+                    #    obj.camera = self.level_file.replayareas.get_cameras()[obj.cameraid]
                 else:
                     self.level_file.areas.append(obj)
-                    if obj.type == 3 and obj.route > -1:
-                        obj.route_obj = self.level_file.get_route_collec_for(obj)[obj.route]
-                    elif obj.type ==4 and obj.enemypointid > -1:
-                        obj.enemypoint = self.level_file.enemypointgroups.get_point_from_index[obj.enemypointid]
+                    #if obj.type ==4 and obj.enemypointid > -1:
+                    #    obj.enemypoint = self.level_file.enemypointgroups.get_point_from_index[obj.enemypointid]
             elif isinstance(obj, libkmp.Camera):
                 self.level_file.cameras.append(obj)
-                if obj.type == 3 and obj.route > -1:
-                    obj.route_obj = self.level_file.get_route_collec_for(obj)[obj.route]
             elif isinstance(obj, libkmp.CannonPoint):
                 max_cannon_id = -1
                 for point in self.level_file.cannonpoints:
@@ -2444,6 +2439,12 @@ class GenEditor(QtWidgets.QMainWindow):
                 self.level_file.missionpoints.append(obj)
             else:
                 continue
+
+            if isinstance(obj, libkmp.RoutedObject):
+                route_collec = self.level_file.get_route_collec_for(obj)
+                for route in route_collec:
+                    if id(route) == obj.route:
+                        obj.route_obj = route
 
             added.append(obj)
 
