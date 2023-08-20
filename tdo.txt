@@ -1,6 +1,5 @@
 updates:
 
-v vs control v (new route) for route point creation 
 render player origin cameras differently.
 
 new features:

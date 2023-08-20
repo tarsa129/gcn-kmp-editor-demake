@@ -618,7 +618,7 @@ class GenEditor(QtWidgets.QMainWindow):
             "autoground_2d",  self.autoground_mode) )
         self.edit_menu.addAction(self.autoground_mode)
 
-        self.snapping_menu = self.edit_menu.addMenu('Snapping\tV')
+        self.snapping_menu = self.edit_menu.addMenu('Snapping\tM')
         self.snapping_menu.setToolTipsVisible(True)
         self.snapping_menu.aboutToShow.connect(self.on_snapping_menu_aboutToShow)
         self.snapping_menu.addAction('Disabled')
@@ -2047,8 +2047,8 @@ class GenEditor(QtWidgets.QMainWindow):
 
         if event.key() == QtCore.Qt.Key_Escape:
             self.action_stop_adding()
-        elif event.key() == QtCore.Qt.Key_V:
-            self.button_open_add_item_window()
+        #elif event.key() == QtCore.Qt.Key_V:
+        #    self.button_open_add_item_window()
 
         if event.key() == QtCore.Qt.Key_Shift:
             self.level_view.shift_is_pressed = True
@@ -2882,16 +2882,15 @@ class GenEditor(QtWidgets.QMainWindow):
                 self.pik_control.button_add_object.setChecked(True)
                 self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
             #create a new path for the object/camera
-            """
             elif isinstance(obj_type, MapObject ):
-                new_route = self.level_file.get_route_for_obj(obj_type)
+                #new_route = self.level_file.get_route_for_obj(obj_type)
                 for obj in self.connect_start:
-                    obj.create_route()
+                    obj.create_route(overwrite=True)
                     routepoint_setting = obj.get_routepoint_idx()
                     if routepoint_setting is not None:
                         obj.userdata[routepoint_setting] = 0
 
-                    self.button_add_from_addi_options("add_routepoints_end", obj)"""
+                    self.button_add_from_addi_options("add_routepoints_end", obj)
         elif len(self.level_view.selected) != 1:
             return
         else: #len(self.level_view.selected) == 1
