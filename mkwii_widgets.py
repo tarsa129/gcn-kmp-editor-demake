@@ -407,10 +407,10 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
 
     def _get_snapping_points(self):
         if self.snapping_mode == SnappingMode.EDGE_CENTERS:
-            return self.collision.edge_centers
+            return self.collision.get_edge_centers
         if self.snapping_mode == SnappingMode.FACE_CENTERS:
-            return self.collision.face_centers
-        return self.collision.vertices
+            return self.collision.get_face_centers()
+        return self.collision.get_vertices()
 
     def handle_arrowkey_scroll(self, timedelta):
         if self.selectionbox_projected_coords is not None:
@@ -1090,7 +1090,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                 # Draw wireframe.
                 glColor4f(0.1, 0.1, 0.1, 0.3)
                 glBegin(GL_LINES)
-                for triangle in self.collision.triangles:
+                for triangle in self.collision.get_triangles():
                     glVertex3f(triangle.origin.x, triangle.origin.y, triangle.origin.z)
                     glVertex3f(triangle.p2.x, triangle.p2.y, triangle.p2.z)
                     glVertex3f(triangle.origin.x, triangle.origin.y, triangle.origin.z)

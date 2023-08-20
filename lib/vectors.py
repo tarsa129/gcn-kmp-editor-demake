@@ -141,6 +141,10 @@ class Vector3(object):
     def render(self):
         return self
 
+class Vector3Mat(Vector3):
+    def __init__(self, x, y, z, mat):
+        super().__init__(x, y, z)
+        self.mat = mat
 
 class Vector4(Vector3):
     def __init__(self, x, y, z, w):

@@ -1,5 +1,5 @@
 import math
-from .vectors import Vector3, Triangle, Line
+from .vectors import Vector3, Vector3Mat, Triangle, Line
 import numba
 import numpy
 
@@ -15,22 +15,22 @@ class Collision(object):
         #print(self.faces)
         for face in self.faces:
             v1, v2, v3 = face[0:3]
-            col_type = 0x0100
+            col_type = 0xFFFF
             if len(face) > 3:
                 col_type = face[3]
 
             #print(v1i, v2i, v3i, len(self.verts))
-            v1 = Vector3(v1.x, -v1.z, v1.y)
-            v2 = Vector3(v2.x, -v2.z, v2.y)
-            v3 = Vector3(v3.x, -v3.z, v3.y)
+            v1 = Vector3Mat(v1.x, -v1.z, v1.y, col_type)
+            v2 = Vector3Mat(v2.x, -v2.z, v2.y, col_type)
+            v3 = Vector3Mat(v3.x, -v3.z, v3.y, col_type)
 
-            self.vertices.extend( [v1, v2, v3] )
+            self.vertices.extend( (v1, v2, v3) )
 
             face_center = (v1 + v2 + v3) / 3.0
-            self.face_centers.append(Vector3(face_center.x, face_center.y, face_center.z))
+            self.face_centers.append( Vector3Mat(face_center.x, face_center.y, face_center.z, col_type))
 
             for edge_center in ((v1 + v2) / 2.0, (v1 + v3) / 2.0, (v2 + v3) / 2.0):
-                self.edge_centers.append(Vector3(edge_center.x, edge_center.y, edge_center.z))
+                self.edge_centers.append(Vector3Mat(edge_center.x, edge_center.y, edge_center.z, col_type))
 
             triangle = Triangle(v1,v2,v3,col_type)
             if not triangle.normal.is_zero():
@@ -89,6 +89,18 @@ class Collision(object):
             return None
 
         return Vector3(*place_at)
+
+    def get_edge_centers(self):
+        return [center for center in self.edge_centers if not self.is_invisible_tri(center.mat)]
+
+    def get_face_centers(self):
+        return [center for center in self.face_centers if not self.is_invisible_tri(center.mat)]
+
+    def get_vertices(self):
+        return [center for center in self.vertices if not self.is_invisible_tri(center.mat)]
+
+    def get_triangles(self):
+        return [center for center in self.triangles if not self.is_invisible_tri(center.material)]
 
     @staticmethod
     def get_closest_point(ray, points):
