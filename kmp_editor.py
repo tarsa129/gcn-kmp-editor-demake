@@ -517,10 +517,10 @@ class GenEditor(QtWidgets.QMainWindow):
         self.pik_control = PikminSideWidget(self)
         self.horizontalLayout.addWidget(self.pik_control)
 
-        snapping_toggle_shortcut = QtGui.QShortcut(QtGui.QKeySequence(QtCore.Qt.Key_V), self)
+        snapping_toggle_shortcut = QtGui.QShortcut(QtGui.QKeySequence(QtCore.Qt.Key_M), self)
         snapping_toggle_shortcut.activated.connect(self.level_view.toggle_snapping)
         snapping_cycle_shortcut = QtGui.QShortcut(
-            QtGui.QKeySequence(QtCore.Qt.Key_V | QtCore.Qt.SHIFT), self)
+            QtGui.QKeySequence(QtCore.Qt.Key_M | QtCore.Qt.SHIFT), self)
         snapping_cycle_shortcut.activated.connect(self.level_view.cycle_snapping_mode)
 
         QtGui.QShortcut(QtCore.Qt.Key_G, self).activated.connect(self.action_ground_objects)
@@ -990,7 +990,7 @@ class GenEditor(QtWidgets.QMainWindow):
         for filepath in recent_files:
             recent_file_action = self.file_load_recent_menu.addAction(filepath)
             recent_file_action.triggered.connect(
-                lambda checked, filepath=filepath: self.button_load_level(checked, filepath))
+                lambda checked=False, filepath=filepath: self.button_load_level(False, filepath, True))
 
     def on_visible_menu_changed(self, element, index):
         if hasattr(self.visibility_menu, element):
@@ -1264,6 +1264,7 @@ class GenEditor(QtWidgets.QMainWindow):
 
     #@catch_exception
     def button_load_level(self, checked=False, filepath=None, add_to_ini=True ):
+        print(filepath)
         if filepath is None:
             filepath, chosentype = QtWidgets.QFileDialog.getOpenFileName(
                 self, "Open File",
@@ -1272,7 +1273,6 @@ class GenEditor(QtWidgets.QMainWindow):
                 self.last_chosen_type)
         else:
             chosentype = None
-
         if filepath:
             if chosentype is not None:
                 self.last_chosen_type = chosentype
@@ -1931,6 +1931,10 @@ class GenEditor(QtWidgets.QMainWindow):
                     self.button_stop_adding()
             elif isinstance(object, libkmp.RoutePoint):
                 group.points.insert(position + self.points_added, placeobject)
+                if isinstance(object, (libkmp.ReplayCameraRoutePoint, libkmp.CameraRoutePoint)):
+                    camera = self.level_file.route_used_by(group)[0]
+
+                    placeobject.position.y = camera.position.y
                 self.points_added += 1
             elif isinstance(object, libkmp.MapObject):
                 self.level_file.objects.objects.append(placeobject)
@@ -1956,7 +1960,9 @@ class GenEditor(QtWidgets.QMainWindow):
                     self.level_file.areas.append(placeobject)
                     if placeobject.type == 4:
                         placeobject.find_closest_enemypoint()
-                        #assign to closest enemypoint
+                    elif placeobject.type == 7:
+                        if self.level_file.areas.boo_obj is None:
+                            self.level_file.areas.boo_obj = MapObject.new(396)
             elif isinstance(object, libkmp.OpeningCamera):
                 self.level_file.cameras.append(placeobject)
                 if placeobject.route_obj is not None:

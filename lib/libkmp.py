@@ -1693,6 +1693,7 @@ class Area(RoutedObject):
 class Areas(ObjectContainer):
     def __init__(self):
         super().__init__()
+        self.boo_obj = None
 
     @classmethod
     def from_file(cls, f, count):
@@ -2587,10 +2588,10 @@ class KMP(object):
         #goalcam handling
         goalcams = self.cameras.get_type(0)
         if len(goalcams) > 1:
-            return_string += "Multiple cameras of type 0 have been found. Only the first will be kept"
+            return_string += "Multiple cameras of type 0 have been found. Only the first will be kept\n"
             self.cameras.goalcam = GoalCamera.from_generic(goalcams[0])
         elif len(goalcams) == 0:
-            return_string += "No camera of type 0 has been found. One will be added"
+            return_string += "No camera of type 0 has been found. One will be added\n"
         else:
             self.cameras.goalcam = GoalCamera.from_generic(goalcams[0])
         for camera in goalcams:
@@ -2660,6 +2661,22 @@ class KMP(object):
                 for point in camera.route_obj.points:
                     point.position = Vector3Relative(point.position, camera.position)
                 camera.position2_player = camera.route_obj.points[0].position
+
+        #type 7 area and boo
+        boo_objs = [obj for obj in self.objects.objects if obj.objectid == 396]
+        [self.objects.objects.remove(boo_obj) for boo_obj in boo_objs]
+        boo_areas = [area for area in self.areas if area.type == 7]
+        if not boo_objs and boo_areas:
+            return_string += "Boo Areas are in the .kmp, but no boo objects exist. A boo object will be added.\n"
+            self.areas.boo_obj = MapObject.new(396)
+        elif boo_objs and not boo_areas:
+            return_string += "Boo objects are in the .kmp, but no boo areas exist. The boo objects will be removed.\n"
+        elif boo_objs and boo_areas:
+            self.areas.boo_obj = boo_objs[0]
+            if len(boo_objs) > 1:
+                return_string += "Multiple boo objects are in the .kmp. Only one of them will be preserved.\n"
+
+
         return return_string
 
     @classmethod
@@ -2705,8 +2722,13 @@ class KMP(object):
         routes.extend(arearoutes)
         routes.extend(objectroutes)
 
+        all_objects = MapObjects()
+        all_objects.objects.extend(self.objects.objects)
+        if self.areas.boo_obj is not None and self.areas.get_type(7):
+            all_objects.objects.append(self.areas.boo_obj)
+
         offsets.append(f.tell() ) #offset 8 for gobj
-        self.objects.write(f, routes)
+        all_objects.write(f, routes)
 
         offsets.append(f.tell() ) #offset 9 for poti
         f.write(b"POTI")

@@ -68,8 +68,8 @@ class LoadingFix(QtWidgets.QDialog):
         font.setPointSize(10)
 
         self.setWindowTitle("Initial Errors Fixed")
-        self.text_widget = QTextEdit(self)
-        layout = QtWidgets.QHBoxLayout()(self)
+        self.text_widget = QtWidgets.QTextEdit(self)
+        layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.text_widget)
         self.setMinimumSize(QtCore.QSize(300, 300))
@@ -100,8 +100,8 @@ class ErrorAnalyzer(QtWidgets.QDialog):
         font.setPointSize(10)
 
         self.setWindowTitle("Analysis Results")
-        self.text_widget = QTextEdit(self)
-        layout = QtWidgets.QHBoxLayout()(self)
+        self.text_widget = QtWidgets.QTextEdit(self)
+        layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.text_widget)
         self.setMinimumSize(QtCore.QSize(300, 300))
@@ -312,7 +312,6 @@ class AddPikObjectWindow(QtWidgets.QDialog):
         self.editor_widget = None
         self.editor_layout = QtWidgets.QScrollArea()#QVBoxLayout(self.centralwidget)
         self.verticalLayout.addWidget(self.editor_layout)
-        #self.textbox_xml = QTextEdit(self.centralwidget)
         self.button_savetext = QtWidgets.QPushButton(self)
         self.button_savetext.setText("Add Object")
         self.button_savetext.setToolTip("Hotkey: Ctrl+S")

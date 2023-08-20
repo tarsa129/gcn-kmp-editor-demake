@@ -93,7 +93,7 @@ class Collision(object):
     @staticmethod
     def get_closest_point(ray, points):
         distances_and_points = []
-        tuple_points = [(point.x, point.y, point.z) for point in point]
+        tuple_points = [(point.x, point.y, point.z) for point in points]
         for point in tuple_points:
             try:
                 distance = _distance_between_line_and_point(

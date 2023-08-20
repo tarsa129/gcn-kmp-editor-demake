@@ -742,6 +742,8 @@ def choose_data_editor(obj):
             return ReplayAreaEdit
         elif obj.type == 3:
             return RoutedAreaEdit
+        elif obj.type == 7:
+            return BooAreaEdit
         else:
             return AreaEdit
     elif isinstance(obj, ReplayCamera):
@@ -1277,6 +1279,13 @@ class ObjectEdit(DataEditor):
                 elif isinstance(widget, QtWidgets.QLineEdit):
                     widget.setText(str(value))
 
+class BooEdit(ObjectEdit):
+    def setup_widgets(self, inthemaking = False):
+        super().setup_widgets()
+        self.objectid.setVisible(False)
+        self.objectid_edit.setVisible(False)
+
+
 class KartStartPointsEdit(DataEditor):
     def setup_widgets(self):
         self.pole_position = self.add_dropdown_input("Pole Position", "pole_position", POLE_POSITIONS )
@@ -1320,7 +1329,7 @@ class AreaEdit(DataEditor):
                                                      -inf, +inf)
         self.rotation = self.add_rotation_input()
 
-        self.area_type, self.area_type_label = self.add_dropdown_input("Area Type", "type", AREA_Type, True)
+        #self.area_type, self.area_type_label = self.add_dropdown_input("Area Type", "type", AREA_Type, True)
 
         self.shape = self.add_dropdown_input("Shape", "shape", AREA_Shape)
 
@@ -1330,7 +1339,7 @@ class AreaEdit(DataEditor):
         self.setting1, self.setting1_label = self.add_integer_input("Setting 1", "setting1", MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT, True)
         self.setting2, self.setting2_label = self.add_integer_input("Setting 2", "setting2", MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT, True)
 
-        self.area_type.currentIndexChanged.connect(self.update_name)
+        #self.area_type.currentIndexChanged.connect(self.update_name)
         """
         self.smooth, self.smooth_label = self.add_dropdown_input("Sharp/Smooth motion", "route_obj.smooth", POTI_Setting1, return_both = True)
         self.cyclic, self.cyclic_label = self.add_dropdown_input("Cyclic/Back and forth motion", "route_obj.cyclic", POTI_Setting2, return_both = True)
@@ -1350,12 +1359,12 @@ class AreaEdit(DataEditor):
 
         if obj.shape is not None: self.shape.setCurrentIndex( obj.shape )
 
-        if obj.type != 0:
-            typeindex = self.area_type.findData(obj.type )
-            self.area_type.setCurrentIndex(typeindex if typeindex != -1 else 1)
+        #if obj.type != 0:
+        #    typeindex = self.area_type.findData(obj.type )
+        #    self.area_type.setCurrentIndex(typeindex if typeindex != -1 else 1)
 
-        self.area_type.setVisible(obj.type != 0)
-        self.area_type_label.setVisible(obj.type != 0)
+        #self.area_type.setVisible(obj.type != 0)
+        #self.area_type_label.setVisible(obj.type != 0)
 
         if obj.priority is not None: self.priority.setText(str(obj.priority))
 
@@ -1558,7 +1567,6 @@ class CameraEdit(DataEditor):
         self.routespeed.setVisible(vis_value)
         self.routespeed_label.setVisible(vis_value)
 
-
 class ReplayCameraEdit(CameraEdit):
 
     def setup_widgets(self):
@@ -1609,6 +1617,8 @@ class OpeningCameraEdit(CameraEdit):
 class GoalCameraEdit(CameraEdit):
     def setup_widgets(self):
         super().setup_widgets()
+        self.camduration = self.add_integer_input("Camera Duration", "camduration",
+                                    MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT)
         self.type.setVisible(False)
         self.type_label.setVisible(False)
         self.follow_player.setVisible(False)
@@ -1681,6 +1691,21 @@ class RoutedAreaEdit(RoutedEditor):
         self.main_thing.addTab(self.route_edit, "Route")
 
         self.main_thing.setTabEnabled(1, len(route_obj) > 0)
+
+class BooAreaEdit(DataEditor):
+    def setup_widgets(self):
+        self.main_thing = QtWidgets.QTabWidget()
+        self.vbox.addWidget(self.main_thing)
+
+        self.area_edit = AreaEdit(self.parent(), self.bound_to)
+        self.object_edit = BooEdit(self.parent(), [self.kmp_file.areas.boo_obj])
+
+        self.main_thing.addTab(self.area_edit, "Area")
+        self.main_thing.addTab(self.object_edit, "Boo Object")
+
+    def update_data(self):
+        self.area_edit.update_data()
+        self.object_edit.update_data()
 
 class AreaRoutePointEdit(DataEditor):
     def __init__(self, parent, bound_to, idx=-1, kmp_file=None):
