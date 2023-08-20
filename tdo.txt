@@ -1,11 +1,13 @@
 updates:
 
-improve json files
-scale on gizmo (better)
+v vs control v (new route) for route point creation 
+render player origin cameras differently.
 
 new features:
 add arrow keys for "next point" in route + linedraw increment
-handle boos automatically + handle that enemy point switching thing
+improve json files
+scale on gizmo (better)
+handle that enemy point switching object
 area scale handlers
 load + collide on gobj collision files
 add option to select x to y points
@@ -14,3 +16,4 @@ brres loading
 lookinto collision translucency
 error analyzer
 better area rendering - image
+

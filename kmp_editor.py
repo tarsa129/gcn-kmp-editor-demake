@@ -31,7 +31,7 @@ from lib.libkcl import RacetrackCollision
 from lib.model_rendering import TexturedModel, CollisionModel
 from widgets.editor_widgets import ErrorAnalyzer, ErrorAnalyzerButton, LoadingFix
 from widgets.file_select import FileSelect
-from widgets.data_editor_options import routed_cameras
+from widgets.data_editor_options import AREA_TYPES
 from lib.vectors import Vector3
 from lib.file_system import *
 
@@ -1264,7 +1264,6 @@ class GenEditor(QtWidgets.QMainWindow):
 
     #@catch_exception
     def button_load_level(self, checked=False, filepath=None, add_to_ini=True ):
-        print(filepath)
         if filepath is None:
             filepath, chosentype = QtWidgets.QFileDialog.getOpenFileName(
                 self, "Open File",
@@ -2670,9 +2669,15 @@ class GenEditor(QtWidgets.QMainWindow):
                 context_menu.addAction(select_type)
             elif isinstance(obj, Area) and obj.type == 0:
                 select_type = QtGui.QAction("Preview Camera", self)
-                select_type.triggered.connect(lambda: 
+                select_type.triggered.connect(lambda:
                     self.level_view.preview_replay_cameras([obj], self.level_file.enemypointgroups, True))
                 context_menu.addAction(select_type)
+            elif isinstance(obj, Area) and obj.type != 0:
+                for new_type in range(1, len(AREA_TYPES)):
+                    select_type = context_menu.addAction("Change to type " + AREA_TYPES[new_type])
+                    select_type.triggered.connect(lambda new_type=new_type:
+                        obj.change_type(new_type))
+
         context_menu.exec(self.sender().mapToGlobal(position))
         context_menu.destroy()
 
@@ -2991,6 +2996,10 @@ class GenEditor(QtWidgets.QMainWindow):
                 self.load_collision_kcl(filepath)
             if exten == ".szs":
                 self.load_archive_file(filepath, add_to_ini = False)
+
+    def change_area_type(self, obj, new_type):
+        print(new_type)
+        obj.change_type(new_type)
 
 def find_file(rarc_folder, ending):
     for filename in rarc_folder.files.keys():

@@ -48,7 +48,7 @@ def get_cmn_obj(objs, kmp_file=None):
 
     for obj in objs[1:]:
         for member in members:
-            if member == "route_obj":
+            if member == "route_obj" and obj.route_info():
                 getattr(cmn_obj, member).append(  getattr(obj, member) )
             #print(getattr(obj, member),  getattr(cmn_obj, member))
             elif getattr(cmn_obj, member) is not None and getattr(obj, member) is not None:
@@ -740,12 +740,8 @@ def choose_data_editor(obj):
     elif isinstance(obj, Area):
         if obj.type == 0:
             return ReplayAreaEdit
-        elif obj.type == 3:
-            return RoutedAreaEdit
-        elif obj.type == 7:
-            return BooAreaEdit
         else:
-            return AreaEdit
+            return SpecialAreaEdit
     elif isinstance(obj, ReplayCamera):
         return RoutedReplayCameraEdit
     elif isinstance(obj, OpeningCamera):
@@ -1329,7 +1325,7 @@ class AreaEdit(DataEditor):
                                                      -inf, +inf)
         self.rotation = self.add_rotation_input()
 
-        #self.area_type, self.area_type_label = self.add_dropdown_input("Area Type", "type", AREA_Type, True)
+        self.area_type, self.area_type_label = self.add_dropdown_input("Area Type", "type", AREA_Type, True)
 
         self.shape = self.add_dropdown_input("Shape", "shape", AREA_Shape)
 
@@ -1339,17 +1335,7 @@ class AreaEdit(DataEditor):
         self.setting1, self.setting1_label = self.add_integer_input("Setting 1", "setting1", MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT, True)
         self.setting2, self.setting2_label = self.add_integer_input("Setting 2", "setting2", MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT, True)
 
-        #self.area_type.currentIndexChanged.connect(self.update_name)
-        """
-        self.smooth, self.smooth_label = self.add_dropdown_input("Sharp/Smooth motion", "route_obj.smooth", POTI_Setting1, return_both = True)
-        self.cyclic, self.cyclic_label = self.add_dropdown_input("Cyclic/Back and forth motion", "route_obj.cyclic", POTI_Setting2, return_both = True)
-
-        if get_cmn_obj(self.bound_to).route_obj is None:
-            self.smooth.setVisible(False)
-            self.smooth_label.setVisible(False)
-            self.cyclic.setVisible(False)
-            self.cyclic_label.setVisible(False)"""
-
+        self.area_type.currentIndexChanged.connect(self.update_name)
 
     def update_data(self):
         obj: Area = get_cmn_obj(self.bound_to)
@@ -1357,30 +1343,20 @@ class AreaEdit(DataEditor):
         self.update_vector3("rotation", obj.rotation)
         self.update_vector3("scale", obj.scale)
 
+        if obj.type != 0:
+            typeindex = self.area_type.findData(obj.type )
+            with QtCore.QSignalBlocker(self.area_type):
+                self.area_type.setCurrentIndex(typeindex if typeindex != -1 else 1)
+
+        self.area_type.setVisible(obj.type != 0)
+        self.area_type_label.setVisible(obj.type != 0)
+
         if obj.shape is not None: self.shape.setCurrentIndex( obj.shape )
-
-        #if obj.type != 0:
-        #    typeindex = self.area_type.findData(obj.type )
-        #    self.area_type.setCurrentIndex(typeindex if typeindex != -1 else 1)
-
-        #self.area_type.setVisible(obj.type != 0)
-        #self.area_type_label.setVisible(obj.type != 0)
 
         if obj.priority is not None: self.priority.setText(str(obj.priority))
 
         if obj.setting1 is not None: self.setting1.setText(str(obj.setting1))
         if obj.setting2 is not None: self.setting2.setText(str(obj.setting2))
-        """
-        obj: Route = obj.route_obj
-        if len(obj) == 1:
-            self.smooth.setCurrentIndex( min(obj[0].smooth, 1))
-            self.cyclic.setCurrentIndex( min(obj[0].cyclic, 1))
-
-        has_route = len(obj) > 0
-        self.smooth.setVisible(has_route)
-        self.smooth_label.setVisible(has_route)
-        self.cyclic.setVisible(has_route)
-        self.cyclic_label.setVisible(has_route)"""
 
         self.set_settings_visible()
 
@@ -1407,6 +1383,8 @@ class AreaEdit(DataEditor):
 
     def update_name(self):
         self.set_settings_visible()
+        for area in self.bound_to:
+            area.change_type(area.type)
         super().update_name()
 
 class ReplayAreaEdit(DataEditor):
@@ -1680,32 +1658,60 @@ class CameraRoutePointEdit(DataEditor):
         obj = self.bound_to[0]
         self.unk1.setText(str(obj.unk1))
 
-class RoutedAreaEdit(RoutedEditor):
-    def setup_widgets(self):
-        super().setup_widgets()
-        self.camera_edit = AreaEdit(self.parent(), self.bound_to)
-        route_obj = get_cmn_obj(self.bound_to).route_obj
-        self.route_edit = AreaRouteEdit(self.parent(), route_obj)
-
-        self.main_thing.addTab(self.camera_edit, "Area")
-        self.main_thing.addTab(self.route_edit, "Route")
-
-        self.main_thing.setTabEnabled(1, len(route_obj) > 0)
-
-class BooAreaEdit(DataEditor):
+class SpecialAreaEdit(DataEditor):
     def setup_widgets(self):
         self.main_thing = QtWidgets.QTabWidget()
         self.vbox.addWidget(self.main_thing)
 
         self.area_edit = AreaEdit(self.parent(), self.bound_to)
-        self.object_edit = BooEdit(self.parent(), [self.kmp_file.areas.boo_obj])
+
+        self.area_edit.area_type.currentIndexChanged.connect(self.update_data)
+
+        self.route_edit = QtWidgets.QWidget()
+        self.object_edit = QtWidgets.QWidget()
+
+        route_obj = get_cmn_obj(self.bound_to).route_obj
+        has_boo_areas = any([area.type == 7 for area in self.bound_to])
 
         self.main_thing.addTab(self.area_edit, "Area")
+
+        if route_obj:
+            self.route_edit = AreaRouteEdit(self.parent(), route_obj)
+        if has_boo_areas:
+            self.object_edit = BooEdit(self.parent(), [self.kmp_file.areas.boo_obj])
+
+        self.main_thing.addTab(self.route_edit, "Route")
+        self.main_thing.setTabVisible(1, len(route_obj) > 0)
         self.main_thing.addTab(self.object_edit, "Boo Object")
+        self.main_thing.setTabVisible(2, has_boo_areas)
 
     def update_data(self):
         self.area_edit.update_data()
-        self.object_edit.update_data()
+        route_obj = get_cmn_obj(self.bound_to).route_obj
+        has_boo_areas = any([area.type == 7 for area in self.bound_to])
+
+        if isinstance(route_obj, DataEditor) and self.route_edit:
+            self.route_edit.update_data()
+        elif route_obj:
+            self.route_edit = AreaRouteEdit(self.parent(), route_obj, self.kmp_file)
+            self.route_edit.update_data()
+            self.main_thing.removeTab(1)
+            self.main_thing.insertTab(1, self.route_edit, "Route")
+        else:
+            self.route_edit = QtWidgets.QWidget()
+
+        if isinstance(self.object_edit, DataEditor) and has_boo_areas:
+            self.object_edit.update_data()
+        elif has_boo_areas:
+            self.object_edit = BooEdit(self.parent(), [self.kmp_file.areas.boo_obj], self.kmp_file)
+            self.object_edit.update_data()
+            self.main_thing.removeTab(2)
+            self.main_thing.addTab(self.object_edit, "Boo Object")
+        else:
+            self.object_edit = QtWidgets.QWidget()
+
+        self.main_thing.setTabVisible(1, len(route_obj) > 0 )
+        self.main_thing.setTabVisible(2, has_boo_areas)
 
 class AreaRoutePointEdit(DataEditor):
     def __init__(self, parent, bound_to, idx=-1, kmp_file=None):
@@ -1722,7 +1728,6 @@ class AreaRoutePointEdit(DataEditor):
         obj = self.bound_to[0]
         self.unk1.setText(str(obj.unk1))
         self.unk2.setText(str(obj.unk2))
-
 
 class RespawnPointEdit(DataEditor):
     def setup_widgets(self):

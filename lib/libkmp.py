@@ -1539,6 +1539,8 @@ class Area(RoutedObject):
         self.enemypointid = -1
         self.enemypoint = None
 
+        self.type_variant = 0
+
         self.widget = None
         self.routeclass = AreaRoute
 
@@ -1689,6 +1691,19 @@ class Area(RoutedObject):
         if self.type == 3:
             return 2
         return 0
+
+    def change_type(self, new_type):
+        self.type = new_type
+        self.widget.update_name()
+        if new_type not in (3, 4, 7):
+            return
+        if self.type == 3:
+            self.create_route(True)
+        elif self.type == 4:
+            self.find_closest_enemypoint
+        elif self.type == 7:
+            if __class__.level_file.areas.boo_obj is None:
+                __class__.level_file.areas.boo_obj = MapObject.new(396)
 
 class Areas(ObjectContainer):
     def __init__(self):
