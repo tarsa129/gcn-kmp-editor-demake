@@ -23,6 +23,7 @@
   "ReplayAreaFill": [1, 0.5, 0, 0.5],
   "SelectedReplayAreaFill":  [1, 1, 0, 0.5],
   "ReplayCamera": [1, 0.5, 0, 1],
+  "ReplayCameraPlayer": [0.5, 0.25, 0, 1],
   "ReplayCameraRoute": [1, 0.7, 0, 1],
 
   "Areas": [0.529, 0.808, 0.922, 1.0],

@@ -42,6 +42,7 @@ class ObjectModels(object):
 
         self.replayareas = GenericObject(colors["ReplayArea"])
         self.replaycameras = Cube(colors["ReplayCamera"])
+        self.replaycamerasplayer = Cube(colors["ReplayCameraPlayer"])
         self.replaycamerapoint = Cylinder(colors["ReplayCameraRoute"])
 
         self.areas = GenericObject(colors["Areas"])
@@ -76,7 +77,7 @@ class ObjectModels(object):
                      self.respawn, self.unusedrespawn,
                      self.objects, self.objectpoint, self.unusedobjectpoint,
                      self.camera, self.camerapoint,
-                     self.replayareas, self.replaycameras, self.replaycamerapoint,
+                     self.replayareas, self.replaycameras, self.replaycamerasplayer, self.replaycamerapoint,
                      self.areas, self.areapoint,
                      self.startpoints, self.cannons, self.missions):
             cube.generate_displists()

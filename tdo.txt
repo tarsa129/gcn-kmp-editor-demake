@@ -1,9 +1,8 @@
 updates:
 
-render player origin cameras differently.
+add arrow keys for "next point" in route + linedraw increment
 
 new features:
-add arrow keys for "next point" in route + linedraw increment
 improve json files
 scale on gizmo (better)
 handle that enemy point switching object

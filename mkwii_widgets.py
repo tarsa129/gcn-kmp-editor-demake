@@ -1740,7 +1740,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
 
                     elif object.type == 3:
                         self.models.render_generic_position_colored(object.position,
-                                                                bolded, "replaycameras")
+                                                                bolded, "replaycamerasplayer")
                         pos2 = object.position2_player.render()
                         pos3 = object.position3_player.render()
                         self.models.draw_sphere(pos2, 300)
