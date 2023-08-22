@@ -3227,6 +3227,53 @@ class KMP(object):
 
         return selected, selected_positions, selected_rotations
 
+    def get_next_points(self, points):
+        next_points = []
+        next_positions = []
+        next_rotations = []
+        for point in points:
+            next_point = None
+            if isinstance(point, KMPPoint):
+                to_deal_with = self.get_to_deal_with(point)
+                group_idx, group, point_idx = to_deal_with.find_group_of_point(point)
+                if len(group.points) > point_idx + 1:
+                    next_point = group.points[point_idx + 1]
+            elif isinstance(point, RoutePoint):
+                route = self.get_route_of_point(point)
+                index = route.points.index(point)
+                if len(route.points) > index + 1:
+                    next_point = route.points[index + 1]
+            elif isinstance(point, Camera) and point.has_route():
+                route = point.route_obj
+                if len(route.points) > 1:
+                    next_point = route.points[1]
+
+            if next_point and next_point not in points:
+                next_points.append(next_point )
+                next_positions.append(next_point.position)
+        return next_points, next_positions, next_rotations
+
+    def get_prev_points(self, points):
+        prev_points = []
+        prev_positions = []
+        prev_rotations = []
+        for point in points:
+            prev_point = None
+            if isinstance(point, KMPPoint):
+                to_deal_with = self.get_to_deal_with(point)
+                group_idx, group, point_idx = to_deal_with.find_group_of_point(point)
+                if point_idx > 0:
+                    prev_point = group.points[point_idx - 1]
+            elif isinstance(point, RoutePoint):
+                route = self.get_route_of_point(point)
+                index = route.points.index(point)
+                if index > 0:
+                    prev_point = route.points[index - 1]
+            if prev_point and prev_point not in points:
+                prev_points.append(prev_point )
+                prev_positions.append(prev_point.position)
+        return prev_points, prev_positions, prev_rotations
+
 with open("lib/mkwiiobjects.json", "r") as f:
     tmp = json.load(f)
     OBJECTNAMES = {}
