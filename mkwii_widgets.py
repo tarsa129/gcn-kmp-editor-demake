@@ -1755,8 +1755,8 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                     selected = route in selected_routes
                     bolded = route in linked_routes
 
-                    last_point = None
-                    for point in route.points:
+                    last_point = route.points[0]
+                    for point in route.points[1:]:
                         self.models.render_generic_position_colored(point.position.render(), bolded, "replaycamerapoint")
                         if last_point is not None:
                             self.models.draw_arrow_head(last_point.position.render(), point.position.render())
@@ -1856,7 +1856,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
 
             if vismenu.cannonpoints.is_visible():
                 for object in self.level_file.cannonpoints:
-                    self.models.render_generic_position_rotation_colored("cannon",
+                    self.models.render_generic_position_rotation_colored("cannons",
                                                                 object.position, object.rotation,
                                                                  object in select_optimize)
             if vismenu.missionsuccesspoints.is_visible():

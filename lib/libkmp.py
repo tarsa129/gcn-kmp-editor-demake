@@ -1609,7 +1609,7 @@ class Area(RoutedObject):
         f.write(pack(">HHBBH", self.setting1, self.setting2, route, enemypointid, 0 ) )
         return 1
 
-    def copy(self):
+    def copy(self, copy_cam = False):
         enemypoint = self.enemypoint
         camera = self.camera
         route_obj = self.route_obj
@@ -1628,7 +1628,10 @@ class Area(RoutedObject):
         self.widget = widget
 
         new_area.enemypoint = enemypoint
-        new_area.camera = camera
+        if copy_cam and camera is not None:
+            new_area.camera = camera.copy()
+        else:
+            new_area.camera = camera
         new_area.route_obj = route_obj
 
         return new_area

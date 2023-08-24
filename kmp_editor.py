@@ -1934,6 +1934,9 @@ class GenEditor(QtWidgets.QMainWindow):
                     camera = self.level_file.route_used_by(group)[0]
 
                     placeobject.position.y = camera.position.y
+                    if isinstance(object, libkmp.ReplayCameraRoutePoint) and camera.type == 3:
+                        diff = placeobject.position - camera.position
+                        placeobject.position = Vector3Relative(diff, camera.position)
                 self.points_added += 1
             elif isinstance(object, libkmp.MapObject):
                 self.level_file.objects.objects.append(placeobject)
@@ -2047,8 +2050,8 @@ class GenEditor(QtWidgets.QMainWindow):
 
         if event.key() == QtCore.Qt.Key_Escape:
             self.action_stop_adding()
-        #elif event.key() == QtCore.Qt.Key_V:
-        #    self.button_open_add_item_window()
+        elif event.key() == QtCore.Qt.Key_V:
+            self.button_open_add_item_window()
 
         if event.key() == QtCore.Qt.Key_Shift:
             self.level_view.shift_is_pressed = True
@@ -2563,7 +2566,7 @@ class GenEditor(QtWidgets.QMainWindow):
                 elif isinstance(currentobj, libkmp.KartStartPoint):
                     item = get_treeitem(self.leveldatatreeview.kartpoints, currentobj)
                 elif isinstance(currentobj, libkmp.CannonPoint):
-                    item = get_treeitem(self.leveldatatreeview.cannonpoints, currentobj)
+                    item = get_treeitem(self.leveldatatreeview.cannons, currentobj)
                 #assert item is not None
 
                 # Temporarily suppress signals to prevent both checkpoints from
@@ -2994,6 +2997,9 @@ class GenEditor(QtWidgets.QMainWindow):
             else:
                 new_object.create_route(True, None, False, True)
 
+            self.object_to_be_added = [new_object, True, True ]
+        elif isinstance(self.obj_to_copy, Area) and self.obj_to_copy.type == 0:
+            new_object = self.obj_to_copy.copy()
             self.object_to_be_added = [new_object, True, True ]
 
         else:

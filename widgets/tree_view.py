@@ -371,8 +371,7 @@ class CannonEntry(NamedItem):
     def update_name(self):
         for i in range(self.parent().childCount()):
             if self == self.parent().child(i):
-
-                self.setText(0, "Cannon ID: ({0})".format(self.bound_to.id))
+                self.setText(1, "Cannon ID: ({0})".format(self.bound_to.id))
                 break
 
 class MissionEntry(NamedItem):
@@ -571,7 +570,7 @@ class LevelDataTreeView(QtWidgets.QTreeWidget):
             item = CameraEntry(self.cameras, "Camera", camera, i)
         """
         for cannon in kmpdata.cannonpoints:
-            item = CannonEntry(self.cannons, "Cannon", cannon)
+            item = CannonEntry(self.cannons, "Cannon Points", cannon)
 
         for mission in kmpdata.missionpoints:
             item = MissionEntry(self.missions, "Mission Success Point", mission)
