@@ -3254,7 +3254,11 @@ class KMP(object):
 
             if next_point and next_point not in points:
                 next_points.append(next_point )
-                next_positions.append(next_point.position)
+                if isinstance(next_point, Checkpoint):
+                    next_positions.append(next_point.start)
+                    next_positions.append(next_point.end)
+                else:
+                    next_positions.append(next_point.position)
         return next_points, next_positions, next_rotations
 
     def get_prev_points(self, points):
@@ -3275,6 +3279,9 @@ class KMP(object):
                     prev_point = route.points[index - 1]
             if prev_point and prev_point not in points:
                 prev_points.append(prev_point )
+                if isinstance(prev_point, Checkpoint):
+                    prev_positions.append(prev_point.start)
+                    prev_positions.append(prev_point.end)
                 prev_positions.append(prev_point.position)
         return prev_points, prev_positions, prev_rotations
 

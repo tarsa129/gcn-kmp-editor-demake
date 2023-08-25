@@ -162,6 +162,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
         self.connecting_mode = False
         self.connecting_start = None
         self.connecting_rotation = None
+        self.linedraw_count = 4
 
         self.timer = QtCore.QTimer()
         self.timer.setInterval(2)
@@ -2010,8 +2011,8 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                     self.models.draw_arrow_head(pos1, pos2)
                     if self.connecting_mode == "linedraw":
                         diff = pos2 - pos1
-                        for i in range(1, 5):
-                            position = diff * (i/4) + pos1
+                        for i in range(1, 1 + self.linedraw_count):
+                            position = diff * (i/self.linedraw_count) + pos1
                             self.models.render_generic_position_rotation_colored("objects",
                                 position, self.connecting_rotation,
                                 object in select_optimize)

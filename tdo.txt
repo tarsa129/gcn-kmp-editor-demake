@@ -1,11 +1,9 @@
 updates:
 
-linedraw increment/decrement
-new camera on "c" when replay area connects to nothing
+improve json files
 
 new features:
 load + collide on gobj collision files
-improve json files
 scale on gizmo (better)
 handle that enemy point switching object
 area scale handlers

@@ -2499,6 +2499,12 @@ class GenEditor(QtWidgets.QMainWindow):
         self.update_3d()
 
     def select_prev_objects(self):
+        if self.level_view.connecting_mode == "linedraw":
+            if self.level_view.linedraw_count > 1:
+                self.level_view.linedraw_count -= 1
+            self.update_3d()
+            return
+
         selected, positions, rotations = self.level_file.get_prev_points(self.level_view.selected)
         if selected:
             if self.level_view.shift_is_pressed:
@@ -2516,6 +2522,11 @@ class GenEditor(QtWidgets.QMainWindow):
         self.level_view.select_update.emit()
 
     def select_next_objects(self):
+        if self.level_view.connecting_mode == "linedraw":
+            self.level_view.linedraw_count += 1
+            self.update_3d()
+            return
+
         selected, positions, rotations = self.level_file.get_next_points(self.level_view.selected)
         if selected:
             if self.level_view.shift_is_pressed:
@@ -2887,8 +2898,8 @@ class GenEditor(QtWidgets.QMainWindow):
             diff = pos2 - pos1
             if self.connect_start.route_obj:
                 diffed_points = [RoutePoint(x.position - pos1) for x in self.connect_start.route_obj.points]
-            for i in range(1, 5):
-                position = diff * (i/4) + pos1
+            for i in range(1, 1 + self.level_view.linedraw_count):
+                position = diff * (i/self.level_view.linedraw_count) + pos1
                 new_copy = self.connect_start.copy()
 
                 new_copy.position = position
