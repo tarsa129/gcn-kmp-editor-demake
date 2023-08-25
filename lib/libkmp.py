@@ -2039,6 +2039,7 @@ class ReplayCamera(Camera):
     def from_generic(cls, generic):
         generic.__class__ = cls
         generic.routeclass = ReplayCameraRoute
+        generic.follow_player = 1
         return generic
 
     @classmethod

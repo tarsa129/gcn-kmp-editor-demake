@@ -1976,8 +1976,17 @@ class GenEditor(QtWidgets.QMainWindow):
                     opening[-1].nextcam_obj = placeobject
                 else:
                     self.level_file.cameras.startcam = placeobject
-            else:
-                raise RuntimeError("Unknown object type {0}".format(type(object)))
+            elif isinstance(object, libkmp.ReplayCamera):
+                placeobject.route_obj = ReplayCameraRoute()
+
+                first_point = ReplayCameraRoutePoint.new()
+                first_point.position = placeobject.position
+                placeobject.route_obj.points.append(first_point)
+
+                self.points_added = 0
+                for area in group:
+                    area.camera = placeobject
+                self.object_to_be_added = [ReplayCameraRoutePoint.new(), placeobject.route_obj, -1]
 
             if isinstance(placeobject, RoutePoint):
                 self.pik_control.update_data_edit()
@@ -2042,8 +2051,12 @@ class GenEditor(QtWidgets.QMainWindow):
         if self.object_to_be_added:
             addedpoint, route, position = self.object_to_be_added
         if isinstance(addedpoint, (ReplayCameraRoutePoint, CameraRoutePoint)) and len(route.points) > 1:
-            for point in route.points[:-1]:
-                point.unk1 = 30 if point.unk1 ==0 else point.unk1
+            if len(route.points) == 1:
+                for obj in self.level_file.route_used_by(route):
+                    obj.route_obj = None
+            else:
+                for point in route.points[:-1]:
+                    point.unk1 = 30 if point.unk1 ==0 else point.unk1
         self.update_3d()
 
     def keyPressEvent(self, event: QtGui.QKeyEvent):
@@ -2935,6 +2948,14 @@ class GenEditor(QtWidgets.QMainWindow):
                         obj.userdata[routepoint_setting] = 0
 
                     self.button_add_from_addi_options("add_routepoints_end", obj)
+            elif isinstance(obj_type, Area) and obj_type.type == 0:
+                print("what")
+                new_camera = ReplayCamera.from_generic( Camera.new() )
+                self.object_to_be_added = [new_camera, self.connect_start, 0]
+                self.pik_control.button_add_object.setChecked(True)
+                self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
+
+
         elif len(self.level_view.selected) != 1:
             return
         else: #len(self.level_view.selected) == 1
