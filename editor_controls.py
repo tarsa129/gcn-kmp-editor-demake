@@ -78,7 +78,7 @@ class ClickDragAction(MouseAction):
         self.first_click = None
 
     def just_clicked(self, editor, buttons, event):
-        self.first_click = event.pos()
+        self.first_click = event.position().toPoint()
 
     def move(self, editor, buttons, event):
 
@@ -102,7 +102,7 @@ class TopdownScroll(ClickDragAction):
 
         editor.position += Vector3(adjusted_dx, 0, adjusted_dz)
         editor.do_redraw()
-        self.first_click = event.pos()
+        self.first_click = event.position().toPoint()
 
 
 class TopdownSelect(ClickDragAction):
@@ -152,7 +152,7 @@ class Gizmo2DMoveX(ClickDragAction):
         if editor.gizmo.was_hit["gizmo_x"]:
             editor.gizmo.set_render_axis(AXIS_X)
             delta_x = event.x() - self.first_click.x()
-            self.first_click = event.pos()
+            self.first_click = event.position().toPoint()
             editor.move_points.emit(delta_x*editor.zoom_factor, 0, 0)
 
     def just_released(self, editor, buttons, event):
@@ -173,7 +173,7 @@ class Gizmo2DMoveXZ(Gizmo2DMoveX):
             #editor.gizmo.set_render_axis(AXIS_X)
             delta_x = event.x() - self.first_click.x()
             delta_z = event.y() - self.first_click.y()
-            self.first_click = event.pos()
+            self.first_click = event.position().toPoint()
             editor.move_points.emit(delta_x*editor.zoom_factor, 0, delta_z*editor.zoom_factor)
 
 
@@ -182,7 +182,7 @@ class Gizmo2DMoveZ(Gizmo2DMoveX):
         if editor.gizmo.was_hit["gizmo_z"]:
             editor.gizmo.set_render_axis(AXIS_Z)
             delta_z = event.y() - self.first_click.y()
-            self.first_click = event.pos()
+            self.first_click = event.position().toPoint()
             editor.move_points.emit(0, 0, delta_z*editor.zoom_factor)
 
 
@@ -204,7 +204,7 @@ class Gizmo2DRotateY(Gizmo2DMoveX):
 
             editor.rotate_current.emit(Vector3(0, delta, 0))
 
-            self.first_click = event.pos()
+            self.first_click = event.position().toPoint()
 
     def just_released(self, editor, buttons, event):
         super().just_released(editor, buttons, event)
@@ -219,7 +219,7 @@ class Gizmo2DScaleX(Gizmo2DMoveX):
         if editor.gizmo.was_hit["scale_x"]:
             editor.gizmo.set_render_axis(AXIS_X)
             delta = 1 + ((event.x() - self.first_click.x()) * SCALE_CONSTANT)
-            self.first_click = event.pos()
+            self.first_click = event.position().toPoint()
             editor.scale_current.emit(Vector3(delta, 1, 1))
 
     def just_released(self, editor, buttons, event):
@@ -231,7 +231,7 @@ class Gizmo2DScaleZ(Gizmo2DScaleX):
         if editor.gizmo.was_hit["scale_z"]:
             editor.gizmo.set_render_axis(AXIS_Z)
             delta = 1 + ( (self.first_click.y() - event.y()) * SCALE_CONSTANT)
-            self.first_click = event.pos()
+            self.first_click = event.position().toPoint()
             editor.scale_current.emit(Vector3(1, 1, delta))
 
 
@@ -265,7 +265,7 @@ class View3DScroll(ClickDragAction):
         editor.position += Vector3(sideways_move.x * d_x, 0, sideways_move.y * d_x)
 
         editor.do_redraw()
-        self.first_click = event.pos()
+        self.first_click = event.position().toPoint()
 
 
 class RotateCamera3D(ClickDragAction):
@@ -405,7 +405,7 @@ class Gizmo3DMoveX(Gizmo2DMoveX):
                 0.0,
             ])
             delta[1] = -delta[1]
-            self.first_click = event.pos()
+            self.first_click = event.position().toPoint()
             delta_x = numpy.dot(delta, proj)
 
             if editor.shift_is_pressed:
@@ -564,7 +564,7 @@ class Gizmo3DScaleX(Gizmo2DMoveX):
             proj = proj/numpy.linalg.norm(proj)
             delta = numpy.array([event.x() - self.first_click.x(), event.y() - self.first_click.y(), 0, 0])
             delta[1] = -delta[1]
-            self.first_click = event.pos()
+            self.first_click = event.position().toPoint()
             delta = 1 + (numpy.dot(delta, proj) * SCALE_CONSTANT)
             editor.scale_current.emit(self.do_delta(delta))
 

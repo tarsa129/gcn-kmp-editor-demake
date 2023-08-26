@@ -195,6 +195,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
         self.camera_vertical = -pi*(1/4)
         self.last_move = None
         self.backgroundcolor = (255, 255, 255, 255)
+        self.skycolor = (200, 200, 200, 255)
         self.fov = 75
 
         look_direction = Vector3(cos(self.camera_horiz), sin(self.camera_horiz),
@@ -228,7 +229,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
         with open("resources/gizmo.obj", "r") as f:
             self.gizmo = Gizmo.from_obj(f, rotate=True)
         self.models = ObjectModels()
-        self.grid = Grid(100000, 100000, 10000)
+        self.grid = Grid(1000000, 1000000, 10000)
 
         self.modelviewmatrix = None
         self.projectionmatrix = None
@@ -298,6 +299,12 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                                 int(backgroundcolor[1])/255.0,
                                 int(backgroundcolor[2])/255.0,
                                 1.0)
+        self.skycolor = (
+            self.backgroundcolor[0] * 0.6,
+            self.backgroundcolor[1] * 0.6,
+            self.backgroundcolor[2] * 0.6,
+            self.backgroundcolor[3] * 0.6,
+        )
 
     def change_from_topdown_to_3d(self):
         if self.mode == MODE_3D:
@@ -673,6 +680,8 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
         campos = Vector3(self.position.x, self.position.y, -self.position.z)
         self.campos = campos
 
+        vismenu: FilterViewMenu = self.visibility_menu
+
         if self.mode == MODE_TOPDOWN:
             gizmo_scale = 3*zf
         else:
@@ -690,8 +699,6 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
             glBindFramebuffer(GL_FRAMEBUFFER, self.pick_framebuffer)
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         gizmo_hover_id = 0xFF
-        #print("do we get here? 2")
-
         if not self.selectionqueue and check_gizmo_hover_id:
             self.gizmo.render_collision_check(gizmo_scale, is3d=self.mode == MODE_3D)
             mouse_pos = self.mapFromGlobal(QtGui.QCursor.pos())
@@ -1032,7 +1039,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
 
         #print("gizmo status", self.gizmo.was_hit_at_all)
         #glClearColor(1.0, 1.0, 1.0, 0.0)
-        glClearColor(*self.backgroundcolor)
+        glClearColor(*(self.backgroundcolor if self.mode == MODE_TOPDOWN else self.skycolor))
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
         glEnable(GL_DEPTH_TEST)
@@ -1124,9 +1131,38 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
 
             glCallList(self.snapping_display_list)
 
-        #glDisable(GL_TEXTURE_2D)
-        glColor4f(1.0, 1.0, 1.0, 1.0)
+        if self.mode != MODE_TOPDOWN:
+            glMatrixMode(GL_PROJECTION)
+            glPushMatrix()
+            glLoadIdentity()
+            gluPerspective(75, width / height, 100.0, 10000000.0)
+
+            glEnable(GL_FOG)
+            glFogfv(GL_FOG_COLOR, self.skycolor)
+            glFogi(GL_FOG_MODE, GL_LINEAR)
+            glFogf(GL_FOG_START, 1000)
+            glHint(GL_FOG_HINT, GL_DONT_CARE)
+            glFogf(GL_FOG_END, 200000)
+
         self.grid.render()
+
+        if self.mode != MODE_TOPDOWN:
+            glFogf(GL_FOG_END, 500000)
+
+            glColor4f(*self.backgroundcolor)
+            glBegin(GL_QUADS)
+            glVertex3f(10000000, 10000000, -500)
+            glVertex3f(10000000, -10000000, -500)
+            glVertex3f(-10000000, -10000000, -500)
+            glVertex3f(-10000000, 10000000, -500)
+            glEnd()
+
+            glDisable(GL_FOG)
+
+            glPopMatrix()
+            glMatrixMode(GL_MODELVIEW)
+
+        glColor4f(1.0, 1.0, 1.0, 1.0)
 
         if self.mode == MODE_TOPDOWN:
             #glDisable(GL_DEPTH_TEST)
@@ -1926,7 +1962,9 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                                         color)
 
         #render evrything absolute
-        self.gizmo.render_scaled(gizmo_scale, is3d=self.mode == MODE_3D, hover_id=gizmo_hover_id)
+        self.gizmo.render_scaled(gizmo_scale,
+                                    is3d=self.mode == MODE_3D,
+                                    hover_id=gizmo_hover_id)
 
         glDisable(GL_DEPTH_TEST)
         if self.connecting_mode:

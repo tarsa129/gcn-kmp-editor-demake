@@ -2,6 +2,7 @@ from argparse import _MutuallyExclusiveGroup
 import contextlib
 import pickle
 import traceback
+import weakref
 import os
 from timeit import default_timer
 from copy import deepcopy
@@ -43,13 +44,29 @@ def get_treeitem(root:QtWidgets.QTreeWidgetItem, obj):
     return None
 
 class UndoEntry:
+    _cache = weakref.WeakValueDictionary()
 
-    def __init__(self, bol_document: bytes, enemy_path_data: 'tuple[tuple[bool, int]]'):
-        self.bol_document = bol_document
-        self.enemy_path_data = enemy_path_data
+    class _UndoCacheEntry:
 
+        def __init__(self, bol_document, enemy_path_data):
+            self.bol_document = bol_document
+            self.enemy_path_data = enemy_path_data
+
+    def __init__(self, bol_document: bytes, enemy_path_data: 'tuple[tuple[bool, int]]', selected_items_data: tuple):
         self.bol_hash = hash((bol_document, enemy_path_data))
-        self.hash = hash((self.bol_hash))
+
+        # To avoid keeping track of duplicates of the BOL document (likely the case when the part
+        # that changes in the undo entry is the selection data), a cache is used.
+        if self.bol_hash not in UndoEntry._cache:
+            self._cache_entry = UndoEntry._UndoCacheEntry(bol_document, enemy_path_data)
+            UndoEntry._cache[self.bol_hash] = self._cache_entry
+        else:
+            self._cache_entry = UndoEntry._cache[self.bol_hash]
+        
+        self.bol_document = self._cache_entry.bol_document
+        self.enemy_path_data = self._cache_entry.enemy_path_data
+        self.selected_items_data = selected_items_data
+        self.hash = hash((self.bol_hash, self.selected_items_data))
 
     def __eq__(self, other) -> bool:
         return self.hash == other.hash
@@ -109,7 +126,6 @@ class GenEditor(QtWidgets.QMainWindow):
         self.first_time_3dview = True
 
         self.restore_geometry()
-
         self.undo_history.append(self.generate_undo_entry())
 
         self.obj_to_copy = None
@@ -231,7 +247,17 @@ class GenEditor(QtWidgets.QMainWindow):
         enemy_paths = self.level_file.enemypointgroups
         enemy_path_data = tuple((not path.points, enemy_paths.get_idx(path)) for path in enemy_paths.groups)
 
-        return UndoEntry(bol_document, enemy_path_data)
+        selected_items_data = []
+        for model_index in self.leveldatatreeview.selectionModel().selectedIndexes():
+            selected_item_data = [model_index.row()]
+            model_index_parent = model_index.parent()
+            while model_index_parent.isValid():
+                selected_item_data.append(model_index_parent.row())
+                model_index_parent = model_index_parent.parent()
+            selected_items_data.append(tuple(selected_item_data))
+        selected_items_data = tuple(selected_items_data)
+
+        return UndoEntry(bol_document, enemy_path_data, selected_items_data)
 
     def load_top_undo_entry(self):
         if not self.undo_history:
@@ -259,8 +285,23 @@ class GenEditor(QtWidgets.QMainWindow):
                 assert enemy_path.id == enemy_path_id
                 self.level_file.enemypointgroups.groups.append(enemy_path)
 
+        with QtCore.QSignalBlocker(self.leveldatatreeview):
+            for item in self.leveldatatreeview.selectedItems():
+                item.setSelected(False)
+
         self.level_view.level_file = self.level_file
         self.leveldatatreeview.set_objects(self.level_file)
+
+        # Restore the selection that was current when the undo entry was produced.
+        items_to_select = []
+        with QtCore.QSignalBlocker(self.leveldatatreeview):
+            for selected_item_data in undo_entry.selected_items_data:
+                item = self.leveldatatreeview.invisibleRootItem()
+                for row in reversed(selected_item_data):
+                    item = item.child(row)
+                item.setSelected(True)
+                items_to_select.append(item)
+        self.tree_select_object(items_to_select)
 
         self.update_3d()
         self.pik_control.update_info()
@@ -704,6 +745,8 @@ class GenEditor(QtWidgets.QMainWindow):
         if self.editorconfig.get("default_view") not in ("topdownview", "3dview"):
             self.on_default_view_changed("topdownview")
         self.view_menu.addMenu(self.choose_default_view)
+
+        self.view_menu.addSeparator()
 
         # --------------- Generation
         self.generation_menu = QtWidgets.QMenu(self.menubar)
@@ -1272,41 +1315,52 @@ class GenEditor(QtWidgets.QMainWindow):
                 self.last_chosen_type)
         else:
             chosentype = None
-        if filepath:
-            if chosentype is not None:
-                self.last_chosen_type = chosentype
-            print("Resetting editor")
-            self.reset()
-            print("Reset done")
-            print("Chosen file type:", chosentype)
+        if not filepath:
+            return
 
-            if chosentype == "szs files (*.szs)" or filepath.endswith(".szs"):
-                self.load_archive_file(filepath, add_to_ini)
-                return
-            else:
-                with open(filepath, "rb") as f:
-                    try:
-                        kmp_file = KMP.from_file(f)
+        if chosentype is not None:
+            self.last_chosen_type = chosentype
+        print("Resetting editor")
+        self.reset()
+        print("Reset done")
+        print("Chosen file type:", chosentype)
 
-                        self.setup_kmp_file(kmp_file, filepath, add_to_ini)
-                        self.leveldatatreeview.set_objects(kmp_file)
-                        self.leveldatatreeview.bound_to_group(kmp_file)
-                        self.current_gen_path = filepath
+        if chosentype == "szs files (*.szs)" or filepath.endswith(".szs"):
+            self.load_archive_file(filepath, add_to_ini)
+        else:
+            with open(filepath, "rb") as f:
+                try:
+                    kmp_file = KMP.from_file(f)
 
-                        filepath_base = os.path.dirname(filepath)
+                    self.setup_kmp_file(kmp_file, filepath, add_to_ini)
+                    self.leveldatatreeview.set_objects(kmp_file)
+                    self.leveldatatreeview.bound_to_group(kmp_file)
+                    self.current_gen_path = filepath
 
-                        collisionfile = filepath_base+"/course.kcl"
-                        if os.path.exists(collisionfile):
-                            self.load_collision_kcl(collisionfile)
+                    filepath_base = os.path.dirname(filepath)
 
-                        self.frame_selection(adjust_zoom=True)
-                        self.root_directory = None
-                    except Exception as error:
-                        print("Error appeared while loading:", error)
-                        traceback.print_exc()
-                        open_error_dialog(str(error), self)
+                    collisionfile = filepath_base+"/course.kcl"
+                    if os.path.exists(collisionfile):
+                        self.load_collision_kcl(collisionfile)
 
-            self.update_3d()
+                    self.frame_selection(adjust_zoom=True)
+                    self.root_directory = None
+                except Exception as error:
+                    print("Error appeared while loading:", error)
+                    traceback.print_exc()
+                    open_error_dialog(str(error), self)
+
+        #grab kcl files
+        gobj_kcl_files = []
+        for mapobject in self.level_file.objects.objects:
+            kcl_files = mapobject.get_single_json_val("KCL Files")
+            if kcl_files: gobj_kcl_files.extend(kcl_files)
+        gobj_kcl_files = list(set(gobj_kcl_files))
+
+        if self.level_view.collision is not None:
+            self.level_view.collision.additional_files = gobj_kcl_files
+
+        self.update_3d()
 
     def setup_kmp_file(self, kmp_file, filepath, add_to_ini):
         error_string = kmp_file.fix_file() #will do a popup for 'stuff fixed at load'
@@ -1360,7 +1414,6 @@ class GenEditor(QtWidgets.QMainWindow):
         self.current_gen_path = filepath
 
         clear_temp_folder()
-        self.frame_selection(adjust_zoom=True)
 
     @catch_exception_with_dialog
     def button_save_level(self, *args, **kwargs):
@@ -3107,14 +3160,26 @@ class Application(QtWidgets.QApplication):
 
     document_potentially_changed = QtCore.Signal()
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._pending_focus_change = False
+
+        self.focusChanged.connect(self._on_focus_changed)
+
     def notify(self, receiver: QtCore.QObject, event: QtCore.QEvent) -> bool:
         if event.type() in POTENTIALLY_EDITING_EVENTS:
             if isinstance(receiver, QtGui.QWindow):
-                QtCore.QTimer.singleShot(0, self.document_potentially_changed)
+                disregardable = isinstance(self.focusWidget(), QtWidgets.QAbstractSpinBox)
+                if not disregardable or self._pending_focus_change:
+                    self._pending_focus_change = False
+                    QtCore.QTimer.singleShot(0, self.document_potentially_changed)
 
         return super().notify(receiver, event)
 
-
+    def _on_focus_changed(self, old: QtWidgets.QWidget, now: QtWidgets.QWidget):
+        _ = old, now
+        self._pending_focus_change = True
 
 
 if __name__ == "__main__":
