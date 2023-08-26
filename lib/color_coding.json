@@ -6,8 +6,9 @@
   "ItemRoutes": [1.0, 0.7, 0.7, 1.0],
   "FirstItemPoint": [0.5, 0.35, 0.35, 1.0],
 
-  "CheckpointLeft": [1.0, 0.0, 0.0, 1.0],
-  "CheckpointRight": [0.1, 0.1, 0.8, 1.0],
+  "Checkpoint":[0.0, 0.5, 0.0, 1.0],
+  "CheckpointLeft": [0.0, 1.0, 0.0, 1.0],
+  "CheckpointRight": [0.0, 0.8, 0.0, 1.0],
 
   "Respawn": [1.0, 1.0, 0.0, 1.0],
   "UnusedRespawn": [0.5, 0.5, 0.25, 1.0],
@@ -18,13 +19,15 @@
 
   "Camera": [0.5, 0.1, 0.7, 1],
   "CameraRoutes": [0.7, 0.1, 1, 1],
+  "CameraUnselected": [0.75, 0.65, 0.75, 1],
 
-  "ReplayArea": [1, 0.3, 0, 1],
+  "ReplayArea": [1, 0.7, 0, 1],
   "ReplayAreaFill": [1, 0.5, 0, 0.5],
   "SelectedReplayAreaFill":  [1, 1, 0, 0.5],
   "ReplayCamera": [1, 0.5, 0, 1],
+  "ReplayCameraUnselected": [0.5, 0.5, 0, 1],
   "ReplayCameraPlayer": [0.5, 0.25, 0, 1],
-  "ReplayCameraRoute": [1, 0.7, 0, 1],
+  "ReplayCameraRoute": [1, 0.3, 0, 1],
 
   "Areas": [0.529, 0.808, 0.922, 1.0],
   "AreaFill": [0.0, 0.0, 1, 0.5],

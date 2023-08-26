@@ -1,5 +1,6 @@
 updates:
 
+improve auto respawn generation (base on enemy points)
 improve json files
 
 new features:

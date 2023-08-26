@@ -37,8 +37,6 @@ MOUSE_MODE_CONNECTWP = 3
 MODE_TOPDOWN = 0
 MODE_3D = 1
 
-#colors = [(1.0, 0.0, 0.0), (0.0, 0.5, 0.0), (0.0, 0.0, 1.0), (1.0, 1.0, 0.0)]
-colors = [(0.0,191/255.0,255/255.0), (30/255.0,144/255.0,255/255.0), (0.0,0.0,255/255.0), (0.0,0.0,139/255.0)]
 MKW_FRAMERATE = 59.94
 
 with open("lib/color_coding.json", "r") as f:
@@ -1206,7 +1204,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                         glLineWidth(3.0)
 
                     glBegin(GL_LINE_STRIP)
-                    glColor3f(0.0, 0.0, 0.0)
+                    glColor3f(*colors_json["EnemyRoutes"][:3])
                     prev_point = None
                     for point in group.points:
                         pos = point.position
@@ -1235,7 +1233,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                         continue
 
                     #draw arrows
-                    glColor3f(0.0, 0.0, 0.0)
+                    glColor3f(*colors_json["EnemyRoutes"][:3])
                     for group, point in nextpoints:
                         if selected_groups[i]: #or selected_groups[groupgroup]:
                             glLineWidth(3.0)
@@ -1301,7 +1299,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                         glLineWidth(3.0)
 
                     glBegin(GL_LINE_STRIP)
-                    glColor3f(0.0, 0.0, 0.0)
+                    glColor3f(*colors_json["ItemRoutes"][:3])
                     prev_point = None
                     for point in group.points:
                         pos = point.position
@@ -1327,7 +1325,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                     if len(nextpoints) == 0:
                         continue
 
-                    glColor3f(0.0, 0.0, 0.0)
+                    glColor3f(*colors_json["ItemRoutes"][:3])
                     for group, point in nextpoints:
 
                         if selected_groups[i]: #or selected_groups[group]:
@@ -1376,8 +1374,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                             checkpoints_to_highlight.add(count)
 
                         count += 1
-
-                    glColor3f(*colors[i % 4])
+                    glColor3f(*colors_json["Checkpoint"][:3])
 
                     #draw the lines between the points and between successive points
                     for j, checkpoint in enumerate(group.points):
@@ -1386,7 +1383,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
 
                         #draw the line for each singular checkpoint
                         glLineWidth(normal_width)
-                        glColor3f(*colors[i % 4])
+                        glColor3f(*colors_json["Checkpoint"][:3])
 
                         if (checkpoint.type == 1 or checkpoint.lapcounter == 1) and selected_groups[i] :
                             glLineWidth(highligh_sp_width)
@@ -1410,7 +1407,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
 
                         #draw lines between successive checkpoints
                         if not concave_prev:
-                            glColor3f(*colors[i % 4])
+                            glColor3f(*colors_json["Checkpoint"][:3])
                         glLineWidth(normal_width)
                         glBegin(GL_LINES)
                         if prev is not None:
@@ -1435,7 +1432,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                                 pos1 = checkpoint.start
                                 pos2 = checkpoint.end
 
-                                glColor3f(*colors[i % 4])
+                                glColor3f(*colors_json["Checkpoint"][:3])
                                 if checkpoint.lapcounter == 1:
                                     glColor3f( 1.0, 0.5, 0.0 )
                                     glLineWidth(highligh_sp_width)
@@ -1461,7 +1458,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                     if selected_groups[i]:
                         glLineWidth(normal_width)
 
-                    glColor3f(*colors[i % 4])
+                    glColor3f(*colors_json["Checkpoint"][:3])
                     prev = None
                     for checkpoint in group.points:
                         if prev is None:
@@ -1483,7 +1480,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                 for i, group in enumerate( self.level_file.checkpoints.groups ) :
                     if selected_groups[i]:
                         glLineWidth(highligh_cp_lengt)
-                    glColor3f(*colors[i % 4])
+                    glColor3f(*colors_json["Checkpoint"][:3])
                     prev = None
                     for checkpoint in group.points:
                         if prev is None:
@@ -1583,13 +1580,13 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                         last_point = point
 
                         if point in routepoints_to_circle:
-                            glColor3f(1.0, 1.0, 0.0)
+                            glColor3f(*colors_json["ObjectRoutes"][:3])
                             self.models.draw_sphere(point.position, 300)
                     if selected:
                         glLineWidth(3.0)
 
                     glBegin(GL_LINE_STRIP)
-                    glColor3f(0.0, 0.0, 0.0)
+                    glColor3f(*colors_json["ObjectRoutes"][:3])
                     if len(route.points) == 2 and route.smooth != 0:
                         glColor3f(1.0, 0.0, 0.0 )
                     for point in route.points:
@@ -1600,7 +1597,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                         glLineWidth(1.0)
 
                 for obj in objs_to_highlight:
-                    glColor3f(1.0, 1.0, 0.0)
+                    glColor3f(*colors_json["Objects"][:3])
                     self.models.draw_sphere(obj.position, 300)
 
             if vismenu.kartstartpoints.is_visible():
@@ -1643,7 +1640,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                             point_selected = point in select_optimize
                             self.models.render_generic_position_colored(point.position, point_selected, "areapoint")
                             if circle:
-                                glColor3f(0.0, 0.0, 1.0)
+                                glColor3f(*colors_json["Areas"][:3])
                                 self.models.draw_sphere(point.position, 600)
                             selected = selected or point_selected
                             if last_point is not None:
@@ -1661,7 +1658,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                     if selected or circle:
                         glLineWidth(3.0)
                     glBegin(GL_LINE_STRIP)
-                    glColor3f(0.0, 0.0, 0.0)
+                    glColor3f(*colors_json["AreaRoutes"][:3])
                     if len(route.points) == 2 and route.smooth != 0:
                         glColor3f(1.0, 0.0, 0.0 )
                     for point in route.points:
@@ -1731,7 +1728,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                                 glLineWidth(3.0)
                             else:
                                 glLineWidth(1.0)
-                            glColor3f(0.0, 0.0, 0.0)
+                            glColor3f(*colors_json["ReplayCamera"][:3])
                             glBegin(GL_LINE_STRIP)
 
                             glVertex3f(pos2.x, -pos2.z, pos2.y)
@@ -1765,7 +1762,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                     if bolded:
                         glLineWidth(3.0)
                     glBegin(GL_LINE_STRIP)
-                    glColor3f(0.0, 0.0, 0.0)
+                    glColor3f(*colors_json["ReplayCameraRoute"][:3])
                     if len(route.points) == 2 and route.smooth != 0:
                         glColor3f(1.0, 0.0, 0.0 )
                     for point in route.points:
@@ -1783,9 +1780,9 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                                                                  object in select_optimize,
                                                                  "camera")
                     if object in select_optimize:
-                        glColor3f(1.0, 0.0, 1.0)
+                        glColor3f(*colors_json["Camera"][:3])
                     else:
-                        glColor3f(0.749, 0.616, 0.467)
+                        glColor3f(*colors_json["CameraUnselected"][:3])
                     pos1 = object.position2_simple
                     pos2 = object.position3_simple
                     self.models.draw_sphere(pos1, 300)
@@ -1802,14 +1799,14 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                         pos2 = object.nextcam_obj.position
                         glLineWidth(2.0)
                         glBegin(GL_LINES)
-                        glColor3f(0.0, 0.0, 0.0)
+                        glColor3f(*colors_json["Camera"][:3])
                         glVertex3f(pos1.x, -pos1.z, pos1.y)
                         glVertex3f(pos2.x, -pos2.z, pos2.y)
                         glEnd()
                         self.models.draw_arrow_head(pos1, pos2)
 
                     if object == self.level_file.cameras.startcam:
-                        glColor3f(1.0, 1.0, 0.0)
+                        glColor3f(*colors_json["Camera"][:3])
                         self.models.draw_sphere(object.position, 600)
 
                 routes_to_highlight = set( [camera.route_obj for camera in self.level_file.cameras if camera in select_optimize]  )
@@ -1829,7 +1826,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                     if selected:
                         glLineWidth(3.0)
                     glBegin(GL_LINE_STRIP)
-                    glColor3f(0.0, 0.0, 0.0)
+                    glColor3f(*colors_json["CameraRoutes"][:3])
                     if len(route.points) == 2 and route.smooth != 0:
                         glColor3f(1.0, 0.0, 0.0 )
                     for point in route.points:
@@ -1849,7 +1846,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                                                                 object in select_optimize)
 
                     if object in respawns_to_highlight:
-                        glColor3f(1.0, 1.0, 0.0) # will be replaced with the respawn color
+                        glColor3f(*colors_json["Respawn"][:3]) # will be replaced with the respawn color
                         self.models.draw_sphere(object.position, 600)
                     self.models.draw_wireframe_cube( object.position,
                                                         object.rotation,
@@ -2302,8 +2299,6 @@ class FilterViewMenu(QtWidgets.QMenu):
         with open("lib/color_coding.json", "r") as f:
             colors = json.load(f)
             colors = {k: (round(r * 255), round(g * 255), round(b * 255)) for k, (r, g, b, _a) in colors.items()}
-
-
 
         self.kartstartpoints = ObjectViewSelectionToggle("Kart Start Points", self, True,
                                                          [colors["StartPoints"]])
