@@ -2859,12 +2859,6 @@ class KMP(object):
         self.checkpoints.set_key_cps()
         self.create_respawns()
 
-    def auto_cleanup(self):
-        self.remove_unused_cameras()
-        self.remove_unused_respawns()
-
-        self.remove_invalid_objects()
-
     #respawnid code
     def create_respawns(self):
 

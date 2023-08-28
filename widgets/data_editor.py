@@ -1059,7 +1059,7 @@ class ObjectEdit(DataEditor):
         self.scale = self.add_multiple_decimal_input("Scale", "scale", ["x", "y", "z"],
                                                     -inf, +inf)
         self.rotation = self.add_rotation_input()
-        self.objectid, self.objectid_edit = self.add_dropdown_spinbox_input("Object Type", "objectid", REVERSEOBJECTNAMES, 0, 755)
+        self.objectid, self.objectid_edit = self.add_dropdown_spinbox_input("Object Type", "objectid", REVERSEOBJECTNAMES, 1, 755)
         self.objectid.currentTextChanged.disconnect()
         self.objectid_edit.editingFinished.disconnect()
 
@@ -1092,7 +1092,12 @@ class ObjectEdit(DataEditor):
         self.assets.setSizePolicy(hint)
 
     def object_id_edit_changed(self):
-        new = int(self.objectid_edit.text()) #grab text from the lineedit
+        new = self.objectid_edit.value() #grab value from the lineedit
+        if new not in REVERSEOBJECTNAMES.values():
+            if self.old_objectid is not None:
+                self.update_lineedit(self.old_objectid)
+            return
+
         self.update_combobox(new) #use it to update the combobox
         self.update_name(new) #do the main editing
         self.rename_object_parameters( new, True )
@@ -1120,17 +1125,15 @@ class ObjectEdit(DataEditor):
             return OBJECTNAMES[objectid]
 
     def update_lineedit(self, objectid):
-        self.objectid_edit.editingFinished.disconnect()
-        if objectid is not None:
-            self.objectid_edit.setValue(objectid)
-        self.objectid_edit.editingFinished.connect(self.object_id_edit_changed)
+        with QtCore.QSignalBlocker(self.objectid_edit):
+            if objectid is not None:
+                self.objectid_edit.setValue(objectid)
 
     def update_combobox(self, objectid):
-        self.objectid.currentTextChanged.disconnect()
-        name = self.get_objectname(objectid)
-        index = self.objectid.findText(name)
-        self.objectid.setCurrentIndex(index)
-        self.objectid.currentTextChanged.connect(self.object_id_combo_changed)
+        with QtCore.QSignalBlocker(self.objectid):
+            name = self.get_objectname(objectid)
+            index = self.objectid.findText(name)
+            self.objectid.setCurrentIndex(index)
 
     def rename_object_parameters(self, current, load_defaults=False):
         for i in range(8):
@@ -1208,6 +1211,8 @@ class ObjectEdit(DataEditor):
         self.update_combobox(obj.objectid)
         if self.objectid is not None:
             self.update_lineedit(obj.objectid)
+
+        self.old_objectid = obj.objectid
 
         self.rename_object_parameters( obj.objectid )
 

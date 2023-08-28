@@ -757,11 +757,6 @@ class GenEditor(QtWidgets.QMainWindow):
         self.generation_menu.addAction(self.do_generation)
         self.do_generation.setShortcut("Ctrl+3")
 
-        self.do_cleanup = QtGui.QAction("Run Cleanup")
-        self.do_cleanup.triggered.connect(self.auto_cleanup)
-        self.generation_menu.addAction(self.do_cleanup)
-        self.do_cleanup.setShortcut("Ctrl+4")
-
         self.analyze_action = QtGui.QAction("Analyze for common mistakes", self)
         self.analyze_action.triggered.connect(self.analyze_for_mistakes)
         self.generation_menu.addAction(self.analyze_action)
@@ -3094,13 +3089,6 @@ class GenEditor(QtWidgets.QMainWindow):
 
     def auto_generation(self):
         self.level_file.auto_generation()
-        self.leveldatatreeview.set_objects(self.level_file)
-        self.leveldatatreeview.bound_to_group(self.level_file)
-        self.level_view.do_redraw()
-        self.update_3d()
-
-    def auto_cleanup(self):
-        self.level_file.auto_cleanup()
         self.leveldatatreeview.set_objects(self.level_file)
         self.leveldatatreeview.bound_to_group(self.level_file)
         self.level_view.do_redraw()
