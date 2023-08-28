@@ -2872,19 +2872,21 @@ class KMP(object):
         self.respawnpoints.clear()
         for checkgroup in self.checkpoints.groups:
             num_checks = len(checkgroup.points)
-            for i in range(1, num_checks):
+            for i in range(1, num_checks, 3):
                 checkpoint_mid1 = (checkgroup.points[i].start + checkgroup.points[i].end) /2
                 checkpoint_mid2 = (checkgroup.points[i-1].start + checkgroup.points[i-1].end)/2
+                mid_position = (checkpoint_mid1 * .25) + (checkpoint_mid2 * .75)
 
-                respawn_new = JugemPoint( (checkpoint_mid1 * .25) + (checkpoint_mid2 * .75) )
+                respawn_new = JugemPoint( mid_position )
 
-                self.rotate_one_respawn(respawn_new, edity=True)
+                self.rotate_one_respawn(respawn_new, edity=True, editpos = True)
                 self.respawnpoints.append(respawn_new)
         self.reassign_respawns()
+        self.remove_unused_respawns()
+
     def reassign_respawns(self):
         if len(self.checkpoints.groups) == 0:
             return
-
 
         for checkgroup in self.checkpoints.groups:
             for checkpoint in checkgroup.points:
@@ -2916,7 +2918,7 @@ class KMP(object):
         return -1
 
     def remove_unused_respawns(self):
-        unused_respawns = [i for i in list( range(1, len(self.respawnpoints) )) if i not in self.checkpoints.get_used_respawns()]
+        unused_respawns = [rsp for rsp in self.respawnpoints if rsp not in self.checkpoints.get_used_respawns()]
         unused_respawns.sort()
         unused_respawns.reverse()
         for rsp_idx in unused_respawns:
@@ -2942,7 +2944,7 @@ class KMP(object):
                 idx += 1
         return closest, group_idx, point_idx, master_point_idx
 
-    def rotate_one_respawn(self, rsp :JugemPoint, edity = False):
+    def rotate_one_respawn(self, rsp :JugemPoint, edity = False, editpos = False):
         point, group_idx, pos_idx, point_idx = self.find_closest_enemy_to_rsp(rsp)
         enemy_groups = self.enemypointgroups.groups
 
@@ -2965,11 +2967,15 @@ class KMP(object):
 
         if point_behind_dis < point_ahead_dis:
             pos_ray = point.position - point_behind
+            midpoint = (point.position + point_behind) / 2
             pos_y = point_behind.y
         else:
             pos_ray = point_ahead - point.position
+            midpoint = (point.position + point_ahead) / 2
             pos_y = point_ahead.y
 
+        if editpos:
+            rsp.position = midpoint.copy()
         if edity:
             rsp.position.y = pos_y
 

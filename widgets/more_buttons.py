@@ -191,8 +191,10 @@ class MoreButtons(QtWidgets.QWidget):
                 self.add_button("Copy and Place Current Object", "generic_copy", obj.copy())
 
         elif isinstance(obj, ReplayAreas):
-            self.add_button("Add Area + Simple Stationary Cam", "add_rarea_simple", True)
-            self.add_button("Add Area + Simple Routed Cam", "add_rarea_simple", False)
+            self.add_button("Add Area + Simple Stationary Cam", "add_rarea_simple", False)
+            self.add_button("Add Area + Simple Routed Cam", "add_rarea_simple", True)
+            self.add_button("Add Area + Player Origin Stationary Cam", "add_rarea_simple", False)
+            self.add_button("Add Area + Player Origin Routed Cam", "add_rarea_simple", True)
             self.add_button("Preview Cameras", "preview_replay", obj)
 
         elif isinstance(obj, Areas):

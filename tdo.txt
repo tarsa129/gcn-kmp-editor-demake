@@ -1,10 +1,9 @@
 updates:
 
-improve auto respawn generation (base on enemy points)
 improve json files
+load + collide on gobj collision files
 
 new features:
-load + collide on gobj collision files
 scale on gizmo (better)
 handle that enemy point switching object
 area scale handlers
