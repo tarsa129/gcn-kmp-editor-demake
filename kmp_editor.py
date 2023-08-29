@@ -801,7 +801,7 @@ class GenEditor(QtWidgets.QMainWindow):
             def mousePressEvent(self, event):
                 super().mousePressEvent(event)
 
-                modelIndex = self.indexAt(event.pos())
+                modelIndex = self.indexAt(event.position().toPoint())
                 if not modelIndex.isValid():
                     self.clearSelection()
 
@@ -958,6 +958,7 @@ class GenEditor(QtWidgets.QMainWindow):
                 hidden_colgroups_str = self.configuration["editor"]["hidden_collision_type_groups"]
                 self.level_view.collision.hidden_coltypes = [int(x) for x in hidden_coltypes_str.split(",")]
                 self.level_view.collision.hidden_colgroups = [int(x) for x in hidden_colgroups_str.split(",")]
+                self.level_view.collision.set_visible_tris()
 
             save_cfg(self.configuration)
             self.update_3d()
@@ -1553,6 +1554,7 @@ class GenEditor(QtWidgets.QMainWindow):
             set(int(t) for t in editor_config.get("hidden_collision_types", "").split(",") if t)
         self.level_view.collision.hidden_colgroups = \
             set(int(t) for t in editor_config.get("hidden_collision_type_groups", "").split(",") if t)
+        self.level_view.collision.set_visible_tris()
         save_cfg(self.configuration)
 
     def button_open_add_item_window(self):

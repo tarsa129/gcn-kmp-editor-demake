@@ -37,14 +37,9 @@ class Collision(object):
         self.vertices = list(set(self.vertices))
         self.hash = hash((tuple(self.vertices), tuple(faces)))
 
-        self.flat_triangles = []
-        for t in self.triangles:
-            self.flat_triangles.extend((t.origin.x, t.origin.y, t.origin.z, t.p2.x, t.p2.y, t.p2.z,
-                                        t.p3.x, t.p3.y, t.p3.z))
-        self.flat_triangles = numpy.array(self.flat_triangles)
-
-        self.hidden_coltypes = set()
         self.hidden_colgroups = set()
+        self.hidden_coltypes = set()
+        self.set_visible_tris()
 
         self.additional_files = []
 
@@ -65,16 +60,19 @@ class Collision(object):
         dist2 = abs(y - result2.z)
         return result2.z if dist1 > dist2 else result1.z
 
+    def set_visible_tris(self):
+        self.flat_triangles = []
+        for t in self.triangles:
+            if self.is_invisible_tri(t.material):
+                continue
+            self.flat_triangles.extend((t.origin.x, t.origin.y, t.origin.z, t.p2.x, t.p2.y, t.p2.z,
+                                        t.p3.x, t.p3.y, t.p3.z))
+        self.flat_triangles = numpy.array(self.flat_triangles)
+
     def is_invisible_tri(self, face_mat):
         return ( face_mat in self.hidden_coltypes) or ( face_mat & 0x1F in self.hidden_colgroups)
 
     def collide_ray(self, ray):
-        visible_triangles = [t for t in self.triangles if not self.is_invisible_tri(t.material)]
-        flat_triangles = []
-        for t in visible_triangles:
-            flat_triangles.extend((t.origin.x, t.origin.y, t.origin.z, t.p2.x, t.p2.y, t.p2.z,
-                                        t.p3.x, t.p3.y, t.p3.z))
-
         place_at = _collide_ray_and_triangles(
             ray.origin.x,
             ray.origin.y,
@@ -82,7 +80,7 @@ class Collision(object):
             ray.direction.x,
             ray.direction.y,
             ray.direction.z,
-            numpy.array(self.flat_triangles)
+            self.flat_triangles,
         )
 
         if math.isnan(place_at[0]):
@@ -244,7 +242,7 @@ def _collide_ray_and_triangle(
             if dot(nx, ny, nz, *cross(*subtract(x0, y0, z0, x2, y2, z2), *C2)) >= 0.0:
                 return d, *intersection_point
 
-    return 0.0, 0.0, 0.0, 0.0
+    return 999999999990.0, 0.0, 0.0, 0.0
 
 
 @numba.jit(nopython=True, nogil=True, cache=True)
