@@ -44,13 +44,11 @@ def get_cmn_obj(objs, kmp_file=None):
         return cmn_obj
 
     members = [attr for attr in dir(cmn_obj) if not callable(getattr(cmn_obj, attr)) and not attr.startswith("__")]
-    #print(members)
 
     for obj in objs[1:]:
         for member in members:
             if member == "route_obj" and obj.route_info():
                 getattr(cmn_obj, member).append(  getattr(obj, member) )
-            #print(getattr(obj, member),  getattr(cmn_obj, member))
             elif getattr(cmn_obj, member) is not None and getattr(obj, member) is not None:
                 if type( getattr(cmn_obj, member) ) == list:
                     cmn_list = getattr(cmn_obj, member)
@@ -320,7 +318,6 @@ class DataEditor(QtWidgets.QWidget):
         self.vbox.addLayout(layout)
         if return_both:
             return spinbox, layout.itemAt(0).widget()
-        #print("created for", text, attribute)
         return spinbox
 
     def add_integer_input_index(self, text, attribute, index, min_val, max_val):
@@ -331,7 +328,6 @@ class DataEditor(QtWidgets.QWidget):
 
         def input_edited():
             text = line_edit.text()
-            #print("input:", text)
             for obj in self.bound_to:
                 mainattr = getattr(obj, attribute)
                 mainattr[index] = int(text)
@@ -444,8 +440,6 @@ class DataEditor(QtWidgets.QWidget):
 
         combobox.currentIndexChanged.connect(lambda index: item_selected(index))
 
-        #print("created for", text, attribute)
-
         self.vbox.addLayout(layout)
         if return_both:
             return combobox, layout.itemAt(0).widget()
@@ -460,7 +454,6 @@ class DataEditor(QtWidgets.QWidget):
 
         def item_selected(item):
             val = keyval_dict[item]
-            #print("selected", item)
             set_attr_mult(self.bound_to, attribute, val)
 
             tt_dict = getattr(ttl, attribute, None)
@@ -662,7 +655,6 @@ def create_setter(lineedit, bound_to, attribute, subattr, update3dview, isFloat)
     if isFloat:
         def input_edited():
             text = lineedit.text()
-            #print(bound_to, attribute, subattr)
             #mainattr = getattr(get_cmn_obj(bound_to), attribute)
 
             set_subattrs_mult(bound_to, [attribute, subattr], float(text))
@@ -1275,7 +1267,6 @@ class KartStartPointsEdit(DataEditor):
     def update_starting_info(self):
         #self.bound_to[0].pole_position = self.pole_position.currentIndex()
         #self.bound_to[0].start_squeeze = self.start_squeeze.currentIndex()
-        #print( self.pole_position.currentIndex(), self.start_squeeze.currentIndex())
         self.update_name()
 
 class KartStartPointEdit(DataEditor):

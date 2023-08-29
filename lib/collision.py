@@ -12,14 +12,12 @@ class Collision(object):
         self.triangles = []
         self.face_centers = []
         self.edge_centers = []
-        #print(self.faces)
+
         for face in self.faces:
             v1, v2, v3 = face[0:3]
             col_type = 0xFFFF
             if len(face) > 3:
                 col_type = face[3]
-
-            #print(v1i, v2i, v3i, len(self.verts))
             v1 = Vector3Mat(v1.x, -v1.z, v1.y, col_type)
             v2 = Vector3Mat(v2.x, -v2.z, v2.y, col_type)
             v3 = Vector3Mat(v3.x, -v3.z, v3.y, col_type)

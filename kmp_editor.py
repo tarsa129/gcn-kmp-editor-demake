@@ -83,7 +83,6 @@ class GenEditor(QtWidgets.QMainWindow):
 
         try:
             self.configuration = read_config()
-            print("Config file loaded")
         except FileNotFoundError as e:
             print("No config file found, creating default config...")
             self.configuration = make_default_config()
@@ -497,7 +496,6 @@ class GenEditor(QtWidgets.QMainWindow):
             self.tree_select_object(current[0])
 
     def tree_select_object(self, item):
-        #print("Selected mkdd_editor:", item)
         self.level_view.selected = []
         self.level_view.selected_positions = []
         self.level_view.selected_rotations = []
@@ -1315,11 +1313,7 @@ class GenEditor(QtWidgets.QMainWindow):
 
         if chosentype is not None:
             self.last_chosen_type = chosentype
-        print("Resetting editor")
         self.reset()
-        print("Reset done")
-        print("Chosen file type:", chosentype)
-
         if chosentype == "szs files (*.szs)" or filepath.endswith(".szs"):
             self.load_archive_file(filepath, add_to_ini)
         else:
@@ -1374,7 +1368,6 @@ class GenEditor(QtWidgets.QMainWindow):
 
         self.on_document_potentially_changed(update_unsaved_changes=False)
 
-        print("File loaded")
         # self.bw_map_screen.update()
         # path_parts = path.split(filepath)
         self.set_base_window_title(filepath)
@@ -1584,8 +1577,6 @@ class GenEditor(QtWidgets.QMainWindow):
                 if isinstance(obj, Camera) and obj.route_obj is None:
                     obj.setup_route()
                 self.button_add_from_addi_options( "add_routepoints_end", obj)
-            else:
-                print('nothing caught')
 
         self.update_3d()
 
@@ -1654,7 +1645,6 @@ class GenEditor(QtWidgets.QMainWindow):
     #this is what happens when you close out of the window
     @catch_exception
     def button_add_item_window_save(self):
-        #print("ohai")
         if self.add_object_window is not None:
             self.object_to_be_added = self.add_object_window.get_content()
             if self.object_to_be_added is None:
@@ -2218,8 +2208,6 @@ class GenEditor(QtWidgets.QMainWindow):
         self.level_view.change_height_is_pressed = False
 
     def action_rotate_object(self, deltarotation):
-        #obj.set_rotation((None, round(angle, 6), None))
-        #print(deltarotation)
         for rot in self.level_view.selected_rotations:
             if deltarotation.x != 0:
                 rot.rotate_around_x(deltarotation.x) #originally y
@@ -2891,8 +2879,6 @@ class GenEditor(QtWidgets.QMainWindow):
         end_groupind, end_group, end_pointind = to_deal_with.find_group_of_point(endpoint)
 
         start_groupind, start_group, start_pointind = to_deal_with.find_group_of_point(startpoint)
-        #print( end_groupind, end_group, end_pointind )
-        #print( start_groupind, start_group, start_pointind  )
         #make sure that start_group is good to add another
         if start_group.num_next() == 6 and start_pointind == len(start_group.points) - 1:
             return
@@ -3008,7 +2994,6 @@ class GenEditor(QtWidgets.QMainWindow):
 
                     self.button_add_from_addi_options("add_routepoints_end", obj)
             elif isinstance(obj_type, Area) and obj_type.type == 0:
-                print("what")
                 new_camera = ReplayCamera.from_generic( Camera.new() )
                 self.object_to_be_added = [new_camera, self.connect_start, 0]
                 self.pik_control.button_add_object.setChecked(True)
@@ -3059,8 +3044,6 @@ class GenEditor(QtWidgets.QMainWindow):
                     if (not both_in_seq) or (opening_cams.index(camera) < opening_cams.index(endpoint)):
                         camera.nextcam_obj = endpoint
     def set_and_start_copying(self):
-        #print(self.level_view.selected)
-        #print(isinstance( self.level_view.selected[0], (MapObject, Area, Camera)))
         if len(self.level_view.selected) == 1 and isinstance( self.level_view.selected[0], (MapObject, Area, Camera)):
             self.obj_to_copy = self.level_view.selected[0]
             self.copy_current_obj()
@@ -3117,7 +3100,6 @@ class GenEditor(QtWidgets.QMainWindow):
                 self.load_archive_file(filepath, add_to_ini = False)
 
     def change_area_type(self, obj, new_type):
-        print(new_type)
         obj.change_type(new_type)
 
 def find_file(rarc_folder, ending):

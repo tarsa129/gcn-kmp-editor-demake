@@ -423,7 +423,6 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
             return
 
         diff_x = diff_y = 0
-        #print(self.MOVE_UP, self.MOVE_DOWN, self.MOVE_LEFT, self.MOVE_RIGHT)
         speedup = 1
 
         if self.shift_is_pressed:
@@ -459,7 +458,6 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
             return
 
         diff_x = diff_y = diff_height = 0
-        #print(self.MOVE_UP, self.MOVE_DOWN, self.MOVE_LEFT, self.MOVE_RIGHT)
         speedup = 1
 
         forward_vec = Vector3(cos(self.camera_horiz), sin(self.camera_horiz), 0)
@@ -661,7 +659,6 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
             look_direction = Vector3(cos(self.camera_horiz), sin(self.camera_horiz), sin(self.camera_vertical))
             # look_direction.unify()
             fac = 1.01 - abs(look_direction.z)
-            # print(fac, look_direction.z, look_direction)
 
             gluLookAt(self.position.x, self.position.z, self.position.y,
                       self.position.x + look_direction.x * fac, self.position.z + look_direction.y * fac,
@@ -670,7 +667,6 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
 
             self.camera_direction = Vector3(look_direction.x * fac, look_direction.y * fac, look_direction.z)
 
-            #print(self.camera_direction)
 
         self.modelviewmatrix = numpy.transpose(numpy.reshape(glGetFloatv(GL_MODELVIEW_MATRIX), (4,4)))
         self.projectionmatrix = numpy.transpose(numpy.reshape(glGetFloatv(GL_PROJECTION_MATRIX), (4,4)))
@@ -718,7 +714,6 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
             glClearColor(1.0, 1.0, 1.0, 1.0)
             glDisable(GL_TEXTURE_2D)
 
-        #print("do we get here?")
 
         while len(self.selectionqueue) > 0:
             click_x, click_y, clickwidth, clickheight, shiftpressed, do_gizmo = self.selectionqueue.pop()
@@ -1035,9 +1030,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
         if use_pick_framebuffer:
             glBindFramebuffer(GL_FRAMEBUFFER, self.defaultFramebufferObject())
 
-        
 
-        #print("gizmo status", self.gizmo.was_hit_at_all)
         #glClearColor(1.0, 1.0, 1.0, 0.0)
         glClearColor(*(self.backgroundcolor if self.mode == MODE_TOPDOWN else self.skycolor))
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -1989,7 +1982,6 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                     self.models.draw_arrow_head(pos1, pos2)
         else: 
             if self.selectionbox_start is not None and self.selectionbox_end is not None:
-                #print("drawing box")
                 startx, startz = self.selectionbox_start
                 endx, endz = self.selectionbox_end
                 glColor4f(1.0, 0.0, 0.0, 1.0)
@@ -2004,7 +1996,6 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                 glLineWidth(1.0)
 
             if self.selectionbox_projected_origin is not None and self.selectionbox_projected_coords is not None:
-                #print("drawing box")
                 origin = self.selectionbox_projected_origin
                 point2, point3, point4 = self.selectionbox_projected_coords
                 glColor4f(1.0, 0.0, 0.0, 1.0)
@@ -2054,7 +2045,6 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
 
         glFinish()
         #now = default_timer() - start
-        #print("Frame time:", now, 1/now, "fps")
 
     def do_selection(self):
         pass
@@ -2166,7 +2156,6 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
             pos2 = self.collision.collide_ray(ray)
 
         if pos2 is None:
-            #print("colliding with plane")
             plane = Plane.xy_aligned(Vector3(0.0, 0.0, 0.0))
 
             collision = ray.collide_plane(plane)

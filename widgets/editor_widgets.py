@@ -33,11 +33,9 @@ def catch_exception(func):
 def catch_exception_with_dialog(func):
     def handle(*args, **kwargs):
         try:
-            #print(args, kwargs)
             return func(*args, **kwargs)
         except Exception as e:
             traceback.print_exc()
-            #print("hey")
             open_error_dialog(str(e), None)
     return handle
 
@@ -45,7 +43,6 @@ def catch_exception_with_dialog(func):
 def catch_exception_with_dialog_nokw(func):
     def handle(*args, **kwargs):
         try:
-            #print(args, kwargs)
             return func(*args, **kwargs)
         except Exception as e:
             traceback.print_exc()
@@ -442,7 +439,6 @@ class AddPikObjectWindow(QtWidgets.QDialog):
                 self.editor_widget.setContentsMargins(margin, margin, margin, margin)
                 self.editor_layout.setWidget(self.editor_widget)
 
-                #print("isobject", isinstance(self.editor_widget, ObjectEdit))
                 if isinstance(self.editor_widget, ObjectEdit):
                     self.editor_widget.update_data(load_defaults = True)
                     self.editor_widget.set_default_values()

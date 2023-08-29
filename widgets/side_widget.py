@@ -131,7 +131,6 @@ class PikminSideWidget(QtWidgets.QWidget):
         self.more_buttons.add_buttons_multi(objs)
         if not objs:
             return
-        #print(objs)
         if all_of_same_type(objs):
             editor = choose_data_editor(objs[0])
             if editor is not None:
@@ -144,7 +143,6 @@ class PikminSideWidget(QtWidgets.QWidget):
     #updates the side buttons
     def set_buttons(self, obj):
         #so obj is used to determined - this is when stuff switches?
-        #print("side info set buttons")
         self.more_buttons.add_buttons(obj)
 
     #upon one thing being selected

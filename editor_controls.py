@@ -298,11 +298,6 @@ ufac = 500
 
 class Select3D(ClickDragAction):
     def condition(self, editor, buttons, event):
-        if False and not (editor.mousemode == MOUSE_MODE_NONE and not buttons.is_held(event, "Right") and not editor.gizmo.was_hit_at_all):
-            print("Wanted to do a select but", editor.mousemode == MOUSE_MODE_NONE,
-                  not buttons.is_held(event, "Right"),
-                  not editor.gizmo.was_hit_at_all
-                  )
         return editor.mousemode == MOUSE_MODE_NONE and not buttons.is_held(event, "Right") and not editor.gizmo.was_hit_at_all
 
     def just_clicked(self, editor, buttons, event):
@@ -354,7 +349,6 @@ class AddObject3D(ClickAction):
         return editor.mousemode == MOUSE_MODE_ADDWP
 
     def just_clicked(self, editor, buttons, event):
-        #print("added object in 3d")
         ray = editor.create_ray_from_mouseclick(event.x(), event.y())
         place_at = None
 
@@ -362,7 +356,6 @@ class AddObject3D(ClickAction):
             place_at = editor.collision.collide_ray(ray)
 
         if place_at is None:
-            #print("colliding with plane")
             plane = Plane.xy_aligned(Vector3(0.0, 0.0, 0.0))
 
             collision = ray.collide_plane(plane)
@@ -371,12 +364,8 @@ class AddObject3D(ClickAction):
 
 
         if place_at is not None:
-            #print("placed at", place_at)
             editor.create_waypoint_3d.emit(place_at.x, place_at.z, -place_at.y)
             editor.position_update.emit(event, (round(place_at.x, 2), round(place_at.y, 2), round(place_at.z, 2)))
-        #else:
-        #    print("nothing collided, aw")
-
 
 vec = numpy.array([1, 0, 0, 0])
 
@@ -662,9 +651,7 @@ class UserControl(object):
         else:
             self.handle_release_3d(event)
 
-        #editor.selectionqueue.clear()
         editor.gizmo.reset_hit_status()
-        #print("Gizmo hit status was reset!!!!", editor.gizmo.was_hit_at_all)
         editor.do_redraw()
 
         x = event.x()

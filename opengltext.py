@@ -180,7 +180,6 @@ class GLPlotWidget(QtOpenGLWidgets.QOpenGLWidget):
         glLoadIdentity()
         draw_collision(self.verts, self.faces)
         glFinish()
-        print("drawn")
 
     def resizeGL(self, width, height):
         # Called upon window resizing: reinitialize the viewport.

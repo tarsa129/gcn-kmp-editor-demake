@@ -46,7 +46,6 @@ os.remove(os.path.join(bundle_dirpath, 'frozen_application_license.txt'))
 current_dirpath = os.getcwd()
 os.chdir(build_dirpath)
 try:
-    print('Creating ZIP archive...')
     shutil.make_archive(bundle_dirname, 'zip', '.', bundle_dirname)
 finally:
     os.chdir(current_dirpath)

@@ -37,12 +37,10 @@ class Directory(object):
     @classmethod
     def from_dir(cls, path, follow_symlinks=False):
         dirname = os.path.basename(path)
-        #print(dirname, path)
         dir = cls(dirname)
 
         #with os.scandir(path) as entries: <- not supported in versions earlier than 3.6 apparently
         for entry in os.scandir(path):
-            #print(entry.path, dirname)
             if entry.is_dir(follow_symlinks=follow_symlinks):
                 newdir = Directory.from_dir(entry.path, follow_symlinks=follow_symlinks)
                 dir.subdirs[entry.name] = newdir
@@ -65,12 +63,10 @@ class Directory(object):
         else:
             dirpath = _path+"/"+self.name
 
-        #print("Yielding", dirpath)
 
         yield (dirpath, self.subdirs.keys(), self.files.keys())
 
         for dirname, dir in self.subdirs.items():
-            #print("yielding subdir", dirname)
             yield from dir.walk(dirpath)
 
     def __getitem__(self, path):

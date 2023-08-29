@@ -262,7 +262,6 @@ class PointGroups(object):
         return None, None, None
 
     def merge_groups(self):
-        #print("new merge cycle")
         if len(self.groups) < 2:
             return
 
@@ -273,11 +272,9 @@ class PointGroups(object):
                 return
 
             group = self.groups[i]
-            #print("compare the ids, they should be the same", i, group.id)
             #if this group only has one next, and the nextgroup only has one prev, they can be merged
             if group.num_next() == 1 and group.nextgroup[0].num_prev() == 1:
                 if first_group in group.nextgroup:
-                    #print("do not merge with the starte")
                     i += 1 #do not merge with the start
                     continue
                 del_group = group.nextgroup[0]
@@ -889,7 +886,6 @@ class CheckpointGroup(PointGroup):
         return key
 
     def write_ckph(self, f, index, groups):
-        #print(index, len(self.points), self.prevgroup, self.nextgroup)
         f.write(pack(">B", index ) )
         f.write(pack(">B", len(self.points) ) )
 
@@ -917,12 +913,9 @@ class CheckpointGroups(PointGroups):
     @classmethod
     def from_file(cls, f, ckph_offset):
         checkpointgroups = cls()
-        #print("ckpt offset", hex(f.tell()))
         assert f.read(4) == b"CKPT"
         count = read_uint16(f)
         f.read(2)
-
-        #print(count)
 
         all_points = []
         #read the enemy points
@@ -930,7 +923,6 @@ class CheckpointGroups(PointGroups):
             checkpoint = Checkpoint.from_file(f)
             all_points.append(checkpoint)
 
-        #print("ckph offset", hex(f.tell()))
         assert f.read(4) == b"CKPH"
         count = read_uint16(f)
         f.read(2)
@@ -1304,7 +1296,6 @@ class MapObject(RoutedObject):
     def common_obj(cls, objs):
         cmn = objs[0].copy()
         members = [attr for attr in dir(cmn) if not callable(getattr(cmn, attr)) and not attr.startswith("__")]
-        print(members)
         return cmn
 
 
@@ -1448,7 +1439,6 @@ class MapObjects(object):
         f.write(pack(">H", len(self.objects)))
         f.write(pack(">H", 0) )
 
-        #print(bol2kmp)
         for object in self.objects:
             object.write(f, routes)
 
@@ -1893,8 +1883,6 @@ class Camera(RoutedObject):
         cam.startflag = start_flag
         cam.movieflag = movie_flag
 
-
-        #print(rotation)
         cam.rot = Rotation.from_file(f)
 
         cam.fov.start = read_float(f)
@@ -2110,7 +2098,6 @@ class JugemPoint(object):
         jugem = cls(position)
 
         #rotation = Vector3(*unpack(">fff", f.read(12)))
-        #print(rotation)
         jugem.rotation = Rotation.from_file(f)
 
 
