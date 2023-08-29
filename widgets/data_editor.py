@@ -1585,12 +1585,13 @@ class GoalCameraEdit(CameraEdit):
 
 class CamerasEdit(DataEditor):
     def setup_widgets(self):
+        goalcam = self.bound_to[0].goalcam
         self.bound_to = self.bound_to[0]
         self.main_thing = QtWidgets.QTabWidget()
         self.vbox.addWidget(self.main_thing)
 
-        self.seq_edit = OpeningCamerasEdit(self.parent(), [self.bound_to])
-        self.camera_edit = GoalCameraEdit(self.parent(), [self.bound_to.goalcam])
+        self.seq_edit = OpeningCamerasEdit(self.parent(), self.bound_to)
+        self.camera_edit = GoalCameraEdit(self.parent(), [goalcam])
 
         self.main_thing.addTab(self.seq_edit, "Opening Cameras")
         self.main_thing.addTab(self.camera_edit, "Goal Camera")
@@ -1604,14 +1605,14 @@ class CameraSummaryEdit(DataEditor):
         self.camduration = self.add_integer_input("Camera Duration", "camduration",
                                     MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT)
     def update_data(self):
-        self.camduration.setValue(self.bound_to.camduration)
+        self.camduration.setValue(self.bound_to[0].camduration)
 
 class OpeningCamerasEdit(DataEditor):
     def setup_widgets(self):
         self.widgets = []
 
-        for obj in self.bound_to[0]:
-            editor = CameraSummaryEdit(self.parent(), obj)
+        for obj in self.bound_to:
+            editor = CameraSummaryEdit(self.parent(), [obj])
             self.vbox.addWidget(editor)
             self.widgets.append(editor)
 
