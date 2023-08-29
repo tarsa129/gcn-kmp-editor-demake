@@ -362,10 +362,9 @@ class AddObject3D(ClickAction):
             if collision is not False:
                 place_at, _ = collision
 
-
         if place_at is not None:
             editor.create_waypoint_3d.emit(place_at.x, place_at.z, -place_at.y)
-            editor.position_update.emit(event, (round(place_at.x, 2), round(place_at.y, 2), round(place_at.z, 2)))
+            editor.position_update.emit((round(place_at.x, 2), round(place_at.y, 2), round(place_at.z, 2)))
 
 vec = numpy.array([1, 0, 0, 0])
 
