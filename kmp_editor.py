@@ -1780,9 +1780,12 @@ class GenEditor(QtWidgets.QMainWindow):
             self.object_to_be_added = [thing_to_add, start_group, start_pointind + 1  ]
             self.pik_control.button_add_object.setChecked(True)
             self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
-        elif option == "add_rarea_simple": #area camera route add
+        elif option in ("add_rarea_simple", "add_rarea_player"): #area camera route add
             new_area = libkmp.Area.default()
-            new_camera = libkmp.ReplayCamera.default(1)
+            if option == "add_rarea_simple":
+                new_camera = libkmp.ReplayCamera.default(1)
+            else:
+                new_camera = libkmp.ReplayCamera.default(3)
             if obj:
                 new_camera.create_route(True)
             new_area.camera = new_camera
@@ -1998,6 +2001,8 @@ class GenEditor(QtWidgets.QMainWindow):
                             diffed_points = [RoutePoint(x.position - object.position) for x in object.camera.route_obj.points]
                             placeobject.camera.create_route(True, diffed_points, True, overwrite=True)
                             placeobject.camera.route_obj.points[0].position = placeobject.camera.position
+                        placeobject.camera.position2_player = Vector3Relative(Vector3(200, 100, -500), placeobject.camera.position)
+                        placeobject.camera.position3_player = Vector3Relative(Vector3(0.0, 0.0, 0.0), placeobject.camera.position)
                 else:
                     self.level_file.areas.append(placeobject)
                     if placeobject.type == 4:

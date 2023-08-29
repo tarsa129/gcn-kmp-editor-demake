@@ -193,8 +193,7 @@ class MoreButtons(QtWidgets.QWidget):
         elif isinstance(obj, ReplayAreas):
             self.add_button("Add Area + Simple Stationary Cam", "add_rarea_simple", False)
             self.add_button("Add Area + Simple Routed Cam", "add_rarea_simple", True)
-            self.add_button("Add Area + Player Origin Stationary Cam", "add_rarea_simple", False)
-            self.add_button("Add Area + Player Origin Routed Cam", "add_rarea_simple", True)
+            self.add_button("Add Area + Player Origin Stationary Cam", "add_rarea_player", False)
             self.add_button("Preview Cameras", "preview_replay", obj)
 
         elif isinstance(obj, Areas):
