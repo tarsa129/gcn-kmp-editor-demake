@@ -1413,14 +1413,9 @@ class MapObject(RoutedObject):
         closest_point_idx = argmin(array([x.position.distance(self.position) for x in self.route_obj.points]))
         self.routepoint = self.route_obj.points[closest_point_idx]
 
-class MapObjects(object):
+class MapObjects(ObjectContainer):
     def __init__(self):
-        self.objects = []
-
-    def reset(self):
-        del self.objects
-        self.objects = []
-
+        super().__init__()
 
     @classmethod
     def from_file(cls, f, objectcount):
@@ -1429,21 +1424,21 @@ class MapObjects(object):
         for i in range(objectcount):
             obj = MapObject.from_file(f)
             if obj is not None:
-                mapobjs.objects.append(obj)
+                mapobjs.append(obj)
 
         return mapobjs
 
     def write(self, f, routes):
 
         f.write(b"GOBJ")
-        f.write(pack(">H", len(self.objects)))
+        f.write(pack(">H", len(self)))
         f.write(pack(">H", 0) )
 
-        for object in self.objects:
+        for object in self:
             object.write(f, routes)
 
     def get_routes(self):
-        return list(set([obj.route_obj for obj in self.objects if obj.route_obj is not None and obj.route_info()]))
+        return list(set([obj.route_obj for obj in self if obj.route_obj is not None and obj.route_info()]))
 
 # Section 6
 # Kart/Starting positions
@@ -2215,6 +2210,7 @@ class KMP(object):
         self.respawnpoints.assoc = JugemPoint
         self.cannonpoints.assoc = CannonPoint
         self.missionpoints.assoc = MissionPoint
+        self.objects.assoc = MapObject
 
     @classmethod
     def make_useful(cls):
@@ -2261,7 +2257,7 @@ class KMP(object):
                 yield point
 
     def objects_with_rotations(self):
-        for object in self.objects.objects:
+        for object in self.objects:
             assert object is not None
             yield object
 
@@ -2316,7 +2312,7 @@ class KMP(object):
             objects.append(route)
             objects.extend(route.points)
 
-        objects.extend(self.objects.objects)
+        objects.extend(self.objects)
         objects.extend(self.kartpoints.positions)
         objects.extend(self.areas)
         objects.extend(self.replayareas)
@@ -2469,13 +2465,13 @@ class KMP(object):
 
         #remove invalid objects
         to_remove = []
-        for object in self.objects.objects:
+        for object in self.objects:
             if object.objectid not in OBJECTNAMES:
                 return_string += "An invalid object of id {0} was found and will be removed.".format(object.objectid)
                 to_remove.append(object)
-        [self.objects.objects.remove(obj) for obj in to_remove]
+        [self.objects.remove(obj) for obj in to_remove]
 
-        for object in self.objects.objects:
+        for object in self.objects:
             if object.route_info() > 0:
                 if object.route > -1 and object.route < len(self.routes):
                     route = self.routes[object.route]
@@ -2645,7 +2641,7 @@ class KMP(object):
                 for thing in self.route_used_by(route):
                     thing.route_obj = new_route
 
-        for obj in self.objects.objects:
+        for obj in self.objects:
             special_usersetting = obj.get_routepoint_idx()
             if (special_usersetting is not None) and obj.userdata[special_usersetting] < len(obj.route_obj.points):
                 obj.routepoint = obj.route_obj.points[obj.userdata[special_usersetting]]
@@ -2669,8 +2665,8 @@ class KMP(object):
                 camera.position2_player = camera.route_obj.points[0].position
 
         #type 7 area and boo
-        boo_objs = [obj for obj in self.objects.objects if obj.objectid == 396]
-        [self.objects.objects.remove(boo_obj) for boo_obj in boo_objs]
+        boo_objs = [obj for obj in self.objects if obj.objectid == 396]
+        [self.objects.remove(boo_obj) for boo_obj in boo_objs]
         boo_areas = [area for area in self.areas if area.type == 7]
         if not boo_objs and boo_areas:
             return_string += "Boo Areas are in the .kmp, but no boo objects exist. A boo object will be added.\n"
@@ -2729,9 +2725,9 @@ class KMP(object):
         routes.extend(objectroutes)
 
         all_objects = MapObjects()
-        all_objects.objects.extend(self.objects.objects)
+        all_objects.extend(self.objects)
         if self.areas.boo_obj is not None and self.areas.get_type(7):
-            all_objects.objects.append(self.areas.boo_obj)
+            all_objects.append(self.areas.boo_obj)
 
         offsets.append(f.tell() ) #offset 8 for gobj
         all_objects.write(f, routes)
@@ -3107,10 +3103,10 @@ class KMP(object):
 
     #objects
     def remove_object(self, obj: MapObject):
-        self.objects.objects.remove(obj)
+        self.objects.remove(obj)
 
     def remove_invalid_objects(self):
-        invalid_objs = [obj for obj in self.objects.objects if obj.objectid not in OBJECTNAMES]
+        invalid_objs = [obj for obj in self.objects if obj.objectid not in OBJECTNAMES]
         for obj in invalid_objs:
             self.remove_object(obj)
 
@@ -3141,12 +3137,12 @@ class KMP(object):
         elif isinstance(route, CameraRoute):
             collec = self.cameras
         elif isinstance(route, ObjectRoute):
-            collec = self.objects.objects
+            collec = self.objects
         else:
             collec.extend(self.areas)
             collec.extend(self.replayareas.get_cameras())
             collec.extend(self.cameras)
-            collec.extend(self.objects.objects)
+            collec.extend(self.objects)
         if mandatory:
             return [x for x in collec if x.route_info() > 1 and x.route_obj == route]
         else:

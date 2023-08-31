@@ -434,7 +434,7 @@ class GenEditor(QtWidgets.QMainWindow):
                     extend(checkpoint.start)
                     extend(checkpoint.end)
         if self.visibility_menu.objects.is_visible():
-            for object_ in self.level_file.objects.objects:
+            for object_ in self.level_file.objects:
                 extend(object_.position)
         if self.visibility_menu.areas.is_visible():
             for area in self.level_file.areas:
@@ -1233,9 +1233,9 @@ class GenEditor(QtWidgets.QMainWindow):
         obj = item.bound_to
         to_delete = []
         if isinstance(obj, MapObject):
-            to_delete = [mapobject for mapobject in self.level_file.objects.objects if mapobject.objectid == obj.objectid]
+            to_delete = [mapobject for mapobject in self.level_file.objects if mapobject.objectid == obj.objectid]
             for obj in to_delete:
-                self.level_file.objects.objects.remove(obj)
+                self.level_file.objects.remove(obj)
         elif isinstance(obj, Area):
             to_delete = [area for area in self.level_file.areas if area.type == obj.type]
             for obj in to_delete:
@@ -1251,7 +1251,7 @@ class GenEditor(QtWidgets.QMainWindow):
         else:
             obj = item
         if isinstance(obj, MapObject):
-            to_select = [mapobject for mapobject in self.level_file.objects.objects if mapobject.objectid == obj.objectid]
+            to_select = [mapobject for mapobject in self.level_file.objects if mapobject.objectid == obj.objectid]
         elif isinstance(obj, Area):
             to_select = [area for area in self.level_file.areas if area.type == obj.type]
         self.level_view.selected = to_select
@@ -1804,7 +1804,7 @@ class GenEditor(QtWidgets.QMainWindow):
                     self.auto_route_obj(camera)
             elif isinstance(obj, MapObjects):
                 self.leveldatatreeview.objects.bound_to = self.level_file.objects
-                for object in self.level_file.objects.objects:
+                for object in self.level_file.objects:
                     self.auto_route_obj(object)
         elif option == "auto_keycheckpoints": #key checkpoints
             self.level_file.checkpoints.set_key_cps()
@@ -1972,7 +1972,7 @@ class GenEditor(QtWidgets.QMainWindow):
                         placeobject.position = Vector3Relative(diff, camera.position)
                 self.points_added += 1
             elif isinstance(object, libkmp.MapObject):
-                self.level_file.objects.objects.append(placeobject)
+                self.level_file.objects.append(placeobject)
                 placeobject.reassign_routepoint()
             elif isinstance(object, libkmp.KartStartPoint):
                 self.level_file.kartpoints.positions.append(placeobject)
@@ -2319,7 +2319,7 @@ class GenEditor(QtWidgets.QMainWindow):
                     elif len(group.points) == 2:
                         group.smooth = 0
                 #see if a route point is used
-                for mapobject in self.level_file.objects.objects:
+                for mapobject in self.level_file.objects:
                     if mapobject.routepoint == obj:
                         mapobject.reassign_routepoint()
 
@@ -2474,7 +2474,7 @@ class GenEditor(QtWidgets.QMainWindow):
 
             # Autonomous objects.
             elif isinstance(obj, libkmp.MapObject):
-                self.level_file.objects.objects.append(obj)
+                self.level_file.objects.append(obj)
             elif isinstance(obj, libkmp.KartStartPoint):
                 self.level_file.kartpoints.positions.append(obj)
             elif isinstance(obj, libkmp.JugemPoint):
@@ -2940,7 +2940,7 @@ class GenEditor(QtWidgets.QMainWindow):
                 if self.connect_start.route_obj:
                     new_copy.create_route(True, diffed_points, True, overwrite=True)
                     self.action_ground_objects( [x.position for x in new_copy.route_obj.points]  )
-                self.level_file.objects.objects.append(new_copy)
+                self.level_file.objects.append(new_copy)
                 #copy the route, if the route is type 2
                 #place the object
 

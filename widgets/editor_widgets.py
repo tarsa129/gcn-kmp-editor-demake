@@ -175,7 +175,7 @@ class ErrorAnalyzer(QtWidgets.QDialog):
                 write_line("Route {0} has two points, but is set to smooth".format( i ))
         """
         # Validate path id in objects
-        for object in kmp.objects.objects:
+        for object in kmp.objects:
             if object.route_info() > 0 and object.route_obj is None:
                 write_line("Object {0} needs a route.".format( get_kmp_name(object.objectid)))
         # Check camera indices in areas

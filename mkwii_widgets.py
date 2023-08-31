@@ -812,7 +812,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                     offset = len(objlist)
 
                 if vismenu.objects.is_selectable(): #object routes
-                    for i, obj in enumerate(obj for obj in self.level_file.objects.objects if obj not in selected):
+                    for i, obj in enumerate(obj for obj in self.level_file.objects if obj not in selected):
                         objlist.append(
                             ObjectSelectionEntry(obj=obj,
                                                 pos1=obj.position,
@@ -1568,7 +1568,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
             glPopMatrix()
             #go between the groups
             if vismenu.objects.is_visible():
-                for object in self.level_file.objects.objects:
+                for object in self.level_file.objects:
                     self.models.render_generic_position_rotation_colored("objects",
                                                                  object.position, object.rotation,
                                                                  object in select_optimize,
@@ -1576,11 +1576,11 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
 
                 routes_to_highlight = set()
 
-                for obj in self.level_file.objects.objects:
+                for obj in self.level_file.objects:
                     if obj.route_obj is not None and obj in select_optimize:
                         routes_to_highlight.add(obj.route_obj)
 
-                routepoints_to_circle = [x.routepoint for x in self.level_file.objects.objects if x in select_optimize]
+                routepoints_to_circle = [x.routepoint for x in self.level_file.objects if x in select_optimize]
 
                 objs_to_highlight = set()
 

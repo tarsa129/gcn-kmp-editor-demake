@@ -551,7 +551,7 @@ class LevelDataTreeView(QtWidgets.QTreeWidget):
 
         self.reset()
 
-        for object in kmpdata.objects.objects:
+        for object in kmpdata.objects:
             object_item = ObjectEntry(self.objects, "Object", object)
 
         self.sort_objects()
