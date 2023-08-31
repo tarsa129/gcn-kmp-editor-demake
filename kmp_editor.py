@@ -1340,16 +1340,6 @@ class GenEditor(QtWidgets.QMainWindow):
                     traceback.print_exc()
                     open_error_dialog(str(error), self)
 
-        #grab kcl files
-        gobj_kcl_files = []
-        for mapobject in self.level_file.objects.objects:
-            kcl_files = mapobject.get_single_json_val("KCL Files")
-            if kcl_files: gobj_kcl_files.extend(kcl_files)
-        gobj_kcl_files = list(set(gobj_kcl_files))
-
-        if self.level_view.collision is not None:
-            self.level_view.collision.additional_files = gobj_kcl_files
-
         self.update_3d()
 
     def setup_kmp_file(self, kmp_file, filepath, add_to_ini):

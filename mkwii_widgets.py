@@ -1224,7 +1224,6 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                             self.models.draw_cylinder(point.position, 600, 600)
 
 
-
                         point_index += 1
 
                     # Draw the connections between each enemy point.
@@ -1243,7 +1242,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                     prev_point = None
                     for point in group.points:
                         if prev_point is not None:
-                            self.models.draw_arrow_head(prev_point, point.position)
+                            self.draw_arrow_head(prev_point, point.position)
                         prev_point = point.position
 
                     if selected_groups[i] :
@@ -1271,7 +1270,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                         glVertex3f(point.position.x, -point.position.z, point.position.y)
                         glEnd()
 
-                        self.models.draw_arrow_head(prevpoint.position, point.position)
+                        self.draw_arrow_head(prevpoint.position, point.position)
 
                         if selected_groups[i]: #or selected_groups[group]:
                             glLineWidth(1.0)
@@ -1338,7 +1337,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                     prev_point = None
                     for point in group.points:
                         if prev_point is not None:
-                            self.models.draw_arrow_head(prev_point, point.position)
+                            self.draw_arrow_head(prev_point, point.position)
                         prev_point = point.position
 
                     if selected_groups[i] and len(all_groups) > 1:
@@ -1365,7 +1364,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                         glVertex3f(point.position.x, -point.position.z, point.position.y)
                         glEnd()
 
-                        self.models.draw_arrow_head(prevpoint.position, point.position)
+                        self.draw_arrow_head(prevpoint.position, point.position)
 
                         if selected_groups[i]: #or selected_groups[group]:
                             glLineWidth(4.0)
@@ -1498,7 +1497,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                             mid1 = (prev.start + prev.end) / 2.0
                             mid2 = (checkpoint.start + checkpoint.end) / 2.0
 
-                            self.models.draw_arrow_head(mid1, mid2)
+                            self.draw_arrow_head(mid1, mid2)
                             #lines.append((mid1, mid2))
                             prev = checkpoint
 
@@ -1551,14 +1550,14 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                         glVertex3f(point.start.x, -point.start.z, point.start.y)
                         glEnd()
 
-                        self.models.draw_arrow_head(prevpoint.start, point.start)
+                        self.draw_arrow_head(prevpoint.start, point.start)
 
                         glBegin(GL_LINES)
                         glVertex3f(prevpoint.end.x, -prevpoint.end.z, prevpoint.end.y)
                         glVertex3f(point.end.x, -point.end.z, point.end.y)
                         glEnd()
 
-                        self.models.draw_arrow_head(prevpoint.end, point.end)
+                        self.draw_arrow_head(prevpoint.end, point.end)
 
                         if selected_groups[i] :#or selected_groups[group]:
                             glLineWidth(normal_width)
@@ -1605,7 +1604,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                         selected = selected or point_selected
 
                         if last_point is not None:
-                            self.models.draw_arrow_head(last_point.position, point.position)
+                            self.draw_arrow_head(last_point.position, point.position)
                         last_point = point
 
                         if point in routepoints_to_circle:
@@ -1673,7 +1672,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                                 self.models.draw_sphere(point.position, 600)
                             selected = selected or point_selected
                             if last_point is not None:
-                                self.models.draw_arrow_head(last_point.position, point.position)
+                                self.draw_arrow_head(last_point.position, point.position)
                             last_point = point
                     else:
                         for point in route.points:
@@ -1681,7 +1680,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                             self.models.render_generic_position_colored(point.position, point_selected, "unusedpoint")
                             selected = selected or point_selected
                             if last_point is not None:
-                                self.models.draw_arrow_head(last_point.position, point.position)
+                                self.draw_arrow_head(last_point.position, point.position)
                             last_point = point
 
                     if selected or circle:
@@ -1763,7 +1762,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                             glVertex3f(pos2.x, -pos2.z, pos2.y)
                             glVertex3f(pos3.x, -pos3.z, pos3.y)
                             glEnd()
-                            self.models.draw_arrow_head(pos2, pos3)
+                            self.draw_arrow_head(pos2, pos3)
 
                     elif object.type == 3:
                         self.models.render_generic_position_colored(object.position,
@@ -1786,7 +1785,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                     for point in route.points[1:]:
                         self.models.render_generic_position_colored(point.position.render(), bolded, "replaycamerapoint")
                         if last_point is not None:
-                            self.models.draw_arrow_head(last_point.position.render(), point.position.render())
+                            self.draw_arrow_head(last_point.position.render(), point.position.render())
                         last_point = point
                     if bolded:
                         glLineWidth(3.0)
@@ -1821,7 +1820,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                     glVertex3f(pos1.x, -pos1.z, pos1.y)
                     glVertex3f(pos2.x, -pos2.z, pos2.y)
                     glEnd()
-                    self.models.draw_arrow_head(pos1, pos2)
+                    self.draw_arrow_head(pos1, pos2)
 
                     if object.nextcam_obj is not None:
                         pos1 = object.position
@@ -1832,7 +1831,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                         glVertex3f(pos1.x, -pos1.z, pos1.y)
                         glVertex3f(pos2.x, -pos2.z, pos2.y)
                         glEnd()
-                        self.models.draw_arrow_head(pos1, pos2)
+                        self.draw_arrow_head(pos1, pos2)
 
                     if object == self.level_file.cameras.startcam:
                         glColor3f(*colors_json["Camera"][:3])
@@ -1849,7 +1848,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                         self.models.render_generic_position_colored(point.position, point_selected, "camerapoint")
                         selected = selected or point_selected
                         if last_point is not None:
-                            self.models.draw_arrow_head(last_point.position, point.position)
+                            self.draw_arrow_head(last_point.position, point.position)
                         last_point = point
 
                     if selected:
@@ -1979,7 +1978,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                     glVertex3f(pos1.x, -pos1.z, pos1.y)
                     glVertex3f(pos2.x, -pos2.z, pos2.y)
                     glEnd()
-                    self.models.draw_arrow_head(pos1, pos2)
+                    self.draw_arrow_head(pos1, pos2)
         else: 
             if self.selectionbox_start is not None and self.selectionbox_end is not None:
                 startx, startz = self.selectionbox_start
@@ -2034,7 +2033,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                     glVertex3f(pos1.x, -pos1.z, pos1.y)
                     glVertex3f(pos2.x, -pos2.z, pos2.y)
                     glEnd()
-                    self.models.draw_arrow_head(pos1, pos2)
+                    self.draw_arrow_head(pos1, pos2)
                     if self.connecting_mode == "linedraw":
                         diff = pos2 - pos1
                         for i in range(1, 1 + self.linedraw_count):
@@ -2045,6 +2044,16 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
 
         glFinish()
         #now = default_timer() - start
+
+    def draw_arrow_head(self, startpos, endpos):
+        mid_position = (startpos + endpos) / 2
+        if self.mode == MODE_TOPDOWN:
+            scale = self.zoom_factor / 16
+            up_dir = Vector3(0.0, 1.0, 0.0)
+        else:
+            up_dir = (mid_position - self.campos).normalized()
+            scale = (mid_position - self.campos).norm() / 8192
+        self.models.draw_arrow_head(startpos, mid_position, up_dir, scale)
 
     def do_selection(self):
         pass

@@ -1,6 +1,6 @@
 from math import sqrt
 from io import StringIO
-from numpy import arctan2, ndarray, matmul, deg2rad, cos, sin
+from numpy import arctan2, ndarray, matmul, deg2rad, cos, sin, matrix
 from math import atan2
 from copy import deepcopy
 from struct import unpack, pack
@@ -17,7 +17,13 @@ class Vector3(object):
 
     def norm(self):
         return sqrt(self.x**2 + self.y**2 + self.z**2)
-    
+
+    def length(self):
+        return sqrt(self.length2())
+
+    def length2(self):
+        return self.x**2 + self.y**2 + self.z**2
+
     def absolute(self):
         return self
 
@@ -26,6 +32,11 @@ class Vector3(object):
         self.x /= norm
         self.y /= norm
         self.z /= norm
+    
+    def normalized(self):
+        other = self.copy()
+        other.normalize()
+        return other
 
     def unit(self):
         return self/self.norm()
@@ -546,3 +557,38 @@ class Vector3Relative(Vector3):
 
     def get_base(self):
         return self.base
+
+def align_z_axis_with_target_dir(target_dir: Vector3, up_dir: Vector3) -> matrix:
+    # Implementation taken from Imath.
+    if target_dir.length2() == 0.0:
+        target_dir = Vector3(0, 0, 1)
+
+    if up_dir.length2() == 0.0:
+        up_dir = Vector3(0, 1, 0)
+
+    if up_dir.cross(target_dir).length2() == 0.0:
+        up_dir = target_dir.cross(Vector3(1.0, 0.0, 0.0))
+        if up_dir.length2() == 0.0:
+            up_dir = target_dir.cross(Vector3(0.0, 0.0, 1.0))
+
+    target_perp_dir = up_dir.cross(target_dir)
+    target_up_dir = target_dir.cross(target_perp_dir)
+
+    target_perp_dir.normalize()
+    target_up_dir.normalize()
+    target_dir.normalize()
+
+    return matrix([
+        [target_perp_dir.x, target_perp_dir.y, target_perp_dir.z, 0],
+        [target_up_dir.x, target_up_dir.y, target_up_dir.z, 0],
+        [target_dir.x, target_dir.y, target_dir.z, 0],
+        [0, 0, 0, 1],
+    ])
+
+def rotation_matrix_with_up_dir(from_dir: Vector3, to_dir: Vector3,
+    up_dir: Vector3) -> matrix:
+    # Implementation taken from Imath.
+    z_axis2_from_dir = align_z_axis_with_target_dir(from_dir, Vector3(0, 1, 0))
+    z_axis2_from_dir.transpose()
+    z_axis2_to_dir = align_z_axis_with_target_dir(to_dir, up_dir)
+    return z_axis2_from_dir * z_axis2_to_dir

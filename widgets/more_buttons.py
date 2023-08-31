@@ -228,7 +228,6 @@ class MoreButtons(QtWidgets.QWidget):
             self.add_button("v: Add Points to End of Route", "add_routepoints_end", obj)
 
         elif isinstance(obj, Cameras):
-            self.add_button("Remove Unused Cameras", "remove_unused_cams", obj)
             self.add_button("Add Routed Opening Camera", "add_camera", 1)
             self.add_button("Preview Opening Cams (Not Functional)", "preview_opening", obj)
 

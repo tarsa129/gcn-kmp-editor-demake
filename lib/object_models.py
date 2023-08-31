@@ -2,7 +2,8 @@ import os
 import json
 from OpenGL.GL import *
 from .model_rendering import (GenericObject, Model, TexturedModel, Cube, TransModel, Cylinder)
-from lib.vectors import Vector3
+from .vectors import Vector3, rotation_matrix_with_up_dir
+import numpy
 
 with open("lib/color_coding.json", "r") as f:
     colors = json.load(f)
@@ -82,23 +83,26 @@ class ObjectModels(object):
                      self.startpoints, self.cannons, self.missions):
             cube.generate_displists()
 
-    def draw_arrow_head(self, frompos, topos):
+    def draw_arrow_head(self, frompos, topos, up_dir, scale):
+        # Convert to GL base.
+        frompos = Vector3(frompos.x, -frompos.z, frompos.y)
+        topos = Vector3(topos.x, -topos.z, topos.y)
+        up_dir = Vector3(up_dir.x, -up_dir.z, up_dir.y)
+
         glPushMatrix()
-        dir = topos-frompos
-        if not dir.is_zero():
-            dir.normalize()
-            glMultMatrixf([dir.x, -dir.z, 0, 0,
-                           -dir.z, -dir.x, 0, 0,
-                           0, 0, 1, 0,
-                           topos.x, -topos.z, topos.y, 1])
-        else:
-            glTranslatef(topos.x, -topos.z, topos.y)
+
+        glTranslatef(topos.x, topos.y, topos.z)
+
+        direction = topos - frompos
+        if not direction.is_zero() and not up_dir.is_zero():
+            matrix = rotation_matrix_with_up_dir(Vector3(-1, 0, 0), direction, up_dir)
+            glMultMatrixf(matrix.flatten())
+
+        glScale(scale, scale, scale)
+
         self.arrow_head.render()
+
         glPopMatrix()
-        #glBegin(GL_LINES)
-        #glVertex3f(frompos.x, -frompos.z, frompos.y)
-        #glVertex3f(topos.x, -topos.z, topos.y)
-        #glEnd()
 
     def draw_sphere(self, position, scale):
         glPushMatrix()
@@ -218,5 +222,4 @@ class ObjectModels(object):
         glScalef(scale.z, scale.x, scale.y)
         self.trans_cylinder.render()
         glPopMatrix()
-
 

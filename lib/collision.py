@@ -41,8 +41,6 @@ class Collision(object):
         self.hidden_coltypes = set()
         self.set_visible_tris()
 
-        self.additional_files = []
-
     def collide_ray_downwards(self, x, z, y=99999999):
         result = self.collide_ray(Line(Vector3(x, -z, y), Vector3(0.0, 0.0, -1.0)))
         return result.z if result is not None else None
