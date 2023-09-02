@@ -358,7 +358,7 @@ class GenEditor(QtWidgets.QMainWindow):
     @catch_exception_with_dialog
     def do_goto_action(self, item, index):
         _ = index
-        self.tree_select_object(item)
+        self.tree_select_object([item])
         self.frame_selection(adjust_zoom=False)
 
     def frame_selection(self, adjust_zoom):
@@ -491,43 +491,28 @@ class GenEditor(QtWidgets.QMainWindow):
         return tuple(extent) or (0, 0, 0, 0, 0, 0)
 
     def tree_select_arrowkey(self):
-        current = self.leveldatatreeview.selectedItems()
-        if len(current) == 1:
-            self.tree_select_object(current[0])
+        self.tree_select_object(self.leveldatatreeview.selectedItems())
 
-    def tree_select_object(self, item):
+    def tree_select_object(self, items):
         self.level_view.selected = []
         self.level_view.selected_positions = []
         self.level_view.selected_rotations = []
         self.level_view.selected_scales = []
 
-        if isinstance(item, (tree_view.CameraEntry, tree_view.RespawnEntry, tree_view.AreaEntry, tree_view.ObjectEntry,
-                             tree_view.KartpointEntry, tree_view.EnemyRoutePoint, tree_view.ItemRoutePoint,
-                             tree_view.ObjectRoutePoint, tree_view.CameraRoutePoint,
-                             tree_view.CannonEntry, tree_view.MissionEntry)):
-            bound_to = item.bound_to
-            self.level_view.selected = [bound_to]
-            self.level_view.selected_positions = [bound_to.position]
+        for item in items:
+            if isinstance(item, (tree_view.AreaEntry, tree_view.ObjectEntry,
+                                 tree_view.CannonEntry, tree_view.KartpointEntry, tree_view.MissionEntry)):
+                bound_to = item.bound_to
+                self.level_view.selected.append(bound_to)
+                self.level_view.selected_positions.append(bound_to.position)
+                self.level_view.selected_rotations.append(bound_to.rotation)
 
-            if hasattr(bound_to, "rotation"):
-                self.level_view.selected_rotations = [bound_to.rotation]
+        self.pik_control.set_buttons(items[0] if len(items) == 1 else None)
 
-        elif isinstance(item, tree_view.Checkpoint):
-            bound_to = item.bound_to
-            self.level_view.selected = [bound_to]
-            self.level_view.selected_positions = [bound_to.start, bound_to.end]
-        elif isinstance(item, (tree_view.EnemyPointGroup, tree_view.ItemPointGroup, tree_view.CheckpointGroup, tree_view.ObjectPointGroup, tree_view.CameraPointGroup)):
-                self.level_view.selected = [item.bound_to]
-        elif isinstance(item, tree_view.KMPHeader) and self.level_file is not None:
-            self.level_view.selected = [self.level_file]
-
-        if hasattr(item, "bound_to"):
-            self.pik_control.set_buttons(item.bound_to)
-
-        self.level_view.gizmo.move_to_average(self.level_view.selected, 
+        self.level_view.gizmo.move_to_average(self.level_view.selected,
                                               self.level_view.selected_positions)
         self.level_view.do_redraw()
-        self.level_view.select_update.emit()
+        self.action_update_info()
 
     def setup_ui(self):
         self.resize(3000, 2000)
@@ -539,7 +524,7 @@ class GenEditor(QtWidgets.QMainWindow):
         self.horizontalLayout = QtWidgets.QSplitter()
         self.centralwidget = self.horizontalLayout
         self.setCentralWidget(self.horizontalLayout)
-        self.leveldatatreeview = LevelDataTreeView(self.centralwidget, self.visibility_menu)
+        self.leveldatatreeview = LevelDataTreeView(self, self.centralwidget, self.visibility_menu)
         #self.leveldatatreeview.itemClicked.connect(self.tree_select_object)
         self.leveldatatreeview.itemDoubleClicked.connect(self.do_goto_action)
         self.leveldatatreeview.itemSelectionChanged.connect(self.tree_select_arrowkey)
@@ -562,7 +547,8 @@ class GenEditor(QtWidgets.QMainWindow):
             QtGui.QKeySequence(QtCore.Qt.Key_M | QtCore.Qt.SHIFT), self)
         snapping_cycle_shortcut.activated.connect(self.level_view.cycle_snapping_mode)
 
-        QtGui.QShortcut(QtCore.Qt.Key_G, self).activated.connect(self.action_ground_objects)
+        ground_shortcut = QtGui.QShortcut(QtGui.QKeySequence(QtCore.Qt.Key_G), self)
+        ground_shortcut.activated.connect(self.action_ground_objects)
         self.statusbar = QtWidgets.QStatusBar(self)
         self.statusbar.setObjectName("statusbar")
         self.setStatusBar(self.statusbar)
@@ -1575,37 +1561,36 @@ class GenEditor(QtWidgets.QMainWindow):
     def shortcut_open_add_item_window(self):
         self.button_open_add_item_window()
 
-    def select_tree_item_bound_to(self, obj):
-        # If found, deselect current selection, and select the new item.
-        for selected_item in self.leveldatatreeview.selectedItems():
-            if selected_item.isSelected():
-                #the problem line
-                selected_item.setSelected(False)
-
-        # Iteratively traverse all the tree widget items.
+    def select_tree_item_bound_to(self, objects):
+        bound_objects_and_items = []
         pending_items = [self.leveldatatreeview.invisibleRootItem()]
         while pending_items:
             item = pending_items.pop(0)
             for child_index in range(item.childCount()):
                 child_item = item.child(child_index)
+                if hasattr(child_item, 'bound_to') and child_item.bound_to is not None:
+                    bound_objects_and_items.append((child_item.bound_to, child_item))
+                pending_items.append(child_item)
 
-                # Check whether the item contains any item that happens to be bound to the target
-                # object.
-                bound_item = get_treeitem(child_item, obj)
-                if bound_item is not None:
+        new_item_selection = []
+        for obj in objects:
+            for bound_object, item in bound_objects_and_items:
+                if obj is bound_object:
+                    new_item_selection.append(item)
 
-                    bound_item.setSelected(True)
+        if new_item_selection:
+            # If found, deselect current selection, and select the new item.
+            for selected_item in self.leveldatatreeview.selectedItems():
+                selected_item.setSelected(False)
+            for bound_item in new_item_selection:
+                bound_item.setSelected(True)
 
-                    # Ensure that the new item is visible.
-                    parent_item = bound_item.parent()
-                    while parent_item is not None:
-                        parent_item.setExpanded(True)
-                        parent_item = parent_item.parent()
-                    self.leveldatatreeview.scrollToItem(bound_item)
-
-                    return
-                else:
-                    pending_items.append(child_item)
+                # Ensure that the new item is visible.
+                parent_item = bound_item.parent()
+                while parent_item is not None:
+                    parent_item.setExpanded(True)
+                    parent_item = parent_item.parent()
+                self.leveldatatreeview.scrollToItem(bound_item)
 
     def add_item_window_save(self):
         self.object_to_be_added = self.add_object_window.get_content()
@@ -1628,7 +1613,7 @@ class GenEditor(QtWidgets.QMainWindow):
             self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_NONE)
             self.leveldatatreeview.set_objects(self.level_file)
 
-            self.select_tree_item_bound_to(obj)
+            self.select_tree_item_bound_to([obj])
 
         elif self.object_to_be_added is not None:
             self.pik_control.button_add_object.setChecked(True)
@@ -1656,7 +1641,7 @@ class GenEditor(QtWidgets.QMainWindow):
                 self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_NONE)
                 self.leveldatatreeview.set_objects(self.level_file)
 
-                self.select_tree_item_bound_to(obj)
+                self.select_tree_item_bound_to([obj])
 
             elif self.object_to_be_added is not None:
                 self.pik_control.button_add_object.setChecked(True)
@@ -1930,7 +1915,7 @@ class GenEditor(QtWidgets.QMainWindow):
                 self.set_has_unsaved_changes(True)
                 self.leveldatatreeview.set_objects(self.level_file)
 
-                self.select_tree_item_bound_to(placeobject)
+                self.select_tree_item_bound_to([placeobject])
 
                 to_deal_with = self.level_file.get_to_deal_with(object)
                 if to_deal_with.num_total_points() == 255:
@@ -2028,7 +2013,7 @@ class GenEditor(QtWidgets.QMainWindow):
             self.level_view.do_redraw()
             self.leveldatatreeview.set_objects(self.level_file)
             self.set_has_unsaved_changes(True)
-            self.select_tree_item_bound_to(placeobject)
+            self.select_tree_item_bound_to([placeobject])
 
     @catch_exception
     def action_move_objects(self, deltax, deltay, deltaz):
@@ -2516,7 +2501,7 @@ class GenEditor(QtWidgets.QMainWindow):
         self.set_has_unsaved_changes(True)
         self.leveldatatreeview.set_objects(self.level_file)
 
-        self.select_tree_item_bound_to(added[-1])
+        self.select_tree_item_bound_to(added)
         self.level_view.selected = added
         self.level_view.selected_positions = []
         self.level_view.selected_rotations = []
@@ -2583,6 +2568,7 @@ class GenEditor(QtWidgets.QMainWindow):
 
     def select_from_3d_to_treeview(self):
         if self.level_file is not None:
+            item = None
             selected = self.level_view.selected
             if len(selected) == 1:
                 currentobj = selected[0]
@@ -2643,6 +2629,9 @@ class GenEditor(QtWidgets.QMainWindow):
 
                 if suppress_signal:
                     self.leveldatatreeview.blockSignals(False)
+
+            if item is None:
+                self.action_update_info()
 
             #if nothing is selected and the currentitem is something that can be selected
             #clear out the buttons
@@ -2705,7 +2694,7 @@ class GenEditor(QtWidgets.QMainWindow):
                 with QtCore.QSignalBlocker(self.leveldatatreeview):
                     if selected:
                         # When there is more than one object selected, pick the last one.
-                        self.select_tree_item_bound_to(selected[-1])
+                        self.select_tree_item_bound_to(selected)
                     else:
                         # If no selection occurred, ensure that no tree item remains selected. This
                         # is relevant to ensure that non-pickable objects (such as the top-level
@@ -3168,12 +3157,13 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    os.environ['QT_ENABLE_HIGHDPI_SCALING'] = '0'
     app = Application(sys.argv)
 
     signal.signal(signal.SIGINT, lambda _signal, _frame: app.quit())
     app.setStyle(QtWidgets.QStyleFactory.create("Fusion"))
 
-    padding = app.fontMetrics().height() // 2
+    padding = QtGui.QFontMetrics(QtGui.QFont()).height() // 2
     app.setStyleSheet(f'QToolTip {{ padding: {padding}px; }}')
 
     if platform.system() == "Windows":

@@ -65,9 +65,8 @@ class PikminSideWidget(QtWidgets.QWidget):
         self.objectlist = []
 
         verticalLayout = QtWidgets.QVBoxLayout(self)
-        #verticalLayout.addWidget(self.button_add_object)
-        verticalLayout.addWidget(self.button_remove_object)
-        verticalLayout.addWidget(self.button_ground_object)
+        #verticalLayout.addWidget(self.button_remove_object)
+        #verticalLayout.addWidget(self.button_ground_object)
         verticalLayout.addWidget(self.more_buttons)
         verticalLayout.addWidget(scroll_area)
 

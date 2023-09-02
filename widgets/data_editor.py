@@ -821,7 +821,7 @@ class ItemPointEdit(DataEditor):
         else:
             self.setting1.setCurrentIndex(-1)
 
-        self.scale.setValue(obj.scale)
+        if obj.scale is not None: self.scale.setValue(obj.scale)
 
         self.unknown.setChecked( obj.unknown !=0 )
         self.lowpriority.setChecked( obj.lowpriority !=0 )
@@ -1711,8 +1711,8 @@ class RespawnPointEdit(DataEditor):
         obj: JugemPoint = get_cmn_obj(self.bound_to)
         self.update_vector3("position", obj.position)
         self.update_vector3("rotation", obj.rotation)
-        self.range.setValue(obj.range)
-
+        if obj.range is not None: self.range.setValue(obj.range)
+        
 class CannonPointEdit(DataEditor):
     def setup_widgets(self):
         self.position = self.add_multiple_decimal_input("Position", "position", ["x", "y", "z"],

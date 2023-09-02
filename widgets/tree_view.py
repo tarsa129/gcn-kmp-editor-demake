@@ -391,14 +391,16 @@ class LevelDataTreeView(QtWidgets.QTreeWidget):
     visible_changed = QtCore.Signal(str, int)
     #split_checkpoint = QtCore.Signal(CheckpointGroup, Checkpoint)
 
-    def __init__(self, central_widget, vis_menu):
+    def __init__(self, editor, central_widget, vis_menu):
         super().__init__(central_widget)
         self.vis_menu = vis_menu
+        self.editor = editor
         #self.setMaximumWidth(600)
         self.resize(200, self.height())
         self.setColumnCount(2)
         self.setHeaderLabel("Track Data Entries")
         self.setHeaderHidden(True)
+        self.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
 
         self.kmpheader = KMPHeader()
         self.addTopLevelItem(self.kmpheader)
@@ -532,10 +534,9 @@ class LevelDataTreeView(QtWidgets.QTreeWidget):
     def set_objects(self, kmpdata: KMP):
 
         # Compute the location (based on indexes) of the currently selected item, if any.
-        selected_item_indexes = []
-        selected_items = self.selectedItems()
-        if selected_items:
-            item = selected_items[0]
+        selected_item_indexes_list = []
+        for item in self.selectedItems():
+            selected_item_indexes = []
             while item is not None:
                 parent_item = item.parent()
                 if parent_item is not None:
@@ -543,7 +544,12 @@ class LevelDataTreeView(QtWidgets.QTreeWidget):
                 else:
                     selected_item_indexes.insert(0, self.indexOfTopLevelItem(item))
                 item = parent_item
-        selected_items = None
+            if selected_item_indexes:
+                selected_item_indexes_list.append(selected_item_indexes)
+
+        if selected_item_indexes_list:
+            initial_item_count = self.count_items()
+
 
         # Preserve the expansion state of the top-level items that can have nested groups.
         #enemyroutes_expansion_states = self._get_expansion_states(self.enemyroutes)
@@ -562,10 +568,6 @@ class LevelDataTreeView(QtWidgets.QTreeWidget):
         for area in kmpdata.areas:
             item = AreaEntry(self.areas, "Area", area)
 
-        """
-        for i, camera in enumerate(kmpdata.cameras):
-            item = CameraEntry(self.cameras, "Camera", camera, i)
-        """
         for cannon in kmpdata.cannonpoints:
             item = CannonEntry(self.cannons, "Cannon Points", cannon)
 
@@ -578,18 +580,24 @@ class LevelDataTreeView(QtWidgets.QTreeWidget):
         #self._set_expansion_states(self.checkpointgroups, checkpointgroups_expansion_states)
 
         # And restore previous selection.
-        if selected_item_indexes:
-            for item in self.selectedItems():
-                item.setSelected(False)
-            item = self.topLevelItem(selected_item_indexes.pop(0))
-            while selected_item_indexes:
-                index = selected_item_indexes.pop(0)
-                if index < item.childCount():
-                    item = item.child(index)
-                else:
-                    break
-            item.setSelected(True)
+        items_to_select = []
+        if selected_item_indexes_list and initial_item_count == self.count_items():
+            for selected_item_indexes in selected_item_indexes_list:
+                item = self.topLevelItem(selected_item_indexes.pop(0))
+                while selected_item_indexes:
+                    index = selected_item_indexes.pop(0)
+                    if index < item.childCount():
+                        item = item.child(index)
+                    else:
+                        break
+                items_to_select.append(item)
 
+            # Effectively select items without relying on signals which could trigger a considerate
+            # number of events for each item.
+            with QtCore.QSignalBlocker(self):
+                for item in items_to_select:
+                    item.setSelected(True)
+        self.editor.tree_select_object(items_to_select)
         self.bound_to_group(kmpdata)
 
     def sort_objects(self):

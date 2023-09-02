@@ -1018,7 +1018,9 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                 if obj in selected_set:
                     self.selected.append(obj)
 
-            self.select_update.emit()
+            self.editor.select_from_3d_to_treeview()
+
+            self.editor.on_document_potentially_changed(update_unsaved_changes=False)
 
             self.gizmo.move_to_average(self.selected, self.selected_positions)
             if len(selected) == 0:
