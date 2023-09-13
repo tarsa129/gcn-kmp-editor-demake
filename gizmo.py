@@ -14,7 +14,8 @@ id_to_meshname = {
     0x7: "middle",
     0x8: "scale_x",
     0x9: "scale_y",
-    0xA: "scale_z"
+    0xA: "scale_z",
+    0xB: "scale_xz"
 }
 
 AXIS_X = 0
@@ -26,6 +27,7 @@ Y_COLOR = (0.0, 1.0, 0.0, 1.0)
 Z_COLOR = (0.0, 0.0, 1.0, 1.0)
 MIDDLE_COLOR = (0.5, 0.5, 0.5, 1.0)
 HOVER_COLOR = (248 / 255, 185 / 255, 0 / 255, 1.0)
+XZ_COLOR = (1.0, 0.0, 1.0, 1.0)
 
 
 class Gizmo(Model):
@@ -104,6 +106,7 @@ class Gizmo(Model):
                 named_meshes["scale_x"].render_colorid(0x8)
                 if is3d: named_meshes["scale_y"].render_colorid(0x9)
                 named_meshes["scale_z"].render_colorid(0xA)
+                named_meshes["scale_xz"].render_colorid(0xB)
 
             glPopMatrix()
 
@@ -134,8 +137,6 @@ class Gizmo(Model):
     def render(self, is3d=True, hover_id=0xFF):
         if self.hidden: 
             return
-        handle_hit = any(self.was_hit.values())
-
         handle_hit = any(self.was_hit.values())
 
         if not handle_hit or self.was_hit["gizmo_x"]:
@@ -173,6 +174,9 @@ class Gizmo(Model):
             if not handle_hit or self.was_hit["scale_z"]:
                 glColor4f(*Z_COLOR if hover_id != 0xA else HOVER_COLOR)
                 self.named_meshes["scale_z"].render()
+            if not handle_hit or self.was_hit["scale_xz"]:
+                glColor4f(*XZ_COLOR if hover_id != 0xB else HOVER_COLOR)
+                self.named_meshes["scale_xz"].render()
 
     def render_scaled(self, scale, is3d=True, hover_id=0xFF):
         glPushMatrix()

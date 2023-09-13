@@ -234,6 +234,18 @@ class Gizmo2DScaleZ(Gizmo2DScaleX):
             self.first_click = event.position().toPoint()
             editor.scale_current.emit(Vector3(1, 1, delta))
 
+class Gizmo2DScaleXZ(Gizmo2DScaleX):
+    def move(self, editor, buttons, event):
+        if editor.gizmo.was_hit["scale_xz"]:
+            x_dis = event.x() - self.first_click.x()
+            y_dis = self.first_click.y() - event.y()
+            xy_dis = ( (x_dis ** 2 + y_dis ** 2) ** .5)
+            if x_dis < 0 or y_dis < 0:
+                xy_dis *= -1
+
+            delta = 1 + ( xy_dis * SCALE_CONSTANT)
+            self.first_click = event.position().toPoint()
+            editor.scale_current.emit(Vector3(delta, delta, delta))
 
 class AddObjectTopDown(ClickAction):
     def condition(self, editor, buttons, event):
@@ -577,6 +589,16 @@ class Gizmo3DScaleZ(Gizmo3DScaleX):
     def do_delta(self, delta):
         return Vector3(1, 1, delta)
 
+class Gizmo3DScaleXYZ(Gizmo3DScaleX):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.axis_name = "scale_xz"
+        self.dir = numpy.array([1, 1, 1, 0])
+
+    def do_delta(self, delta):
+        return Vector3(delta, delta, delta)
+
+
 class UserControl(object):
     def __init__(self, editor_widget):
         self._editor_widget = editor_widget
@@ -597,6 +619,7 @@ class UserControl(object):
         self.add_action(AddObjectTopDown("AddObject2D", "Left"))
         self.add_action(Gizmo2DScaleX("Gizmo2DScaleX", "Left"))
         self.add_action(Gizmo2DScaleZ("Gizmo2DScaleZ", "Left"))
+        self.add_action(Gizmo2DScaleXZ("Gizmo2DScaleXZ", "Left"))
 
         self.add_action3d(View3DScroll("3DScroll", "Middle"))
         self.add_action3d(RotateCamera3D("RotateCamera", "Right"))
@@ -611,6 +634,7 @@ class UserControl(object):
         self.add_action3d(Gizmo3DScaleX("Gizmo3DScaleX", "Left"))
         self.add_action3d(Gizmo3DScaleY("Gizmo3DScaleY", "Left"))
         self.add_action3d(Gizmo3DScaleZ("Gizmo3DScaleZ", "Left"))
+        self.add_action3d(Gizmo3DScaleXYZ("Gizmo3DScaleXYZ", "Left"))
         self.add_action3d(Select3D("Select3D", "Left"))
 
     def add_action(self, action):

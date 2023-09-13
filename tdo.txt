@@ -8,7 +8,6 @@ lens flare hidden stuff
 
 new features:
 area / object shared routes
-scale on gizmo (better)
 handle that enemy point switching object
 area scale handlers
 add option to select x to y points
