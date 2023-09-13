@@ -14,7 +14,7 @@
         ".kcl files needed"
     ],
     "Default Values": [
-        7,
+        0,
         54,
         11,
         61,
@@ -24,5 +24,7 @@
         30
     ],
     "Route Info": null,
-    "Description": "Floating, shaking and sinking driveable rock from Grumble Volcano.<br>Slot [[Slot#3.4|3.4]] enables its SFX<br>The normal KCL file is always active, KCL b activates when the rock starts shaking and falls with the rock, KCL c activates when the rock starts to fall (It stays in place while the rock falls)"
+    "Description": "Floating, shaking and sinking driveable rock from Grumble Volcano.<br>Slot [[Slot#3.4|3.4]] enables its SFX<br>The normal KCL file is always active, KCL b activates when the rock starts shaking and falls with the rock, KCL c activates when the rock starts to fall (It stays in place while the rock falls)",
+    "KCL File": "VolcanoPiece",
+    "KCL Index": 0
 }

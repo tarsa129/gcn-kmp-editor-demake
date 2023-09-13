@@ -195,7 +195,7 @@ class ColorPicker(ClickableLabel):
 
         color = self.color
 
-        accepted = dialog.exec_()
+        accepted = dialog.exec()
         if accepted:
             self.color = dialog.currentColor()
             self.color_picked.emit(self.color)
@@ -542,26 +542,57 @@ class DataEditor(QtWidgets.QWidget):
 
         return spinboxes
 
-    def add_color_input(self, text, attribute, subattributes, min_val, max_val):
+    def add_color_input(self, text, attribute, with_alpha=False):
         spinboxes = []
-        for subattr in subattributes:
+        input_edited_callbacks = []
+
+        for subattr in ["r", "g", "b", "a"] if with_alpha else ["r", "g", "b"]:
             spinbox = SpinBox(self)
             spinbox.setMaximumWidth(self.fontMetrics().averageCharWidth() * 4)
             spinbox.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
             spinbox.setRange(0, 255)
-            input_edited = create_setter(self.bound_to,
-                                         attribute,
-                                         subattr,
-                                         self.catch_text_update)
-
-
+            input_edited = create_setter(spinbox, self.bound_to,
+                                         attribute, subattr,
+                                           self.catch_text_update, isFloat=False)
+            input_edited_callbacks.append(input_edited)
             spinbox.valueChanged.connect(input_edited)
             spinboxes.append(spinbox)
 
-        layout = self.create_clickable_widgets(self, text, spinboxes)
+        color_picker = ColorPicker(with_alpha=with_alpha)
+
+        def on_spinbox_valueChanged(value: int):
+            _ = value
+            r = spinboxes[0].value()
+            g = spinboxes[1].value()
+            b = spinboxes[2].value()
+            a = spinboxes[3].value() if len(spinboxes) == 4 else 255
+            color_picker.color = QtGui.QColor(r, g, b, a)
+            color_picker.update_color(color_picker.color)
+
+        for spinbox in spinboxes:
+            spinbox.valueChanged.connect(on_spinbox_valueChanged)
+
+        def on_color_changed(color):
+            spinboxes[0].setValue(color.red())
+            spinboxes[1].setValue(color.green())
+            spinboxes[2].setValue(color.blue())
+            if len(spinboxes) == 4:
+                spinboxes[3].setValue(color.alpha())
+
+        def on_color_picked(color):
+            values = [color.red(), color.green(), color.blue()]
+            if len(spinboxes) == 4:
+                values.append(color.alpha())
+            for callback, value in zip(input_edited_callbacks, values):
+                callback(value)
+
+        color_picker.color_changed.connect(on_color_changed)
+        color_picker.color_picked.connect(on_color_picked)
+
+        layout, label = self.create_labeled_widgets(self, text, spinboxes + [color_picker])
         self.vbox.addLayout(layout)
 
-        return layout.itemAt(0).widget(), spinboxes
+        return spinboxes
 
     def update_rotation(self, xang, yang, zang):
         cmn_obj = get_cmn_obj(self.bound_to)
@@ -653,16 +684,16 @@ def create_setter_list(lineedit, bound_to, attribute, index):
 
 def create_setter(lineedit, bound_to, attribute, subattr, update3dview, isFloat):
     if isFloat:
-        def input_edited():
-            text = lineedit.text()
+        def input_edited(text=None):
+            text = lineedit.text() if not text else text
             #mainattr = getattr(get_cmn_obj(bound_to), attribute)
 
             set_subattrs_mult(bound_to, [attribute, subattr], float(text))
             update3dview()
         return input_edited
     else:
-        def input_edited():
-            text = lineedit.text()
+        def input_edited(text=None):
+            text = lineedit.text() if not text else text
             #mainattr = getattr(get_cmn_obj(bound_to), attribute)
 
             set_subattrs_mult(bound_to, [attribute, subattr], int(text))
@@ -782,7 +813,7 @@ class EnemyPointEdit(DataEditor):
                 self.enemyaction2.setCurrentIndex(obj.enemyaction2)
             else:
                 self.enemyaction2.setCurrentIndex(-1)
-        self.unknown.setValue(obj.unknown)
+        if self.unknown is not None: self.unknown.setValue(obj.unknown)
 
 class ItemPointGroupEdit(DataEditor):
     def setup_widgets(self):
@@ -992,14 +1023,9 @@ class KMPEdit(DataEditor):
         self.lens_flare = self.add_checkbox("Enable Lens Flare", "lens_flare",
                                             off_value=0, on_value=1)
 
-        self.flare_colorbutton, self.flare_color = self.add_color_input("Flare Color", "flare_color", ["r", "g", "b"],
-                                                           MIN_UNSIGNED_BYTE, MAX_UNSIGNED_BYTE)
-        self.flare_colorbutton.clicked.connect(lambda: self.open_color_picker_light("flare_color") )
+        self.flare_color = self.add_color_input("Flare Color", "flare_color")
         self.flare_alpha = self.add_integer_input("Flare Alpha %", "flare_alpha",
                                            MIN_UNSIGNED_BYTE, MAX_UNSIGNED_BYTE)
-
-
-
 
 
     def update_data(self):
@@ -1712,7 +1738,7 @@ class RespawnPointEdit(DataEditor):
         self.update_vector3("position", obj.position)
         self.update_vector3("rotation", obj.rotation)
         if obj.range is not None: self.range.setValue(obj.range)
-        
+
 class CannonPointEdit(DataEditor):
     def setup_widgets(self):
         self.position = self.add_multiple_decimal_input("Position", "position", ["x", "y", "z"],

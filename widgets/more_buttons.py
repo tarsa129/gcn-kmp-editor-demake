@@ -6,7 +6,7 @@ from typing import Any
 from PySide6 import QtWidgets
 from lib.vectors import Vector3
 from lib.libkmp import *
-from widgets.tree_view import KMPHeader, EnemyRoutePoint
+from widgets.tree_view import KMPHeader, ObjectGroupObjects
 from widgets.objlists import *
 from copy import copy
 #will create buttons based on the current selection
@@ -161,7 +161,7 @@ class MoreButtons(QtWidgets.QWidget):
         elif isinstance(obj, RoutePoint):
             self.add_button("v: Add Route Points Here", "add_routepoints", obj)
 
-        elif isinstance(obj, MapObjects):
+        elif isinstance(obj,  MapObjects):
             self.add_label("Objects Actions")
             self.add_button("Auto Route All Objects", "auto_route", obj)
 

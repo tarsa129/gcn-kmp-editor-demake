@@ -1,16 +1,21 @@
 updates:
 
 improve json files
-load + collide on gobj collision files
+collide on gobj collision files
+data editor multiselect to use averages for numeric types
+scale points according to zoom factor
+lens flare hidden stuff
 
 new features:
+area / object shared routes
 scale on gizmo (better)
 handle that enemy point switching object
 area scale handlers
 add option to select x to y points
-create dialog for auto generation and auto cleanup
-brres loading
+create dialog for auto generation
 lookinto collision translucency
 error analyzer
 better area rendering - image
 
+ground called when
+- action_ground_object in kmp_editor

@@ -846,6 +846,8 @@ otherwise = (40, 40, 40)
 
 
 class CollisionModel(object):
+    hidden_coltypes = set()
+    hidden_colgroups = set()
     def __init__(self, mkwii_collision):
         meshes = {}
         self.program = None
@@ -971,8 +973,8 @@ class CollisionModel(object):
         glUseProgram(self.program)
 
         for colltype, displist in self._displists:
-            if (colltype in self.hidden_collision_types
-                    or colltype & 0x001F in self.hidden_collision_type_groups):
+            if (colltype in self.__class__.hidden_coltypes
+                    or colltype & 0x001F in self.__class__.hidden_colgroups):
                 continue
 
             if colltype == selectedPart:

@@ -4,6 +4,8 @@ import numba
 import numpy
 
 class Collision(object):
+    hidden_coltypes = set()
+    hidden_colgroups = set()
     def __init__(self, faces):
         self.vertices = []
 
@@ -37,9 +39,10 @@ class Collision(object):
         self.vertices = list(set(self.vertices))
         self.hash = hash((tuple(self.vertices), tuple(faces)))
 
-        self.hidden_colgroups = set()
-        self.hidden_coltypes = set()
         self.set_visible_tris()
+        self.obj_meshes = {}
+
+
 
     def collide_ray_downwards(self, x, z, y=99999999):
         result = self.collide_ray(Line(Vector3(x, -z, y), Vector3(0.0, 0.0, -1.0)))
@@ -68,7 +71,7 @@ class Collision(object):
         self.flat_triangles = numpy.array(self.flat_triangles)
 
     def is_invisible_tri(self, face_mat):
-        return ( face_mat in self.hidden_coltypes) or ( face_mat & 0x1F in self.hidden_colgroups)
+        return ( face_mat in self.__class__.hidden_coltypes) or ( face_mat & 0x1F in self.__class__.hidden_colgroups)
 
     def collide_ray(self, ray):
         place_at = _collide_ray_and_triangles(

@@ -265,15 +265,19 @@ class PointGroups(object):
         if len(self.groups) < 2:
             return
 
+        for group in self.groups[1:]:
+            if len(group.points) == 0:
+                self.remove_group(group, False)
+
         first_group = self.groups[0]
         i = 0
         while i < len(self.groups):
             if len(self.groups) < 2:
                 return
-
             group = self.groups[i]
             #if this group only has one next, and the nextgroup only has one prev, they can be merged
             if group.num_next() == 1 and group.nextgroup[0].num_prev() == 1:
+                print(i, first_group, group)
                 if first_group in group.nextgroup:
                     i += 1 #do not merge with the start
                     continue
@@ -1412,6 +1416,16 @@ class MapObject(RoutedObject):
             return
         closest_point_idx = argmin(array([x.position.distance(self.position) for x in self.route_obj.points]))
         self.routepoint = self.route_obj.points[closest_point_idx]
+
+    def get_kcl_name(self):
+        kcl_file = self.get_single_json_val("KCL File")
+        if not kcl_file:
+            return None
+        kcl_index = self.get_single_json_val("KCL Index")
+        if kcl_index is None:
+            return kcl_file + ".kcl"
+        return kcl_file + str(self.userdata[kcl_index]) + ".kcl"
+
 
 class MapObjects(ObjectContainer):
     def __init__(self):

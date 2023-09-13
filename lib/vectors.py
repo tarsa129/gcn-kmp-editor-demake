@@ -127,6 +127,18 @@ class Vector3(object):
         self.x = x
         self.z = z
 
+    def rotate_x(self, deg):
+        y = self.y * cos(deg2rad(deg)) - self.z * sin(deg2rad(deg))
+        z = self.z * cos(deg2rad(deg)) + self.y * sin(deg2rad(deg))
+        self.y = y
+        self.z = z
+
+    def rotate_z(self, deg):
+        y = self.y * cos(deg2rad(deg)) - self.x * sin(deg2rad(deg))
+        x = self.x * cos(deg2rad(deg)) + self.y * sin(deg2rad(deg))
+        self.y = y
+        self.x = x
+
     def rotate_around_point(self, point, axis, delta):
         diff = self - point
         setattr(diff, axis, 0)
@@ -151,6 +163,14 @@ class Vector3(object):
 
     def render(self):
         return self
+    
+    def transform(self, position, rotation, scale):
+        new_vector = Vector3(self.x * scale.x, self.y * scale.y, self.z * scale.z)
+        new_vector.rotate_x(rotation.x)
+        new_vector.rotate_y(rotation.y)
+        new_vector.rotate_z(rotation.z)
+        new_vector += position
+        return new_vector
 
 class Vector3Mat(Vector3):
     def __init__(self, x, y, z, mat):
@@ -249,6 +269,8 @@ class Triangle(object):
     def is_parallel(self, vec):
         return self.normal.dot(vec) == 0
 
+    def transform(self, mapobject):
+        pass
 
 class Line(object):
     def __init__(self, origin, direction):
@@ -256,88 +278,6 @@ class Line(object):
         self.direction = direction
         self.direction.normalize()
 
-    def collide(self, tri: Triangle):
-        normal = tri.normal
-
-        dot = normal.dot(self.direction)
-
-        if dot == 0.0:
-            return False
-
-        d = (tri.origin - self.origin).dot(normal) / dot
-
-        if d < 0:
-            return False
-
-        intersection_point = self.origin + self.direction * d
-
-        # return intersection_point
-        C0 = intersection_point - tri.origin
-
-        if normal.dot(tri.p1_to_p2.cross(C0)) > 0:
-            C1 = intersection_point - tri.p2
-            if normal.dot(tri.p2_to_p3.cross(C1)) > 0:
-                C2 = intersection_point - tri.p3
-                if normal.dot(tri.p3_to_p1.cross(C2)) > 0:
-                    return intersection_point, d
-        return False
-
-    def collide_py(self, tri: Triangle):
-        hit = False
-
-        edge1 = tri.p1_to_p2
-        edge2 = tri.p1_to_p3
-
-        normal = tri.normal
-        if normal.is_zero():
-            return False
-
-        #d = -normal.dot(self.origin)
-
-        if tri.normal.dot(self.direction) == 0:
-            return False
-
-        d = ((tri.origin - self.origin).dot(tri.normal)) / tri.normal.dot(self.direction)
-
-        #if d == 0:
-        #    return False
-
-        #t = (normal.dot(self.origin) + d) / normal.dot(self.direction)
-
-        if d < 0:
-            return False
-
-        intersection_point = self.origin + self.direction * d
-
-        #return intersection_point
-        C0 = intersection_point - tri.origin
-
-        if tri.normal.dot(tri.p1_to_p2.cross(C0)) > 0:
-            p2_to_p3 = tri.p3 - tri.p2
-            C1 = intersection_point - tri.p2
-
-            if tri.normal.dot(p2_to_p3.cross(C1)) > 0:
-                p3_to_p1 = tri.origin - tri.p3
-                C2 = intersection_point - tri.p3
-                if tri.normal.dot(p3_to_p1.cross(C2)) > 0:
-                    return intersection_point, d
-                else:
-                    return False
-            else:
-                return False
-        else:
-            return False
-
-    def collide_plane(self, plane: Plane):
-        pos = self.origin
-        dir = self.direction
-
-        if not plane.is_parallel(dir):
-            d = ((plane.origin - pos).dot(plane.normal)) / plane.normal.dot(dir)
-            if d >= 0:
-                point = pos + (dir * d)
-                return point, d
-        return False
 
 class Matrix4x4(object):
     def __init__(self,
@@ -442,7 +382,7 @@ class Rotation(Vector3):
     def rotate_around_z(self, degrees):
         self.z += degrees  * rotation_constant
 
-    def get_rotation_matrix( self ):
+    def get_rotation_matrix( self, ninety_degree=False ):
 
         iden = [
 			[1, 0, 0, 0],
@@ -450,7 +390,8 @@ class Rotation(Vector3):
 			[0, 0, 1, 0],
 			[0, 0, 0, 1]
 		]
-        iden = matmul(iden, self.get_rotation_from_vector( Vector3(0.0, 0.0, 0.1), 90))
+        if ninety_degree:
+            iden = matmul(iden, self.get_rotation_from_vector( Vector3(0.0, 0.0, 0.1), 90))
         iden = matmul(iden, self.get_rotation_from_vector( Vector3(1.0, 0.0, 0.0), -self.x   ))
         iden = matmul(iden, self.get_rotation_from_vector( Vector3(0.0, 0.0, 1.0), -self.y   ))
         iden = matmul(iden, self.get_rotation_from_vector( Vector3(0.0, 1.0, 0.0), self.z   ))
@@ -509,9 +450,9 @@ class Rotation(Vector3):
     def write(self, f):
         f.write(pack(">fff", self.x, self.y, self.z) )
 
-    def get_render(self):
+    def get_render(self, ninety_degree=True):
 
-        return self.get_rotation_matrix()
+        return self.get_rotation_matrix(ninety_degree)
 
     def get_euler(self):
 

@@ -35,8 +35,6 @@
     ],
     "Route Info": null,
     "Description": "Horizontally moving Piranha Plant wall from <small>GCN</small> Waluigi Stadium, where it is combined with {{obj-ref|WLdokanGC}}. Its movement is in the direction opposite its rotation; for example its vanilla usage is rotated to face into the pipe, and it technically backs out towards the road. This movement direction fully obeys the object rotation, allowing it to move vertically if desired. Unlike a sine wave, it stays perfectly still at its initial position and post-movement destination, and its movement back and forth between the two is at a constant speed.",
-    "KCL Files": [
-        "WlwallGC.kcl"
-    ],
-    "KCL Index": "None"
+    "KCL File": "WLwallGC",
+    "KCL Index": null
 }

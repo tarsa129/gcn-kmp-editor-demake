@@ -6,7 +6,6 @@ import weakref
 import os
 from timeit import default_timer
 from copy import deepcopy
-from io import TextIOWrapper, BytesIO, StringIO
 from math import sin, cos, atan2
 import json
 from PIL import Image
@@ -18,7 +17,7 @@ import py_obj
 
 from widgets.editor_widgets import catch_exception
 from widgets.editor_widgets import AddPikObjectWindow
-from widgets.tree_view import LevelDataTreeView
+from widgets.tree_view import LevelDataTreeView, KMPHeader
 import widgets.tree_view as tree_view
 from configuration import read_config, make_default_config, save_cfg
 
@@ -90,6 +89,7 @@ class GenEditor(QtWidgets.QMainWindow):
         self.pathsconfig = self.configuration["default paths"]
         self.editorconfig = self.configuration["editor"]
         self.current_gen_path = None
+
         self.setAcceptDrops(True)
         self.setup_ui()
 
@@ -209,6 +209,7 @@ class GenEditor(QtWidgets.QMainWindow):
         self.editing_windows = {}
 
         self.current_gen_path = None
+
         self.pik_control.reset_info()
         self.pik_control.button_add_object.setChecked(False)
         #self.pik_control.button_move_object.setChecked(False)
@@ -507,7 +508,8 @@ class GenEditor(QtWidgets.QMainWindow):
                 self.level_view.selected_positions.append(bound_to.position)
                 self.level_view.selected_rotations.append(bound_to.rotation)
 
-        self.pik_control.set_buttons(items[0] if len(items) == 1 else None)
+        if items and not isinstance(items[0], KMPHeader):
+            self.pik_control.set_buttons(items[0].bound_to if len(items) == 1 else None)
 
         self.level_view.gizmo.move_to_average(self.level_view.selected,
                                               self.level_view.selected_positions)
@@ -672,9 +674,9 @@ class GenEditor(QtWidgets.QMainWindow):
         # ------ Collision Menu
         self.collision_menu = QtWidgets.QMenu(self.menubar)
         self.collision_menu.setTitle("Geometry")
-        self.collision_load_action = QtGui.QAction("Load OBJ", self)
-        self.collision_load_action.triggered.connect(self.button_load_collision)
-        self.collision_menu.addAction(self.collision_load_action)
+        #self.collision_load_action = QtGui.QAction("Load OBJ", self)
+        #self.collision_load_action.triggered.connect(self.button_load_collision)
+        #self.collision_menu.addAction(self.collision_load_action)
         self.collision_load_grid_action = QtGui.QAction("Load KCL", self)
         self.collision_load_grid_action.triggered.connect(self.button_load_collision_kcl)
         self.collision_menu.addAction(self.collision_load_grid_action)
@@ -942,8 +944,14 @@ class GenEditor(QtWidgets.QMainWindow):
             if self.level_view.collision is not None:
                 hidden_coltypes_str = self.configuration["editor"]["hidden_collision_types"]
                 hidden_colgroups_str = self.configuration["editor"]["hidden_collision_type_groups"]
-                self.level_view.collision.hidden_coltypes = [int(x) for x in hidden_coltypes_str.split(",")]
-                self.level_view.collision.hidden_colgroups = [int(x) for x in hidden_colgroups_str.split(",")]
+
+                hidden_coltypes = set(int(t) for t in hidden_coltypes_str.split(",") if t)
+                hidden_colgroups = set(int(t) for t in hidden_colgroups_str.split(",") if t)
+
+                CollisionModel.hidden_coltypes = hidden_coltypes
+                CollisionModel.hidden_colgroups = hidden_colgroups
+
+                self.level_view.set_hidden_coltypes(hidden_coltypes, hidden_colgroups)
                 self.level_view.collision.set_visible_tris()
 
             save_cfg(self.configuration)
@@ -1001,7 +1009,7 @@ class GenEditor(QtWidgets.QMainWindow):
 
     def analyze_for_mistakes(self):
         analyzer_window = ErrorAnalyzer(self.level_file, parent=self)
-        analyzer_window.exec_()
+        analyzer_window.exec()
         analyzer_window.deleteLater()
 
     def on_file_menu_aboutToShow(self):
@@ -1311,11 +1319,12 @@ class GenEditor(QtWidgets.QMainWindow):
                     self.setup_kmp_file(kmp_file, filepath, add_to_ini)
                     self.leveldatatreeview.set_objects(kmp_file)
                     self.leveldatatreeview.bound_to_group(kmp_file)
+
                     self.current_gen_path = filepath
 
                     filepath_base = os.path.dirname(filepath)
 
-                    collisionfile = filepath_base+"/course.kcl"
+                    collisionfile = filepath_base +"/course.kcl"
                     if os.path.exists(collisionfile):
                         self.load_collision_kcl(collisionfile)
 
@@ -1334,7 +1343,7 @@ class GenEditor(QtWidgets.QMainWindow):
         if len(error_string) > 0:
             initial_errors = LoadingFix(self.level_file, parent=self)
             initial_errors.set_text(error_string)
-            initial_errors.exec_()
+            initial_errors.exec()
             initial_errors.deleteLater()
 
 
@@ -1367,9 +1376,9 @@ class GenEditor(QtWidgets.QMainWindow):
             self.leveldatatreeview.set_objects(kmp_file)
             self.leveldatatreeview.bound_to_group(kmp_file)
 
-        kcl_path = os.path.join(os.getcwd(), "lib\szsdump\course.kcl")
-        if os.path.isfile(kcl_path):
-            self.load_collision_kcl(kcl_path)
+        kcl_file_obj = self.root_directory.get_file("course.kcl")
+        if kcl_file_obj is not None:
+            self.load_collision_kcl("course.kcl")
 
         self.set_base_window_title(filepath)
         if add_to_ini:
@@ -1378,35 +1387,39 @@ class GenEditor(QtWidgets.QMainWindow):
             save_cfg(self.configuration)
         self.current_gen_path = filepath
 
-        clear_temp_folder()
+        #clear_temp_folder()
 
     @catch_exception_with_dialog
     def button_save_level(self, *args, **kwargs):
-        if self.current_gen_path is not None:
-            if self.root_directory is not None:
-                clear_temp_folder()
-
-                dump_path = os.path.join(os.getcwd(), "lib")
-                kmp_file_obj = self.root_directory.get_file("course.kmp")
-                if kmp_file_obj is not None:
-                    kmp_file_obj.seek(0)
-                    self.level_file.write(kmp_file_obj)
-
-                self.root_directory.extract_to(dump_path)
-
-                self.set_has_unsaved_changes(False)
-                self.statusbar.showMessage("Saved to {0}".format(self.current_gen_path))
-                szs_path = dump_path = os.path.join(os.getcwd(), "lib\szsdump")
-                os.system(f'wszst create "{szs_path}" -d "{self.current_gen_path}.szs" -o' )
-            else:
-                gen_path = self.current_gen_path[:-3] + "backup.kmp"
-                with open(gen_path, "wb") as f:
-                    self.level_file.write(f)
-                    self.set_has_unsaved_changes(False)
-
-                    self.statusbar.showMessage("Saved to {0}".format(gen_path))
-        else:
+        if self.current_gen_path is None:
             self.button_save_level_as()
+            return
+
+        if self.root_directory is not None:
+            #dump_path = os.path.join(os.getcwd(), "lib")
+            full_path = os.path.join(os.getcwd(), "lib\szsdump")
+            self.root_directory = Directory.from_dir(full_path)
+
+            kmp_file_obj = self.root_directory.get_file("course.kmp")
+            if kmp_file_obj is not None:
+                kmp_file_obj.seek(0)
+                self.level_file.write(kmp_file_obj)
+
+            clear_temp_folder()
+            self.root_directory.extract_to(dump_path)
+
+            self.set_has_unsaved_changes(False)
+            self.statusbar.showMessage("Saved to {0}".format(self.current_gen_path))
+            szs_path = dump_path = os.path.join(os.getcwd(), "lib\szsdump")
+            os.system(f'wszst create "{szs_path}" -d "{self.current_gen_path}.szs" -o' )
+        else:
+            gen_path = self.current_gen_path[:-3] + "backup.kmp"
+            with open(gen_path, "wb") as f:
+                self.level_file.write(f)
+                self.set_has_unsaved_changes(False)
+
+                self.statusbar.showMessage("Saved to {0}".format(gen_path))
+
 
     def button_save_level_as(self, *args, **kwargs):
         self._button_save_level_as(True, *args, **kwargs)
@@ -1494,42 +1507,38 @@ class GenEditor(QtWidgets.QMainWindow):
             self.update_3d()
 
     def load_collision_kcl(self, filepath):
+        faces, model = self.read_kcl_file(filepath)
+        self.setup_collision(faces, filepath, alternative_mesh=model)
+
+    def read_kcl_file(self, filename, filename_only=False):
         kcl_coll = RacetrackCollision()
         faces = []
+        if self.root_directory is not None:
+            kcl_file_obj = self.root_directory.get_file(filename)
+            kcl_coll.load_file(kcl_file_obj)
+        else:
+            if filename_only:
+                filepath_base = os.path.dirname(self.current_gen_path)
+                filename = filepath_base + '/' + filename
+            with open(filename, "rb") as f:
+                kcl_coll.load_file(f)
 
-        with open(filepath, "rb") as f:
-            kcl_coll.load_file(f)
-
-        #these are the actual vertices
-
-        #for v1, v2, v3, collision_type in kcl_coll.triangles:
-        #    faces.append((v1, v2, v3, collision_type))
         faces = kcl_coll.triangles
 
         model = CollisionModel(kcl_coll)
-        self.setup_collision(faces, filepath, alternative_mesh=model)
-
-    def clear_collision(self):
-        self.bco_coll = None
-        self.level_view.clear_collision()
-
-        # Synchronously force a draw operation to provide immediate feedback.
-        self.level_view.update()
-        QApplication.instance().processEvents()
+        return faces, model
 
     def setup_collision(self, faces, filepath, alternative_mesh=None):
         self.level_view.set_collision(faces, alternative_mesh)
         self.pathsconfig["collision"] = filepath
         editor_config = self.configuration["editor"]
-        alternative_mesh.hidden_collision_types = \
-            set(int(t) for t in editor_config.get("hidden_collision_types", "").split(",") if t)
-        alternative_mesh.hidden_collision_type_groups = \
-            set(int(t) for t in editor_config.get("hidden_collision_type_groups", "").split(",") if t)
+        hidden_coltypes = set(int(t) for t in editor_config.get("hidden_collision_types", "").split(",") if t)
+        hidden_colgroups = set(int(t) for t in editor_config.get("hidden_collision_types", "").split(",") if t)
 
-        self.level_view.collision.hidden_coltypes = \
-            set(int(t) for t in editor_config.get("hidden_collision_types", "").split(",") if t)
-        self.level_view.collision.hidden_colgroups = \
-            set(int(t) for t in editor_config.get("hidden_collision_type_groups", "").split(",") if t)
+        CollisionModel.hidden_coltypes = hidden_coltypes
+        CollisionModel.hidden_colgroups = hidden_colgroups
+
+        self.level_view.set_hidden_coltypes(hidden_coltypes, hidden_colgroups)
         self.level_view.collision.set_visible_tris()
         save_cfg(self.configuration)
 
@@ -2077,6 +2086,10 @@ class GenEditor(QtWidgets.QMainWindow):
             else:
                 for point in route.points[:-1]:
                     point.unk1 = 30 if point.unk1 ==0 else point.unk1
+
+        self.level_file.enemypointgroups.merge_groups()
+        self.level_file.itempointgroups.merge_groups()
+        self.level_file.checkpoints.merge_groups()
         self.update_3d()
 
     def keyPressEvent(self, event: QtGui.QKeyEvent):
@@ -2314,7 +2327,8 @@ class GenEditor(QtWidgets.QMainWindow):
             elif isinstance(obj, libkmp.MapObject):
                 self.level_file.remove_object(obj)
             elif isinstance(obj, libkmp.KartStartPoint):
-                self.level_file.kartpoints.positions.remove(obj)
+                if len(self.level_file.kartpoints.positions) > 1:
+                    self.level_file.kartpoints.positions.remove(obj)
             elif isinstance(obj, libkmp.JugemPoint):
                 self.level_file.remove_respawn(obj)
                 #self.level_file.respawnpoints.remove(obj)
@@ -2670,6 +2684,7 @@ class GenEditor(QtWidgets.QMainWindow):
                 self.pik_control.update_info()
 
             elif len(selected) == 0:
+
                 #if self.leveldatatreeview.cameras.isSelected():
                 #    self.pik_control.set_info(self.leveldatatreeview.cameras.bound_to, self.update_3d)
                 #    self.pik_control.update_info()
@@ -2678,6 +2693,9 @@ class GenEditor(QtWidgets.QMainWindow):
                     self.pik_control.update_info()
                 elif self.leveldatatreeview.cameras.isSelected():
                     self.pik_control.set_info(self.leveldatatreeview.cameras.bound_to, self.update_3d)
+                    self.pik_control.update_info()
+                elif self.leveldatatreeview.kmpheader.isSelected():
+                    self.pik_control.set_info(self.level_file, self.update_3d)
                     self.pik_control.update_info()
                 else:
                     self.pik_control.reset_info()
@@ -3004,6 +3022,7 @@ class GenEditor(QtWidgets.QMainWindow):
                         self.connect_two_groups(obj, endpoint, to_deal_with)
             elif isinstance(endpoint, JugemPoint) and isinstance(obj_type, Checkpoint):
                 for obj in self.connect_start:
+                    print(endpoint)
                     obj.respawn_obj = endpoint
             elif isinstance(endpoint, ObjectRoutePoint) and isinstance(obj_type, MapObject):
                 for obj in self.connect_start:

@@ -650,3 +650,19 @@ class LevelDataTreeView(QtWidgets.QTreeWidget):
             toggle = getattr(self.vis_menu, name.replace(" ", "").lower() )
             return (toggle.is_visible(), toggle.is_selectable())
         return (None, None)
+    
+    def count_items(self):
+        count = 0
+
+        pending_items = []
+        for i in range(self.topLevelItemCount()):
+            pending_items.append(self.topLevelItem(i))
+
+        while pending_items:
+            item = pending_items.pop()
+            count += 1
+
+            for i in range(item.childCount()):
+                pending_items.append(item.child(i))
+
+        return count

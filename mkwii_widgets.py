@@ -225,6 +225,8 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
         self.snapping_last_hash = None
         self.snapping_display_list = None
 
+        self.additional_models = {}
+
         # Initialize some models
         with open("resources/gizmo.obj", "r") as f:
             self.gizmo = Gizmo.from_obj(f, rotate=True)
@@ -413,7 +415,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
 
     def _get_snapping_points(self):
         if self.snapping_mode == SnappingMode.EDGE_CENTERS:
-            return self.collision.get_edge_centers
+            return self.collision.get_edge_centers()
         if self.snapping_mode == SnappingMode.FACE_CENTERS:
             return self.collision.get_face_centers()
         return self.collision.get_vertices()
@@ -539,6 +541,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
         self.rotation_is_pressed = False
         self.connecting_mode = False
         self.connecting_start = None
+        self.additional_models = {}
 
         self._frame_invalid = False
         self._mouse_pos_changed = False
@@ -549,16 +552,17 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
         self.MOVE_RIGHT = 0
         self.SPEEDUP = 0
 
-    def clear_collision(self):
-        self.alternative_mesh = None
-        self.collision = None
-
-        if self.main_model is not None:
-            glDeleteLists(self.main_model, 1)
-            self.main_model = None
-
     def set_collision(self, faces, alternative_mesh):
         self.collision = Collision(faces)
+        additional_collision = {}
+        for mapobject in self.level_file.objects:
+            kcl_name = mapobject.get_kcl_name()
+            if kcl_name is None:
+                continue
+            if kcl_name not in self.additional_models.keys():
+                collision_model = MapObjectModel(kcl_name, self.editor.read_kcl_file).collision
+                additional_collision[mapobject] = collision_model
+        self.collision.obj_meshes = additional_collision
 
         if self.main_model is None:
             self.main_model = glGenLists(1)
@@ -1025,6 +1029,9 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
             self.gizmo.move_to_average(self.selected, self.selected_positions)
             if len(selected) == 0:
                 self.gizmo.hidden = True
+
+            self.select_update.emit()
+
             if self.mode == MODE_3D: # In case of 3D mode we need to update scale due to changed gizmo position
                 gizmo_scale = (self.gizmo.position - campos).norm() / 130.0
 
@@ -1067,6 +1074,29 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
 
                 if self.mode != MODE_TOPDOWN:
                     glDisable(GL_LIGHTING)
+
+        additional_collision = {}
+        if self.visibility_menu.objects.is_visible():
+            for mapobject in self.level_file.objects:
+                kcl_name = mapobject.get_kcl_name()
+                if kcl_name is None:
+                    continue
+                if kcl_name not in self.additional_models.keys():
+                    self.additional_models[kcl_name] = MapObjectModel(kcl_name, self.editor.read_kcl_file)
+                visual_model = self.additional_models[kcl_name].visual_mesh
+
+                glPushMatrix()
+                glTranslatef(mapobject.position.x, -mapobject.position.z, mapobject.position.y)
+                glMultMatrixf( mapobject.rotation.get_render(False) )
+                glScalef(mapobject.scale.x, -mapobject.scale.z, mapobject.scale.y)
+
+                visual_model.render(selectedPart=self.highlight_colltype,
+                                    cull_faces=self.cull_faces)
+
+                glPopMatrix()
+
+                additional_collision[mapobject] = self.additional_models[kcl_name].collision
+        if self.collision is not None: self.collision.obj_meshes = additional_collision
 
         if self.snapping_enabled and self.collision is not None:
             snapping_hash = hash((self.snapping_mode, self.collision.hash))
@@ -2195,6 +2225,11 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
             ray = Line(Vector3(mapx, mapz, 99999999.0), Vector3(0.0, 0.0, -1.0))
         return self.collision.get_closest_point(ray, self._get_snapping_points())
 
+    def set_hidden_coltypes(self, hidden_coltypes, hidden_colgroups):
+        Collision.hidden_coltypes = hidden_coltypes
+        Collision.hidden_colgroups = hidden_colgroups
+
+
 def create_object_type_pixmap(canvas_size: int, directed: bool,
                               colors: 'tuple[tuple[int]]') -> QtGui.QPixmap:
     border = int(canvas_size * 0.12)
@@ -2400,4 +2435,10 @@ class FilterViewMenu(QtWidgets.QMenu):
                 QtWidgets.QMenu.mouseReleaseEvent(self, e)
         except:
             traceback.print_exc()
+
+class MapObjectModel(object):
+    def __init__(self, filepath, read_kcl_file) -> None:
+        faces, model = read_kcl_file(filepath, True)
+        self.collision = Collision(faces)
+        self.visual_mesh = model
 

@@ -24,5 +24,7 @@
         0
     ],
     "Route Info": null,
-    "Description": "Floating drivable rock (at Grumble Volcano in the lava). It moves like a cosine on the Z-axis and the Y-axis."
+    "Description": "Floating drivable rock (at Grumble Volcano in the lava). It moves like a cosine on the Z-axis and the Y-axis.",
+    "KCL File": "VolcanoRock",
+    "KCL Index": 0
 }
