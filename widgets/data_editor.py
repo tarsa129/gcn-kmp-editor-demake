@@ -592,7 +592,7 @@ class DataEditor(QtWidgets.QWidget):
         layout, label = self.create_labeled_widgets(self, text, spinboxes + [color_picker])
         self.vbox.addLayout(layout)
 
-        return spinboxes
+        return spinboxes, label, color_picker
 
     def update_rotation(self, xang, yang, zang):
         cmn_obj = get_cmn_obj(self.bound_to)
@@ -1016,27 +1016,41 @@ class KMPEdit(DataEditor):
         self.lap_count = self.add_integer_input("Lap Count", "lap_count",
                                         MIN_UNSIGNED_BYTE, MAX_UNSIGNED_BYTE)
 
-        self.speed_modifier = self.add_decimal_input("Speed Modifier", "speed_modifier", 0, 10000)
+        #self.speed_modifier = self.add_decimal_input("Speed Modifier", "speed_modifier", 0, 10000)
 
 
 
         self.lens_flare = self.add_checkbox("Enable Lens Flare", "lens_flare",
                                             off_value=0, on_value=1)
+        self.lens_flare.stateChanged.connect(self.set_flare_visible)
 
-        self.flare_color = self.add_color_input("Flare Color", "flare_color")
-        self.flare_alpha = self.add_integer_input("Flare Alpha %", "flare_alpha",
-                                           MIN_UNSIGNED_BYTE, MAX_UNSIGNED_BYTE)
+        self.flare_color, self.flare_color_label, self.fc_picker = self.add_color_input("Flare Color", "flare_color")
+        self.flare_alpha, self.flare_alpha_label = self.add_integer_input("Flare Alpha %", "flare_alpha",
+                                           MIN_UNSIGNED_BYTE, MAX_UNSIGNED_BYTE, return_both=True)
 
 
     def update_data(self):
         obj: KMP = self.bound_to[0]
-        self.lap_count.setValue(obj.lap_count)
+        self.lap_count.setValueQuiet(obj.lap_count)
         self.lens_flare.setChecked(obj.lens_flare != 0)
-        self.flare_color[0].setValue(obj.flare_color.r)
-        self.flare_color[1].setValue(obj.flare_color.g)
-        self.flare_color[2].setValue(obj.flare_color.b)
-        self.flare_alpha.setValue(obj.flare_alpha)
-        self.speed_modifier.setValue(obj.speed_modifier)
+
+        self.flare_color[0].setValueQuiet(obj.flare_color.r)
+        self.flare_color[1].setValueQuiet(obj.flare_color.g)
+        self.flare_color[2].setValueQuiet(obj.flare_color.b)
+        self.flare_alpha.setValueQuiet(obj.flare_alpha)
+
+        self.set_flare_visible()
+        #self.speed_modifier.setValue(obj.speed_modifier)
+
+    def set_flare_visible(self):
+        self.flare_color[0].setVisible(self.lens_flare.isChecked())
+        self.flare_color[1].setVisible(self.lens_flare.isChecked())
+        self.flare_color[2].setVisible(self.lens_flare.isChecked())
+        self.flare_color_label.setVisible(self.lens_flare.isChecked())
+        self.fc_picker.setVisible(self.lens_flare.isChecked())
+        self.flare_alpha.setVisible(self.lens_flare.isChecked())
+        self.flare_alpha_label.setVisible(self.lens_flare.isChecked())
+
 
     def open_color_picker_light(self, attrib):
         obj = self.bound_to[0]

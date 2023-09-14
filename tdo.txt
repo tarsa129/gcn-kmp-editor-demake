@@ -2,7 +2,6 @@ updates:
 
 improve json files
 data editor multiselect to use averages for numeric types
-lens flare hidden stuff
 
 new features:
 area / object shared routes
