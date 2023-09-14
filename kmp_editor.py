@@ -1343,6 +1343,7 @@ class GenEditor(QtWidgets.QMainWindow):
                     open_error_dialog(str(error), self)
 
         self.update_3d()
+        self.frame_selection(adjust_zoom=True)
 
     def setup_kmp_file(self, kmp_file, filepath, add_to_ini):
         error_string = kmp_file.fix_file() #will do a popup for 'stuff fixed at load'

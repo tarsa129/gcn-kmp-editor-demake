@@ -2,6 +2,8 @@ updates:
 
 improve json files
 data editor multiselect to use averages for numeric types
+move flare color information to objects
+move lap count to start points
 
 new features:
 area / object shared routes
