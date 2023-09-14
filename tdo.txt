@@ -1,9 +1,7 @@
 updates:
 
 improve json files
-collide on gobj collision files
 data editor multiselect to use averages for numeric types
-scale points according to zoom factor
 lens flare hidden stuff
 
 new features:
@@ -15,6 +13,4 @@ create dialog for auto generation
 lookinto collision translucency
 error analyzer
 better area rendering - image
-
-ground called when
-- action_ground_object in kmp_editor
+collide on gobj collision files

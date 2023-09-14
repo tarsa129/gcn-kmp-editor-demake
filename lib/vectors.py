@@ -121,6 +121,9 @@ class Vector3(object):
         self.y = self.y * other_vec.y
         self.z = self.z * other_vec.z
 
+    def scale_vec(self, other_vec):
+        return Vector3(self.x * other_vec.x, self.y * other_vec.y, self.z * other_vec.z)
+
     def rotate_y(self, deg):
         x = self.x * cos(deg2rad(deg)) - self.z * sin(deg2rad(deg))
         z = self.z * cos(deg2rad(deg)) + self.x * sin(deg2rad(deg))

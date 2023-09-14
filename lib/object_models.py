@@ -164,8 +164,8 @@ class ObjectModels(object):
     def render_generic_position(self, position, selected):
         self._render_generic_position(self.cylinder, position, selected)
 
-    def render_generic_position_colored(self, position, selected, cubename):
-        self._render_generic_position(getattr(self, cubename), position, selected)
+    def render_generic_position_colored(self, position, selected, cubename, scale=Vector3(1, 1, 1)):
+        self._render_generic_position(getattr(self, cubename), position, selected, scale)
 
     def render_generic_position_rotation(self, position, rotation, selected, scale=Vector3(1, 1, 1)):
         self._render_generic_position_rotation("generic", position, rotation, selected, scale)
@@ -190,10 +190,10 @@ class ObjectModels(object):
 
         glPopMatrix()
 
-    def _render_generic_position(self, cube, position, selected):
+    def _render_generic_position(self, cube, position, selected, scale):
         glPushMatrix()
         glTranslatef(position.x, -position.z, position.y)
-        #glTranslatef(position.x, position.y, position.z)
+        glScalef(scale.x, scale.z, scale.y)
         cube.render(selected=selected)
 
         glPopMatrix()

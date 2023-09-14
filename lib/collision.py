@@ -8,8 +8,6 @@ class Collision(object):
     hidden_colgroups = set()
     def __init__(self, faces):
         self.vertices = []
-
-
         self.faces = faces
         self.triangles = []
         self.face_centers = []

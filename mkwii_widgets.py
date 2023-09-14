@@ -689,6 +689,10 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
 
 
         self.gizmo_scale = gizmo_scale
+        if self.editor.scale_points.isChecked():
+            point_scale = Vector3(gizmo_scale/64, gizmo_scale/64, gizmo_scale/64)
+        else:
+            point_scale = Vector3(1, 1, 1)
 
         check_gizmo_hover_id = self.should_check_gizmo_hover_id()
 
@@ -782,7 +786,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                                                  pos3=None,
                                                  rotation=None)
                         )
-                        self.models.render_generic_position_colored_id(obj.position, id + (offset+i) * 4)
+                        self.models.render_generic_position_colored_id(obj.position, id + (offset+i) * 4, point_scale, point_scale)
 
                     offset = len(objlist)
 
@@ -795,7 +799,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                                                  pos3=None,
                                                  rotation=None)
                         )
-                        self.models.render_generic_position_colored_id(obj.position, id + (offset+i) * 4)
+                        self.models.render_generic_position_colored_id(obj.position, id + (offset+i) * 4, point_scale, point_scale)
 
                     offset = len(objlist)
 
@@ -811,7 +815,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                                                  pos2=None,
                                                  pos3=None,
                                                  rotation=None))
-                            self.models.render_generic_position_colored_id(obj.position, id + (offset+i) * 4)
+                            self.models.render_generic_position_colored_id(obj.position, id + (offset+i) * 4, point_scale)
                             i += 1
                     offset = len(objlist)
 
@@ -823,7 +827,8 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                                                 pos2=None,
                                                 pos3=None,
                                                 rotation=obj.rotation))
-                        self.models.render_generic_position_rotation_colored_id(obj.position, obj.rotation, id + (offset+i) * 4, obj.scale)
+                        object_scale = point_scale.scale_vec(obj.scale)
+                        self.models.render_generic_position_rotation_colored_id(obj.position, obj.rotation, id + (offset+i) * 4, object_scale)
                         i += 1
                     offset = len(objlist)
 
@@ -836,9 +841,9 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                                                     pos3=obj.position3_simple,
                                                     rotation=None))
                         self.models.render_generic_position_colored_id(obj.position,
-                                                                                id + (offset + i) * 4)
-                        self.models.render_generic_position_colored_id(obj.position2_simple, id + (offset + i) * 4 + 1)
-                        self.models.render_generic_position_colored_id(obj.position3_simple, id + (offset + i) * 4 + 2)
+                                                                                id + (offset + i) * 4, point_scale)
+                        self.models.render_generic_position_colored_id(obj.position2_simple, id + (offset + i) * 4 + 1, point_scale)
+                        self.models.render_generic_position_colored_id(obj.position3_simple, id + (offset + i) * 4 + 2, point_scale)
 
                     offset = len(objlist)
 
@@ -854,7 +859,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                                                  pos2=None,
                                                  pos3=None,
                                                  rotation=None))
-                            self.models.render_generic_position_colored_id(obj.position, id + (offset+i) * 4)
+                            self.models.render_generic_position_colored_id(obj.position, id + (offset+i) * 4, point_scale)
                             i += 1
 
                     offset = len(objlist)
@@ -872,7 +877,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                                                  pos2=None,
                                                  pos3=None,
                                                  rotation=None))
-                            self.models.render_generic_position_colored_id(pos, id + (offset+i) * 4)
+                            self.models.render_generic_position_colored_id(pos, id + (offset+i) * 4, point_scale)
                             i += 1
 
                     offset = len(objlist)
@@ -894,11 +899,11 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                                                     pos2=pos2,
                                                     pos3=pos3,
                                                     rotation=None))
-                        self.models.render_generic_position_colored_id(pos1, id + (offset + i) * 4)
+                        self.models.render_generic_position_colored_id(pos1, id + (offset + i) * 4, point_scale)
                         if pos2 is not None:
-                             self.models.render_generic_position_colored_id(pos2, id + (offset + i) * 4 + 1)
+                             self.models.render_generic_position_colored_id(pos2, id + (offset + i) * 4 + 1, point_scale)
                         if pos3 is not None:
-                            self.models.render_generic_position_colored_id(pos3, id + (offset + i) * 4 + 2)
+                            self.models.render_generic_position_colored_id(pos3, id + (offset + i) * 4 + 2, point_scale)
 
                     offset = len(objlist)
 
@@ -913,7 +918,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                                                  pos2=None,
                                                  pos3=None,
                                                  rotation=None))
-                            self.models.render_generic_position_colored_id(obj.position, id + (offset+i) * 4)
+                            self.models.render_generic_position_colored_id(obj.position, id + (offset+i) * 4, point_scale)
                             i += 1
 
                     offset = len(objlist)
@@ -926,8 +931,8 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                                              pos2=obj.end,
                                              pos3=None,
                                              rotation=None))
-                        self.models.render_generic_position_colored_id(obj.start, id+(offset+i)*4)
-                        self.models.render_generic_position_colored_id(obj.end, id+(offset+i)*4 + 1)
+                        self.models.render_generic_position_colored_id(obj.start, id+(offset+i)*4, point_scale)
+                        self.models.render_generic_position_colored_id(obj.end, id+(offset+i)*4 + 1, point_scale)
                     offset = len(objlist)
 
                 for is_selectable, collection in (
@@ -950,7 +955,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                                                  pos3=None,
                                                  rotation=obj.rotation))
                         self.models.render_generic_position_rotation_colored_id(obj.position, obj.rotation,
-                                                                                id + (offset + i) * 4)
+                                                                                id + (offset + i) * 4, point_scale)
                     offset = len(objlist)
 
                 pixels = glReadPixels(click_x, click_y, clickwidth, clickheight, GL_RGB, GL_UNSIGNED_BYTE)
@@ -1244,7 +1249,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                         if i == 0 and j == 0:
                             point_type = "enemypointfirst"
 
-                        self.models.render_generic_position_colored(point.position, point in select_optimize, point_type)
+                        self.models.render_generic_position_colored(point.position, point in select_optimize, point_type, point_scale)
 
                         enemyaction_colors = [ [1.0, 0.0, 0.0], [0.5, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.5, 0.0]    ]
                         if point.enemyaction in [1, 2, 3, 4]:
@@ -1335,7 +1340,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                         if i == 0 and j == 0:
                             point_type = "itempointfirst"
 
-                        self.models.render_generic_position_colored(point.position, point in select_optimize, point_type)
+                        self.models.render_generic_position_colored(point.position, point in select_optimize, point_type, point_scale)
 
 
                         billaction_colors = [ [1.0, 0.0, 0.0], [0.5, 0.5, 0.5], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]  ]
@@ -1422,8 +1427,8 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                     for checkpoint in group.points:
                         start_point_selected = checkpoint.start in positions
                         end_point_selected = checkpoint.end in positions
-                        self.models.render_generic_position_colored(checkpoint.start, start_point_selected, "checkpointleft")
-                        self.models.render_generic_position_colored(checkpoint.end, end_point_selected, "checkpointright")
+                        self.models.render_generic_position_colored(checkpoint.start, start_point_selected, "checkpointleft", point_scale)
+                        self.models.render_generic_position_colored(checkpoint.end, end_point_selected, "checkpointright", point_scale)
 
                         if start_point_selected or end_point_selected:
                             respawns_to_highlight.add(checkpoint.respawn_obj)
@@ -1596,15 +1601,16 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                 if self.editor.next_checkpoint_start_position is not None:
                     self.models.render_generic_position_colored(
                     Vector3(*self.editor.next_checkpoint_start_position), True,
-                    "checkpointleft")
+                    "checkpointleft", point_scale)
             glPopMatrix()
             #go between the groups
             if vismenu.objects.is_visible():
                 for object in self.level_file.objects:
+                    object_scale = point_scale.scale_vec(object.scale)
                     self.models.render_generic_position_rotation_colored("objects",
                                                                  object.position, object.rotation,
                                                                  object in select_optimize,
-                                                                 object.scale)
+                                                                 object_scale)
 
                 routes_to_highlight = set()
 
@@ -1632,7 +1638,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                         point_selected = point in select_optimize
                         if point_selected:
                             objs_to_highlight.update( used_by )
-                        self.models.render_generic_position_colored(point.position, point_selected, render_type)
+                        self.models.render_generic_position_colored(point.position, point_selected, render_type, point_scale)
                         selected = selected or point_selected
 
                         if last_point is not None:
@@ -1664,7 +1670,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                 for object in self.level_file.kartpoints.positions:
                     self.models.render_generic_position_rotation_colored("startpoints",
                                                                 object.position, object.rotation,
-                                                                object in select_optimize)
+                                                                object in select_optimize, point_scale)
                     z_scale = 4800 if self.level_file.kartpoints.start_squeeze else 5300
                     self.models.draw_wireframe_cube( object.position,
                                                         object.rotation,
@@ -1673,7 +1679,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                 for object in self.level_file.areas:
                     self.models.render_generic_position_rotation_colored("areas",
                                                                 object.position, object.rotation,
-                                                                object in select_optimize)
+                                                                object in select_optimize, point_scale)
                     if object in select_optimize:
                         glColor4f(*colors_selection)
                         glLineWidth(3.0)
@@ -1698,7 +1704,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                     if self.level_file.route_used_by(route):
                         for point in route.points:
                             point_selected = point in select_optimize
-                            self.models.render_generic_position_colored(point.position, point_selected, "areapoint")
+                            self.models.render_generic_position_colored(point.position, point_selected, "areapoint", point_scale)
                             if circle:
                                 glColor3f(*colors_json["Areas"][:3])
                                 self.models.draw_sphere(point.position, 600)
@@ -1709,7 +1715,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                     else:
                         for point in route.points:
                             point_selected = point in select_optimize
-                            self.models.render_generic_position_colored(point.position, point_selected, "unusedpoint")
+                            self.models.render_generic_position_colored(point.position, point_selected, "unusedpoint", point_scale)
                             selected = selected or point_selected
                             if last_point is not None:
                                 self.draw_arrow_head(last_point.position, point.position)
@@ -1756,7 +1762,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                     bolded = object in linked_areas
                     self.models.render_generic_position_rotation_colored( "replayareas",
                                                                 object.position, object.rotation,
-                                                                bolded)
+                                                                bolded, point_scale)
                     if bolded:
                         glColor4f(*colors_selection)
                         glLineWidth(3.0)
@@ -1775,7 +1781,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                     bolded = object in linked_cameras
 
                     if object.type == 1:
-                        self.models.render_generic_position_colored(object.position, bolded, "replaycameras")
+                        self.models.render_generic_position_colored(object.position, bolded, "replaycameras", point_scale)
                         if not object.follow_player:
                             glColor4f(*colors_replaycamera)
                             pos2 = object.position2_simple.render() #if absolute_poses else object.position2.absolute()
@@ -1798,7 +1804,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
 
                     elif object.type == 3:
                         self.models.render_generic_position_colored(object.position,
-                                                                bolded, "replaycamerasplayer")
+                                                                bolded, "replaycamerasplayer", point_scale)
                         pos2 = object.position2_player.render()
                         pos3 = object.position3_player.render()
                         self.models.draw_sphere(pos2, 300)
@@ -1815,7 +1821,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
 
                     last_point = route.points[0]
                     for point in route.points[1:]:
-                        self.models.render_generic_position_colored(point.position.render(), bolded, "replaycamerapoint")
+                        self.models.render_generic_position_colored(point.position.render(), bolded, "replaycamerapoint", point_scale)
                         if last_point is not None:
                             self.draw_arrow_head(last_point.position.render(), point.position.render())
                         last_point = point
@@ -1838,7 +1844,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                         continue
                     self.models.render_generic_position_colored(object.position,
                                                                  object in select_optimize,
-                                                                 "camera")
+                                                                 "camera", point_scale)
                     if object in select_optimize:
                         glColor3f(*colors_json["Camera"][:3])
                     else:
@@ -1877,7 +1883,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                     last_point = None
                     for point in route.points:
                         point_selected = point in select_optimize
-                        self.models.render_generic_position_colored(point.position, point_selected, "camerapoint")
+                        self.models.render_generic_position_colored(point.position, point_selected, "camerapoint", point_scale)
                         selected = selected or point_selected
                         if last_point is not None:
                             self.draw_arrow_head(last_point.position, point.position)
@@ -1903,7 +1909,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                         render_type = "respawn"
                     self.models.render_generic_position_rotation_colored(render_type,
                                                                 object.position, object.rotation,
-                                                                object in select_optimize)
+                                                                object in select_optimize, point_scale)
 
                     if object in respawns_to_highlight:
                         glColor3f(*colors_json["Respawn"][:3]) # will be replaced with the respawn color
@@ -1916,12 +1922,12 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                 for object in self.level_file.cannonpoints:
                     self.models.render_generic_position_rotation_colored("cannons",
                                                                 object.position, object.rotation,
-                                                                 object in select_optimize)
+                                                                 object in select_optimize, point_scale)
             if vismenu.missionsuccesspoints.is_visible():
                 for object in self.level_file.missionpoints:
                     self.models.render_generic_position_rotation_colored("mission",
                                                                 object.position, object.rotation,
-                                                                 object in select_optimize)
+                                                                 object in select_optimize, point_scale)
 
         if self.level_file is not None:
             if vismenu.replaycameras.is_visible():
@@ -2072,7 +2078,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                             position = diff * (i/self.linedraw_count) + pos1
                             self.models.render_generic_position_rotation_colored("objects",
                                 position, self.connecting_rotation,
-                                object in select_optimize)
+                                object in select_optimize, point_scale)
 
         glFinish()
         #now = default_timer() - start

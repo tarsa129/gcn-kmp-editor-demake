@@ -734,6 +734,13 @@ class GenEditor(QtWidgets.QMainWindow):
 
         self.view_menu.addSeparator()
 
+        self.scale_points = QtGui.QAction("Scale Points in Viewport", self)
+        self.scale_points.setCheckable(True)
+        self.scale_points.setChecked(self.editorconfig.get("scale_viewpoints") == "True")
+        self.scale_points.triggered.connect(lambda: self.on_editing_setting_changed(
+            "scale_viewpoints",  self.scale_points) )
+        self.edit_menu.addAction(self.scale_points)
+
         # --------------- Generation
         self.generation_menu = QtWidgets.QMenu(self.menubar)
         self.generation_menu.setTitle("Generation")
@@ -1508,6 +1515,8 @@ class GenEditor(QtWidgets.QMainWindow):
 
     def load_collision_kcl(self, filepath):
         faces, model = self.read_kcl_file(filepath)
+        if faces is None:
+            return
         self.setup_collision(faces, filepath, alternative_mesh=model)
 
     def read_kcl_file(self, filename, filename_only=False):
@@ -1515,6 +1524,8 @@ class GenEditor(QtWidgets.QMainWindow):
         faces = []
         if self.root_directory is not None:
             kcl_file_obj = self.root_directory.get_file(filename)
+            if kcl_file_obj is None:
+                return None, None
             kcl_coll.load_file(kcl_file_obj)
         else:
             if filename_only:
