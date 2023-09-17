@@ -2266,7 +2266,8 @@ class GenEditor(QtWidgets.QMainWindow):
                     pos.y = (pos.y - orig_avg.y) *  deltascale.y + orig_avg.y
                 if deltascale.z > 0:
                     pos.z = (pos.z - orig_avg.z) *  deltascale.z + orig_avg.z
-                
+
+        self.action_update_info()
 
     def action_ground_objects(self, positions=None):
         selected = (positions is None)
@@ -2670,9 +2671,6 @@ class GenEditor(QtWidgets.QMainWindow):
 
         elif len(selected) == 0:
 
-            #if self.leveldatatreeview.cameras.isSelected():
-            #    self.pik_control.set_info(self.leveldatatreeview.cameras.bound_to, self.update_3d)
-            #    self.pik_control.update_info()
             if self.leveldatatreeview.kartpoints.isSelected():
                 self.pik_control.set_info(self.leveldatatreeview.kartpoints.bound_to, self.update_3d)
                 self.pik_control.update_info()
