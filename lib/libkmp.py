@@ -1621,9 +1621,9 @@ class KartStartPoint(RotatedObject):
         self.rotation /= count
         return self
 
-class KartStartPoints(object):
+class KartStartPoints(ObjectContainer):
     def __init__(self):
-        self.positions = []
+        super().__init__()
 
         self.pole_position = 0
         self.start_squeeze = 0
@@ -1636,15 +1636,15 @@ class KartStartPoints(object):
         kspoints = cls()
         for i in range(count):
             kstart = KartStartPoint.from_file(f)
-            kspoints.positions.append(kstart)
+            kspoints.append(kstart)
 
         return kspoints
 
     def write(self, f):
         f.write(b"KTPT")
-        f.write(pack(">H", len(self.positions)))
+        f.write(pack(">H", len(self)))
         f.write(pack(">H", 0) )
-        for position in self.positions:
+        for position in self:
             position.write(f)
 
 # Section 7
@@ -2443,7 +2443,7 @@ class KMP(object):
         kmp.checkpoints.groups.append(first_checkgroup)
         first_checkgroup.add_new_prev(first_checkgroup)
         first_checkgroup.add_new_next(first_checkgroup)
-        kmp.kartpoints.positions.append( KartStartPoint.new() )
+        kmp.kartpoints.append( KartStartPoint.new() )
 
         kmp.respawnpoints.append(JugemPoint.new())
 
@@ -2474,7 +2474,7 @@ class KMP(object):
             assert object is not None
             yield object
 
-        for kartpoint in self.kartpoints.positions:
+        for kartpoint in self.kartpoints:
             assert kartpoint is not None
             yield kartpoint
 
@@ -2526,7 +2526,7 @@ class KMP(object):
             objects.extend(route.points)
 
         objects.extend(self.objects)
-        objects.extend(self.kartpoints.positions)
+        objects.extend(self.kartpoints)
         objects.extend(self.areas)
         objects.extend(self.replayareas)
         objects.extend(self.cameras)
@@ -3218,8 +3218,8 @@ class KMP(object):
                 if i == 0 and j == 0:
                     draw_cp = True
                     #should both be vector3
-                    central_point = self.kartpoints.positions[0].position
-                    left_vector = self.kartpoints.positions[0].rotation.get_vectors()[2]
+                    central_point = self.kartpoints[0].position
+                    left_vector = self.kartpoints[0].rotation.get_vectors()[2]
                     left_vector = Vector3( -1 * left_vector.x, left_vector.y,-1 * left_vector.z  )
 
                 elif (i == 0 and j % 2 == 0 and len(group.points) > j + 1) or (i > 0 and j % 2 == 1 and len(group.points) > j + 1):

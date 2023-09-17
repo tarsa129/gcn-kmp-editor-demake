@@ -458,7 +458,7 @@ class GenEditor(QtWidgets.QMainWindow):
                 for point in route.points:
                     extend(point.position)
         if self.visibility_menu.kartstartpoints.is_visible():
-            for karts_point in self.level_file.kartpoints.positions:
+            for karts_point in self.level_file.kartpoints:
                 extend(karts_point.position)
 
         if self.visibility_menu.cannonpoints.is_visible():
@@ -1981,7 +1981,7 @@ class GenEditor(QtWidgets.QMainWindow):
                 self.level_file.objects.append(placeobject)
                 placeobject.reassign_routepoint()
             elif isinstance(object, libkmp.KartStartPoint):
-                self.level_file.kartpoints.positions.append(placeobject)
+                self.level_file.kartpoints.append(placeobject)
             elif isinstance(object, libkmp.JugemPoint):
                 self.level_file.respawnpoints.append(placeobject)
                 if group:
@@ -2340,8 +2340,8 @@ class GenEditor(QtWidgets.QMainWindow):
             elif isinstance(obj, libkmp.MapObject):
                 self.level_file.remove_object(obj)
             elif isinstance(obj, libkmp.KartStartPoint):
-                if len(self.level_file.kartpoints.positions) > 1:
-                    self.level_file.kartpoints.positions.remove(obj)
+                if len(self.level_file.kartpoints) > 1:
+                    self.level_file.kartpoints.remove(obj)
             elif isinstance(obj, libkmp.JugemPoint):
                 self.level_file.remove_respawn(obj)
                 #self.level_file.respawnpoints.remove(obj)
@@ -2488,7 +2488,7 @@ class GenEditor(QtWidgets.QMainWindow):
             elif isinstance(obj, libkmp.MapObject):
                 self.level_file.objects.append(obj)
             elif isinstance(obj, libkmp.KartStartPoint):
-                self.level_file.kartpoints.positions.append(obj)
+                self.level_file.kartpoints.append(obj)
             elif isinstance(obj, libkmp.JugemPoint):
 
                 self.level_file.respawnpoints.append(obj)

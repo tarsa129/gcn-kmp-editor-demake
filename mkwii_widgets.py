@@ -936,7 +936,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                     offset = len(objlist)
 
                 for is_selectable, collection in (
-                        (vismenu.kartstartpoints.is_selectable(), self.level_file.kartpoints.positions),
+                        (vismenu.kartstartpoints.is_selectable(), self.level_file.kartpoints),
                         (vismenu.areas.is_selectable(), self.level_file.areas),
                         (vismenu.replaycameras.is_selectable(), self.level_file.replayareas),
                         (vismenu.respawnpoints.is_selectable(), self.level_file.respawnpoints),
@@ -1663,7 +1663,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                     self.models.draw_sphere(obj.position, 300)
 
             if vismenu.kartstartpoints.is_visible():
-                for object in self.level_file.kartpoints.positions:
+                for object in self.level_file.kartpoints:
                     self.models.render_generic_position_rotation_colored("startpoints",
                                                                 object.position, object.rotation,
                                                                 object in select_optimize, point_scale)

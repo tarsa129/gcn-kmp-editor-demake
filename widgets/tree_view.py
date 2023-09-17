@@ -562,7 +562,7 @@ class LevelDataTreeView(QtWidgets.QTreeWidget):
 
         self.sort_objects()
 
-        for kartpoint in kmpdata.kartpoints.positions:
+        for kartpoint in kmpdata.kartpoints:
             item = KartpointEntry(self.kartpoints, "Kartpoint", kartpoint)
 
         for area in kmpdata.areas:

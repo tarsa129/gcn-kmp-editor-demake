@@ -127,7 +127,7 @@ class ErrorAnalyzer(QtWidgets.QDialog):
 
         #ktpt testing
         #check number
-        num_kartpoints = len(kmp.kartpoints.positions)
+        num_kartpoints = len(kmp.kartpoints)
         if num_kartpoints == 0:
             write_line("WARNING: There are no starting points.")
         elif num_kartpoints > 2 and num_kartpoints < 12:
@@ -136,7 +136,7 @@ class ErrorAnalyzer(QtWidgets.QDialog):
             write_line("There are {0} starting points. Battle stages use 12".format(num_kartpoints))
 
         player_ids = {}
-        for i, point in enumerate(kmp.kartpoints.positions):
+        for i, point in enumerate(kmp.kartpoints):
             id = point.playerid
             if id in player_ids:
                 player_ids[id].append(i)
