@@ -901,7 +901,7 @@ class CameraRouteEdit(RouteEdit):
         super().setup_widgets()
         self.widgets = []
 
-        if len(self.bound_to) != 1 or self.bound_to[0] is None:
+        if self.bound_to is None or len(self.bound_to) != 1 or self.bound_to[0] is None:
             return
         for i, point in enumerate(self.bound_to[0].points):
             routepointedit = CameraRoutePointEdit(self.parent(), [point], i, self.kmp_file)
@@ -1380,7 +1380,8 @@ class ReplayAreaEdit(DataEditor):
         self.main_thing.addTab(self.camera_edit, "Camera")
         self.main_thing.addTab(self.route_edit, "Route")
 
-        self.main_thing.setTabEnabled(2, len(route_obj) > 0)
+        has_route = route_obj is not None
+        self.main_thing.setTabEnabled(2, has_route)
     def update_data(self):
         self.area_edit.update_data()
         self.camera_edit.update_data()
@@ -1398,7 +1399,7 @@ class ReplayAreaEdit(DataEditor):
         if route_obj:
             self.route_edit.setup_widgets()
             self.route_edit.update_data()
-        self.main_thing.setTabEnabled(2, len(route_obj) > 0)
+        self.main_thing.setTabEnabled(2, route_obj is not None)
 
 class RoutedOpeningCameraEdit(RoutedEditor):
     def setup_widgets(self):
