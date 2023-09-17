@@ -786,7 +786,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                                                  pos3=None,
                                                  rotation=None)
                         )
-                        self.models.render_generic_position_colored_id(obj.position, id + (offset+i) * 4, point_scale, point_scale)
+                        self.models.render_generic_position_colored_id(obj.position, id + (offset+i) * 4, point_scale)
 
                     offset = len(objlist)
 
@@ -799,7 +799,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                                                  pos3=None,
                                                  rotation=None)
                         )
-                        self.models.render_generic_position_colored_id(obj.position, id + (offset+i) * 4, point_scale, point_scale)
+                        self.models.render_generic_position_colored_id(obj.position, id + (offset+i) * 4, point_scale)
 
                     offset = len(objlist)
 
@@ -1529,8 +1529,6 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                         if prev is None:
                             prev = checkpoint
                         else:
-                            #mid1 = prev.mid
-                            #mid2 = checkpoint.mid
                             mid1 = (prev.start + prev.end) / 2.0
                             mid2 = (checkpoint.start + checkpoint.end) / 2.0
 
@@ -1553,8 +1551,6 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                         else:
                             mid1 = (prev.start+prev.end)/2.0
                             mid2 = (checkpoint.start+checkpoint.end)/2.0
-                            #mid1 = prev.mid
-                            #mid2 = checkpoint.mid
                             glBegin(GL_LINES)
                             glVertex3f(mid1.x, -mid1.z, mid1.y)
                             glVertex3f(mid2.x, -mid2.z, mid2.y)

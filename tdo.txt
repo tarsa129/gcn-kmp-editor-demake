@@ -1,9 +1,10 @@
 updates:
 
 improve json files
-data editor multiselect to use averages for numeric types
-move flare color information to objects
+move flare color information to lens_fx objects, add tab infrastructure for objects
 move lap count to start points
+kartstartpoints should be an objectlist
+exclude lensfx / sun from framing calculations
 
 new features:
 area / object shared routes

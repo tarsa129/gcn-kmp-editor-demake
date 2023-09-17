@@ -32,7 +32,7 @@ class Vector3(object):
         self.x /= norm
         self.y /= norm
         self.z /= norm
-    
+
     def normalized(self):
         other = self.copy()
         other.normalize()
@@ -166,7 +166,7 @@ class Vector3(object):
 
     def render(self):
         return self
-    
+
     def transform(self, position, rotation, scale):
         new_vector = Vector3(self.x * scale.x, self.y * scale.y, self.z * scale.z)
         new_vector.rotate_x(rotation.x)
@@ -174,6 +174,19 @@ class Vector3(object):
         new_vector.rotate_z(rotation.z)
         new_vector += position
         return new_vector
+
+    @classmethod
+    def default(cls):
+        return cls(0, 0, 0)
+
+    @classmethod
+    def from_file(cls, f):
+        euler_angles = list(unpack(">fff", f.read(12)))
+        return cls(*euler_angles)
+
+    def write(self, f):
+        f.write(pack(">fff", self.x, self.y, self.z) )
+
 
 class Vector3Mat(Vector3):
     def __init__(self, x, y, z, mat):
@@ -416,14 +429,7 @@ class Rotation(Vector3):
 			[          0,            0,          0,   1]
 		]
 
-    @classmethod
-    def default(cls):
-        return cls(0, 0, 0)
-    @classmethod
-    def from_file(cls, f, printe = False):
-        euler_angles = list(unpack(">fff", f.read(12)))
 
-        return cls(*euler_angles)
 
     def get_vectors(self):
 
@@ -450,8 +456,6 @@ class Rotation(Vector3):
 
         return forward, up, left
 
-    def write(self, f):
-        f.write(pack(">fff", self.x, self.y, self.z) )
 
     def get_render(self, ninety_degree=True):
 
@@ -469,10 +473,6 @@ class Rotation(Vector3):
 
 
         return rotation
-
-
-    def copy(self):
-        return deepcopy(self)
 
 
 class Vector3Relative(Vector3):

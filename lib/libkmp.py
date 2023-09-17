@@ -135,8 +135,26 @@ class ColorRGBA(ColorRGB):
         super().write(f)
         f.write(pack(">B", self.a))
 
-class RoutedObject(object):
-    def __init__(self):
+class PositionedObject(object):
+    def __init__(self, position) -> None:
+        self.position = position
+
+class RotatedObject(PositionedObject):
+    def __init__(self, position, rotation) -> None:
+        super().__init__(position)
+        for axis in ['x', 'y', 'z']:
+            value = getattr(rotation, axis)
+            while value > 360:
+                value -= 360
+            while value < -360:
+                value += 360
+            setattr(rotation, axis, value)
+        self.rotation = rotation
+
+
+class RoutedObject(PositionedObject):
+    def __init__(self, position):
+        self.position = position
         self.route_obj = None
         self.route = -1
         self.routeclass = Route
@@ -156,10 +174,20 @@ class RoutedObject(object):
     def has_route(self):
         return self.route_obj is not None and self.route_obj.points
 
+    def __iadd__(self, other):
+        self.position += other.position
 
-class KMPPoint(object):
-    def __init__(self):
-        pass
+        if not other.route_obj:
+            return self
+        if self.route_obj and not isinstance(self.route_obj, list):
+            self.route_obj = [self.route_obj]
+        elif self.route_obj:
+            self.route_obj.append(other.route_obj)
+
+
+class KMPPoint(PositionedObject):
+    def __init__(self, position):
+        super().__init__(position)
 
 class PointGroup(object):
     def __init__(self):
@@ -418,8 +446,7 @@ class EnemyPoint(KMPPoint):
                  enemyaction,
                  enemyaction2,
                  unknown):
-        super().__init__()
-        self.position = position
+        super().__init__(position)
 
         self.scale = scale
         self.enemyaction = enemyaction
@@ -436,7 +463,7 @@ class EnemyPoint(KMPPoint):
     @classmethod
     def from_file(cls, f):
         point = cls.new()
-        point.position = Vector3(*unpack(">fff", f.read(12)))
+        point.position = Vector3.from_file(f)
         point.scale = read_float(f)
         point.enemyaction = read_uint16(f)
         point.enemyaction2 = read_uint8(f)
@@ -447,10 +474,28 @@ class EnemyPoint(KMPPoint):
 
     def write(self, f):
 
-        f.write(pack(">fff", self.position.x, self.position.y, self.position.z))
+        self.position.write(f)
         f.write(pack(">f", self.scale ) )
         f.write(pack(">H", self.enemyaction) )
         f.write(pack(">bB", self.enemyaction2, self.unknown) )
+
+    def copy(self):
+        return deepcopy(self)
+
+    def __iadd__(self, other):
+        self.position += other.position
+        self.scale += other.scale
+        self.enemyaction = self.enemyaction if self.enemyaction == other.enemyaction else 0
+        self.enemyaction2 = self.enemyaction2 if self.enemyaction == other.enemyaction2 else 0
+        self.unknown = self.unknown if self.unknown == other.unknown else 0
+
+        return self
+
+    def __itruediv__(self, scale):
+        self.position /= scale
+        self.scale /= scale
+
+        return self
 
 class EnemyPointGroup(PointGroup):
     def __init__(self):
@@ -592,8 +637,7 @@ class EnemyPointGroups(PointGroups):
 
 class ItemPoint(KMPPoint):
     def __init__(self, position, scale, setting1, setting2) :
-        super().__init__()
-        self.position = position
+        super().__init__(position)
         self.scale = scale
         self.setting1 = setting1
 
@@ -615,7 +659,7 @@ class ItemPoint(KMPPoint):
 
         point = cls.new()
 
-        point.position = Vector3(*unpack(">fff", f.read(12)))
+        point.position = Vector3.from_file(f)
         point.scale = read_float(f)
         point.setting1 = read_uint16(f)
         point.set_setting2(read_uint16(f))
@@ -625,12 +669,32 @@ class ItemPoint(KMPPoint):
 
     def write(self, f):
 
-        f.write(pack(">fff", self.position.x, self.position.y, self.position.z))
+        self.position.write(f)
 
         setting2 = self.unknown << 0x2
         setting2 = setting2 | (self.lowpriority << 0x1)
         setting2 = setting2 | self.dontdrop
         f.write(pack(">fHH", self.scale, self.setting1, setting2))
+    
+    def copy(self):
+        return deepcopy(self)
+
+    def __iadd__(self, other):
+        self.position += other.position
+        self.scale += other.scale
+        self.setting1 += other.setting1
+        self.unknown = self.unknown if self.unknown == other.unknown else 0
+        self.lowpriority = self.lowpriority if self.lowpriority == other.lowpriority else 0
+        self.dontdrop = self.dontdrop if self.dontdrop == other.dontdrop else 0
+
+        return self
+
+    def __itruediv__(self, scale):
+        self.position /= scale
+        self.scale /= scale
+        self.setting1 /= self.setting1
+
+        return self
 
 class ItemPointGroup(PointGroup):
     def __init__(self):
@@ -761,9 +825,10 @@ class ItemPointGroups(PointGroups):
 
 class Checkpoint(KMPPoint):
     def __init__(self, start, end, respawn=0, type=0):
+        super().__init__( (start+end)/2.0 )
         self.start = start
         self.end = end
-        self.mid = (start+end)/2.0
+
         self.respawnid = respawn
         self.respawn_obj = None
         self.type = type
@@ -826,6 +891,23 @@ class Checkpoint(KMPPoint):
             f.write(pack(">B", 0xFF))
         f.write(pack(">BB", prev & 0xFF, next & 0xFF) )
         return key
+
+    def copy(self):
+        return deepcopy(self)
+    def __iadd__(self, other):
+        self.start += other.start
+        self.end += other.end
+        self.respawn_obj = self.respawn_obj if self.respawn_obj == other.respawn_obj else None
+        self.type = self.type if self.type == other.type else -1
+        self.lapcounter = self.lapcounter if self.lapcounter == other.lapcounter else 0
+
+        return self
+
+    def __itruediv__(self, scale):
+        self.start /= scale
+        self.end /= scale
+
+        return self
 
 class CheckpointGroup(PointGroup):
     def __init__(self):
@@ -1167,9 +1249,9 @@ class ReplayCameraRoute(Route):
 
 # Section 4
 # Route point for use with routes from section 3
-class RoutePoint(object):
+class RoutePoint(PositionedObject):
     def __init__(self, position):
-        self.position = position
+        super().__init__(position)
         self.unk1 = 0
         self.unk2 = 0
 
@@ -1179,7 +1261,7 @@ class RoutePoint(object):
 
     @classmethod
     def from_file(cls, f):
-        position = Vector3(*unpack(">fff", f.read(12)))
+        position = Vector3.from_file(f)
         point = cls(position)
 
         point.unk1 = read_uint16(f)
@@ -1196,8 +1278,21 @@ class RoutePoint(object):
         return obj
 
     def write(self, f):
-        f.write(pack(">fff", self.position.x, self.position.y, self.position.z ) )
+        self.position.write(f)
         f.write(pack(">HH", self.unk1, self.unk2) )
+
+    def __iadd__(self, other):
+        self.position += other.position
+        self.unk1 += other.unk1
+        self.unk2 += other.unk2
+
+        return self
+
+    def __itruediv__(self, scale):
+        self.position /= scale
+        self.unk1 //= scale
+        self.unk2 //= scale
+        return self
 
 class ObjectRoutePoint(RoutePoint):
     def __init__(self, position):
@@ -1215,11 +1310,11 @@ class AreaRoutePoint(RoutePoint):
 
 # Section 5
 # Objects
-class MapObject(RoutedObject):
-    def __init__(self, position, objectid):
+class MapObject(RoutedObject, RotatedObject):
+    def __init__(self, position, objectid, rotation):
+        RoutedObject.__init__(self, position)
+        RotatedObject.__init__(self, position, rotation)
         self.objectid = objectid
-        self.position = position
-        self.rotation = Rotation.default()
         self.scale = Vector3(1.0, 1.0, 1.0)
 
         self.route = -1
@@ -1250,7 +1345,7 @@ class MapObject(RoutedObject):
 
     @classmethod
     def new(cls, obj_id = 101):
-        new_object = cls(Vector3(0.0, 0.0, 0.0), obj_id)
+        new_object = cls(Vector3(0.0, 0.0, 0.0), obj_id, Rotation.default())
         defaults = new_object.get_single_json_val("Default Values")
         if defaults is not None:
             new_object.userdata = [0 if x is None else x for x in defaults]
@@ -1305,15 +1400,15 @@ class MapObject(RoutedObject):
 
     @classmethod
     def from_file(cls, f):
-        object = cls(Vector3(0.0, 0.0, 0.0), 0)
+        object = cls(Vector3(0.0, 0.0, 0.0), 0, Rotation.default())
 
         object.objectid = read_uint16(f)
 
         f.read(2)
-        object.position = Vector3(*unpack(">fff", f.read(12)))
+        object.position = Vector3.from_file(f)
         object.rotation = Rotation.from_file(f)
 
-        object.scale = Vector3(*unpack(">fff", f.read(12)))
+        object.scale = Vector3.from_file(f)
         object.route = read_uint16(f)
         if object.route == 65535:
             object.route = -1
@@ -1328,9 +1423,9 @@ class MapObject(RoutedObject):
 
 
         f.write(pack(">H", 0) )
-        f.write(pack(">fff", self.position.x, self.position.y, self.position.z))
+        self.position.write(f)
         self.rotation.write(f)
-        f.write(pack(">fff", self.scale.x, self.scale.y, self.scale.z))
+        self.scale.write(f)
         route = self.set_route(routes)
         route = (2 ** 16 - 1) if route == -1 else route
         f.write(pack(">H", route) )
@@ -1426,6 +1521,35 @@ class MapObject(RoutedObject):
             return kcl_file + ".kcl"
         return kcl_file + str(self.userdata[kcl_index]) + ".kcl"
 
+    def __iadd__(self, other):
+        self = RoutedObject.__iadd__(self, other)
+        self.rotation += other.rotation
+        self.scale += other.scale
+        self.single = self.single if self.single == other.single else 1
+        self.double = self.double if self.double == other.double else 1
+        self.triple = self.triple if self.triple == other.triple else 1
+
+        if self.objectid != other.objectid:
+            self.object_id = None
+            self.user_data = [0] * 8
+            return self
+
+        for i in range(8):
+            self.user_data[i] += other.user_data[i]
+        return self
+
+    def __itruediv__(self, count):
+        self.position /= count
+        self.rotation /= count
+        self.scale /= count
+
+        if self.object_id is None:
+            return self
+
+        for i in range(8):
+            self.user_data[i] //= count
+        return self
+
 
 class MapObjects(ObjectContainer):
     def __init__(self):
@@ -1457,28 +1581,25 @@ class MapObjects(ObjectContainer):
 # Section 6
 # Kart/Starting positions
 
-class KartStartPoint(object):
-    def __init__(self, position):
-        self.position = position
-        self.rotation = Rotation.default()
+class KartStartPoint(RotatedObject):
+    def __init__(self, position, rotation):
+        super().__init__(position, rotation)
         self.playerid = 0xFF
 
     @classmethod
     def new(cls):
-        return cls(Vector3(0.0, 0.0, 0.0))
+        return cls(Vector3.default(), Rotation.default())
 
     @classmethod
     def from_file(cls, f):
-        position = Vector3(*unpack(">fff", f.read(12)))
-
-        kstart = cls(position)
-        kstart.rotation = Rotation.from_file(f, True)
+        position = Vector3.from_file(f)
+        rotation = Rotation.from_file(f)
+        kstart = cls(position, rotation)
         kstart.playerid = read_uint8(f)
         return kstart
 
     def write(self,f):
-        f.write(pack(">fff", self.position.x, self.position.y, self.position.z))
-
+        self.position.write(f)
         self.rotation.write(f)
 
         if self.playerid == 0xFF:
@@ -1486,6 +1607,19 @@ class KartStartPoint(object):
         else:
             f.write(pack(">H", self.playerid ) )
         f.write(pack(">H",  0) )
+
+    def copy(self):
+        return deepcopy(self)
+
+    def __iadd__(self, other):
+        self.position += other.position
+        self.rotation += other.rotation
+        return self
+
+    def __itruediv__(self, count):
+        self.position /= count
+        self.rotation /= count
+        return self
 
 class KartStartPoints(object):
     def __init__(self):
@@ -1515,18 +1649,18 @@ class KartStartPoints(object):
 
 # Section 7
 # Areas
-class Area(RoutedObject):
+class Area(RoutedObject, RotatedObject):
     level_file = None
     can_copy = True
-    def __init__(self, position):
+    def __init__(self, position, rotation):
+        RoutedObject.__init__(self, position)
+        RotatedObject.__init__(self, position, rotation)
         self.shape = 0
         self.type = 0
         self.cameraid = -1
         self.camera = None
         self.priority = 0
 
-        self.position = position
-        self.rotation = Rotation.default()
         self.scale = Vector3(1.0, 1.0, 1.0)
 
         self.setting1 = 0
@@ -1538,18 +1672,16 @@ class Area(RoutedObject):
         self.enemypointid = -1
         self.enemypoint = None
 
-        self.type_variant = 0
-
         self.widget = None
         self.routeclass = AreaRoute
 
     @classmethod
     def new(cls):
-        return cls(Vector3(0.0, 0.0, 0.0))
+        return cls(Vector3.default(), Rotation.default())
 
     @classmethod
     def default(cls, type = 0):
-        area = cls(Vector3(0.0, 0.0, 0.0))
+        area = cls.new()
         area.scale = Vector3(1, .5, 1)
         area.type = type
         return area
@@ -1562,8 +1694,8 @@ class Area(RoutedObject):
         camera = read_int8(f)
         priority = read_uint8(f)    #priority
 
-        position = Vector3(*unpack(">fff", f.read(12)))
-        area = cls(position)
+        position = Vector3.from_file(f)
+        area = cls(position, Rotation.default())
 
         area.shape = shape
         area.type = type
@@ -1574,7 +1706,7 @@ class Area(RoutedObject):
         area.priority = priority
         area.rotation = Rotation.from_file(f)
 
-        area.scale = Vector3(*unpack(">fff", f.read(12)))
+        area.scale = Vector3.from_file(f)
 
         area.setting1 = read_int16(f) #unk1
         area.setting2 = read_int16(f) #unk2
@@ -1597,9 +1729,9 @@ class Area(RoutedObject):
         f.write(pack(">B", cameraid) )
         f.write(pack(">B", self.priority) ) #priority
 
-        f.write(pack(">fff", self.position.x, self.position.y, self.position.z))
+        self.position.write(f)
         self.rotation.write(f)
-        f.write(pack(">fff", self.scale.x, self.scale.y, self.scale.z))
+        self.scale.write(f)
 
         enemypointid = self.set_enemypointid(enemypoints)
         enemypointid = 255 if enemypointid < 0 else enemypointid
@@ -1676,7 +1808,7 @@ class Area(RoutedObject):
         forward, up, left = self.rotation.get_vectors()
         diff = pos - self.position
         dotVec = Vector3( left.dot(diff), up.dot(diff), forward.dot(diff) )
-        scale = Vector3(self.scale.x * 5000, self.scale.y * 10000, self.scale.z * 5000)
+        scale = self.scale.scale_by( Vector3(5000, 10000, 5000))
         if scale.y < dotVec.y or dotVec.y < 0:
             return False
         if self.shape == 1: #cylinder
@@ -1706,6 +1838,32 @@ class Area(RoutedObject):
         elif self.type == 7:
             if __class__.level_file.areas.boo_obj is None:
                 __class__.level_file.areas.boo_obj = MapObject.new(396)
+
+    def __iadd__(self, other):
+        self = RoutedObject.__iadd__(self, other)
+        self.rotation += other.rotation
+        self.scale += other.scale
+
+        self.shape = self.shape if self.shape == other.shape else 0
+        self.camera = self.camera if self.camera == other.camera else None
+
+        if self.type != other.type:
+            self.type = None
+            return self
+        self.setting1 += other.setting1
+        self.setting2 += other.setting2
+
+        return self
+
+    def __itruediv__(self, count):
+        self.position /= count
+        self.rotation /= count
+        self.scale /= count
+
+        self.setting1 //= count
+        self.setting2 //= count
+
+        return self
 
 class Areas(ObjectContainer):
     def __init__(self):
@@ -1820,6 +1978,7 @@ class Camera(RoutedObject):
     level_file = None
     can_copy = True
     def __init__(self, position):
+        super().__init__(position)
         self.type = 1
         self.nextcam = -1
         self.nextcam_obj = None
@@ -1832,7 +1991,6 @@ class Camera(RoutedObject):
         self.startflag = 0
         self.movieflag = 0
 
-        self.position = position
         self.rot = Rotation.default()
 
         self.fov = FOV()
@@ -1878,7 +2036,7 @@ class Camera(RoutedObject):
         start_flag = read_uint8(f)
         movie_flag = read_uint8(f)
 
-        position = Vector3(*unpack(">fff", f.read(12)))
+        position = Vector3.from_file(f)
         cam = cls(position)
 
         cam.type = type
@@ -1896,8 +2054,8 @@ class Camera(RoutedObject):
 
         cam.fov.start = read_float(f)
         cam.fov.end = read_float(f)
-        cam.position2 = Vector3(*unpack(">fff", f.read(12)))
-        cam.position3 = Vector3(*unpack(">fff", f.read(12)))
+        cam.position2 = Vector3.from_file(f)
+        cam.position3 = Vector3.from_file(f)
         if cam.type in (0, 1,2, 4, 5):
             cam.position2_simple = cam.position2.copy()
             cam.position3_simple = cam.position3.copy()
@@ -1947,7 +2105,7 @@ class Camera(RoutedObject):
         f.write(pack(">B", self.startflag ) )
         f.write(pack(">B", self.movieflag ) )
 
-        f.write(pack(">fff", self.position.x, self.position.y, self.position.z))
+        self.position.write(f)
         self.rot.write(f)
 
         f.write(pack(">ff", self.fov.start, self.fov.end))
@@ -2027,6 +2185,23 @@ class Camera(RoutedObject):
         new_point = self.route_obj.pointclass(self.position)
         self.route_obj.points.append(new_point)
 
+    def __iadd__(self, other):
+        RoutedObject.__iadd__(self, other)
+
+        self.routespeed += other.routespeed
+        self.zoomspeed += other.zoomspeed
+        self.viewspeed += other.viewspeed
+
+        return self
+
+    def __itruediv__(self, count):
+        self.position /= count
+        self.routespeed //= count
+        self.viewspeed //= count
+        self.zoomspeed //= count
+
+        return self
+
 class ReplayCamera(Camera):
     def __init__(self, position):
         super().__init__(position)
@@ -2088,29 +2263,23 @@ class GoalCamera(Camera):
 
 # Section 9
 # Jugem Points
-class JugemPoint(object):
-    def __init__(self, position):
-        self.position = position
-        self.rotation = Rotation.default()
-        #self.respawn_id = 0
+class JugemPoint(RotatedObject):
+    def __init__(self, position, rotation):
+        super().__init__(position, rotation)
         self.range = 0
-
 
     @classmethod
     def new(cls):
-        return cls(Vector3(0.0, 0.0, 0.0))
+        return cls(Vector3.default(), Rotation.default())
 
 
     @classmethod
     def from_file(cls, f):
-        position = Vector3(*unpack(">fff", f.read(12)))
-        jugem = cls(position)
-
-        #rotation = Vector3(*unpack(">fff", f.read(12)))
-        jugem.rotation = Rotation.from_file(f)
+        position = Vector3.from_file(f)
+        rotation = Rotation.from_file(f)
+        jugem = cls(position, rotation)
 
 
-        #jugem.respawn_id = read_uint16(f)
         read_uint16(f)
 
         jugem.range = read_int16(f)
@@ -2119,29 +2288,43 @@ class JugemPoint(object):
 
 
     def write(self, f, count):
-        f.write(pack(">fff", self.position.x, self.position.y, self.position.z))
+        self.position.write(f)
         self.rotation.write(f)
         f.write(pack(">H", count) )
         f.write(pack(">h", self.range ) )
 
-class CannonPoint(object):
-    def __init__(self, position):
-        self.position = position
-        self.rotation = Rotation.default()
+    def copy(self):
+        return deepcopy(self)
+
+    def __iadd__(self, other):
+        self.position += other.position
+        self.rotation += other.rotation
+        self.range = self.range if self.range == other.range else 0
+        return self
+
+    def __itruediv__(self, count):
+        self.position /= count
+        self.rotation /= count
+
+        return self
+
+class CannonPoint(RotatedObject):
+    def __init__(self, position, rotation):
+        super().__init__(position, rotation)
         self.id = 0
         self.shoot_effect = 0
 
 
     @classmethod
     def new(cls):
-        return cls(Vector3(0.0, 0.0, 0.0))
+        return cls(Vector3.default(), Rotation.default())
 
     @classmethod
     def from_file(cls, f):
-        position = Vector3(*unpack(">fff", f.read(12)))
-        cannon = cls(position)
+        position = Vector3.from_file(f)
+        rotation = Rotation.from_file(f)
 
-        cannon.rotation = Rotation.from_file(f)
+        cannon = cls(position, rotation)
         cannon.id = read_uint16(f)
         cannon.shoot_effect = read_int16(f)
 
@@ -2149,9 +2332,25 @@ class CannonPoint(object):
 
 
     def write(self, f):
-        f.write(pack(">fff", self.position.x, self.position.y, self.position.z))
+        self.position.write(f)
         self.rotation.write(f)
         f.write(pack(">Hh", self.id, self.shoot_effect) )
+
+
+    def copy(self):
+        return deepcopy(self)
+
+    def __iadd__(self, other):
+        self.position += other.position
+        self.rotation += other.rotation
+        self.shoot_effect = self.shoot_effect if self.shoot_effect == other.shoot_effect else 0
+        return self
+
+    def __itruediv__(self, count):
+        self.position /= count
+        self.rotation /= count
+
+        return self
 
 class MissionPoint(object):
     def __init__(self, position):
@@ -2167,7 +2366,7 @@ class MissionPoint(object):
 
     @classmethod
     def from_file(cls, f):
-        position = Vector3(*unpack(">fff", f.read(12)))
+        position = Vector3.from_file(f)
         jugem = cls(position)
 
         jugem.rotation = Rotation.from_file(f)
@@ -2178,7 +2377,7 @@ class MissionPoint(object):
 
 
     def write(self, f, count):
-        f.write(pack(">fff", self.position.x, self.position.y, self.position.z))
+        self.position.write(f)
         self.rotation.write(f)
         f.write(pack(">HH", count, self.unk) )
 

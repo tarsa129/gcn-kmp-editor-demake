@@ -8,6 +8,7 @@ from math import inf
 from lib.libkmp import *
 from lib.vectors import Vector3
 from widgets.data_editor_options import *
+import traceback
 
 def set_attr_mult(objs, attr, value):
     for obj in objs:
@@ -31,50 +32,15 @@ def get_cmn_obj(objs, kmp_file=None):
     if isinstance(objs[0], (KartStartPoints, Cameras)):
         return objs[0]
 
-    try:
-        cmn_obj = objs[0].copy()
-    except:
-        cmn_obj = deepcopy(objs[0])
-
-    if hasattr(cmn_obj, "route_obj"):
-        cmn_obj.route_obj = [objs[0].route_obj]
-        cmn_obj.route_obj = [x for x in cmn_obj.route_obj if x is not None]
+    cmn_obj = objs[0].copy()
 
     if len(objs) == 1:
         return cmn_obj
-
-    members = [attr for attr in dir(cmn_obj) if not callable(getattr(cmn_obj, attr)) and not attr.startswith("__")]
-
     for obj in objs[1:]:
-        for member in members:
-            if member == "route_obj" and obj.route_info():
-                getattr(cmn_obj, member).append(  getattr(obj, member) )
-            elif getattr(cmn_obj, member) is not None and getattr(obj, member) is not None:
-                if type( getattr(cmn_obj, member) ) == list:
-                    cmn_list = getattr(cmn_obj, member)
-                    obj_list = getattr(obj, member)
-                    if len(cmn_list) != len(obj_list):
-                        continue
-                    for i in range(len(cmn_list)):
-                        if cmn_list[i] != obj_list[i]:
-                            cmn_list[i] = None
-                elif isinstance( getattr(cmn_obj, member), (Vector3, Rotation) ):
-                    cmn_vec = getattr(cmn_obj, member)
-                    obj_vec = getattr(obj, member)
-                    cmn_vec.x = None if cmn_vec.x != obj_vec.x else cmn_vec.x
-                    cmn_vec.y = None if cmn_vec.y != obj_vec.y else cmn_vec.y
-                    cmn_vec.z = None if cmn_vec.z != obj_vec.z else cmn_vec.z
-                elif isinstance( getattr(cmn_obj, member), (FOV)):
-                    cmn_fov = getattr(cmn_obj, member)
-                    obj_fov = getattr(obj, member)
-                    cmn_fov.start = None if cmn_fov.start != obj_fov.start else cmn_fov.start
-                    cmn_fov.end = None if cmn_fov.end != obj_fov.end else cmn_fov.end
-                elif getattr(obj, member) != getattr(cmn_obj, member):
-                    setattr(cmn_obj, member, None)
+        cmn_obj += obj
 
-    if hasattr(cmn_obj,"route_obj"):
-        cmn_obj.route_obj = list(set(cmn_obj.route_obj ))
-        cmn_obj.route_obj = [x for x in cmn_obj.route_obj if x is not None]
+    cmn_obj /= len(objs)
+
     return cmn_obj
 
 def load_parameter_names(objectid):
@@ -244,7 +210,7 @@ class DataEditor(QtWidgets.QWidget):
 
     def create_button(self, text):
         button = QtWidgets.QPushButton(self)
-        button.setValue(text)
+        button.setValueQuiet(text)
         return button
 
     def add_label(self, text):
@@ -573,11 +539,11 @@ class DataEditor(QtWidgets.QWidget):
             spinbox.valueChanged.connect(on_spinbox_valueChanged)
 
         def on_color_changed(color):
-            spinboxes[0].setValue(color.red())
-            spinboxes[1].setValue(color.green())
-            spinboxes[2].setValue(color.blue())
+            spinboxes[0].setValueQuiet(color.red())
+            spinboxes[1].setValueQuiet(color.green())
+            spinboxes[2].setValueQuiet(color.blue())
             if len(spinboxes) == 4:
-                spinboxes[3].setValue(color.alpha())
+                spinboxes[3].setValueQuiet(color.alpha())
 
         def on_color_picked(color):
             values = [color.red(), color.green(), color.blue()]
@@ -599,9 +565,9 @@ class DataEditor(QtWidgets.QWidget):
         rotation = cmn_obj.rotation
         euler_angs = rotation.get_euler()
 
-        xang.setValue(round(euler_angs[0], 4))
-        yang.setValue(round(euler_angs[1], 4))
-        zang.setValue(round(euler_angs[2], 4))
+        xang.setValueQuiet(round(euler_angs[0], 4))
+        yang.setValueQuiet(round(euler_angs[1], 4))
+        zang.setValueQuiet(round(euler_angs[2], 4))
 
         #self.bound_to.rotation = Rotation.from_euler(Vector3(x_ang, y_ang, z_ang))
         self.catch_text_update()
@@ -646,12 +612,9 @@ class DataEditor(QtWidgets.QWidget):
 
     def update_vector3(self, attr, vec):
         inputs = getattr(self, attr)
-        if vec.x is not None:
-            inputs[0].setValue(round(vec.x, 3))
-        if vec.y is not None:
-            inputs[1].setValue(round(vec.y, 3))
-        if vec.z is not None:
-            inputs[2].setValue(round(vec.z, 3))
+        inputs[0].setValueQuiet(round(vec.x, 3))
+        inputs[1].setValueQuiet(round(vec.y, 3))
+        inputs[2].setValueQuiet(round(vec.z, 3))
 
 class RoutedEditor(DataEditor):
     def setup_widgets(self):
@@ -778,11 +741,11 @@ class EnemyPointGroupEdit(DataEditor):
     def update_data(self):
         obj : EnemyPointGroup = self.bound_to
 
-        self.groupid.setValue(self.bound_to.id)
+        self.groupid.setValueQuiet(self.bound_to.id)
         for i, widget in enumerate(self.prevgroup):
-            widget.setValue(obj.prevgroup[i])
+            widget.setValueQuiet(obj.prevgroup[i])
         for i, widget in enumerate(self.nextgroup):
-            widget.setValue(obj.nextgroup[i])
+            widget.setValueQuiet(obj.nextgroup[i])
 
 class EnemyPointEdit(DataEditor):
     def setup_widgets(self, group_editable=False):
@@ -802,7 +765,7 @@ class EnemyPointEdit(DataEditor):
         self.update_vector3("position", obj.position)
 
         if obj.scale is not None:
-            self.scale.setValue(obj.scale)
+            self.scale.setValueQuiet(obj.scale)
         if obj.enemyaction  is not None:
             if obj.enemyaction < len(ENPT_Setting1):
                 self.enemyaction.setCurrentIndex(obj.enemyaction)
@@ -813,7 +776,7 @@ class EnemyPointEdit(DataEditor):
                 self.enemyaction2.setCurrentIndex(obj.enemyaction2)
             else:
                 self.enemyaction2.setCurrentIndex(-1)
-        if self.unknown is not None: self.unknown.setValue(obj.unknown)
+        if self.unknown is not None: self.unknown.setValueQuiet(obj.unknown)
 
 class ItemPointGroupEdit(DataEditor):
     def setup_widgets(self):
@@ -827,9 +790,9 @@ class ItemPointGroupEdit(DataEditor):
     def update_data(self):
         obj = self.bound_to
         for i, widget in enumerate(self.prevgroup):
-            widget.setValue(obj.prevgroup[i])
+            widget.setValueQuiet(obj.prevgroup[i])
         for i, widget in enumerate(self.nextgroup):
-            widget.setValue(obj.nextgroup[i])
+            widget.setValueQuiet(obj.nextgroup[i])
 
 class ItemPointEdit(DataEditor):
     def setup_widgets(self, group_editable=False):
@@ -852,7 +815,7 @@ class ItemPointEdit(DataEditor):
         else:
             self.setting1.setCurrentIndex(-1)
 
-        if obj.scale is not None: self.scale.setValue(obj.scale)
+        if obj.scale is not None: self.scale.setValueQuiet(obj.scale)
 
         self.unknown.setChecked( obj.unknown !=0 )
         self.lowpriority.setChecked( obj.lowpriority !=0 )
@@ -871,9 +834,9 @@ class CheckpointGroupEdit(DataEditor):
     def update_data(self):
         obj = self.bound_to
         for i, widget in enumerate(self.prevgroup):
-            widget.setValue(obj.prevgroup[i])
+            widget.setValueQuiet(obj.prevgroup[i])
         for i, widget in enumerate(self.nextgroup):
-            widget.setValue(obj.nextgroup[i])
+            widget.setValueQuiet(obj.nextgroup[i])
 
 class CheckpointEdit(DataEditor):
     def setup_widgets(self):
@@ -893,14 +856,14 @@ class CheckpointEdit(DataEditor):
         obj: Checkpoint = get_cmn_obj(self.bound_to)
 
         if obj.start.x is not None:
-            self.start[0].setValue(round(obj.start.x, 3))
+            self.start[0].setValueQuiet(round(obj.start.x, 3))
         if obj.start.z is not None:
-            self.start[1].setValue(round(obj.start.z, 3))
+            self.start[1].setValueQuiet(round(obj.start.z, 3))
 
         if obj.end.x is not None:
-            self.end[0].setValue(round(obj.end.x, 3))
+            self.end[0].setValueQuiet(round(obj.end.x, 3))
         if obj.end.z is not None:
-            self.end[1].setValue(round(obj.end.z, 3))
+            self.end[1].setValueQuiet(round(obj.end.z, 3))
 
         if obj.lapcounter is not None:
             self.lapcounter.setChecked(obj.lapcounter != 0)
@@ -935,8 +898,6 @@ class RouteEdit(DataEditor):
 
 class CameraRouteEdit(RouteEdit):
     def setup_widgets(self):
-        if len(self.bound_to) == 0:
-            return
         super().setup_widgets()
         self.widgets = []
 
@@ -1006,9 +967,9 @@ class ObjectRoutePointEdit(DataEditor):
         obj: RoutePoint = get_cmn_obj(self.bound_to, self.kmp_file)
         self.update_vector3("position", obj.position)
         if obj.unk1 is not None:
-            self.unk1.setValue(obj.unk1)
+            self.unk1.setValueQuiet(obj.unk1)
         if obj.unk2 is not None:
-            self.unk2.setValue(obj.unk2)
+            self.unk2.setValueQuiet(obj.unk2)
 
 class KMPEdit(DataEditor):
     def setup_widgets(self):
@@ -1040,7 +1001,7 @@ class KMPEdit(DataEditor):
         self.flare_alpha.setValueQuiet(obj.flare_alpha)
 
         self.set_flare_visible()
-        #self.speed_modifier.setValue(obj.speed_modifier)
+        #self.speed_modifier.setValueQuiet(obj.speed_modifier)
 
     def set_flare_visible(self):
         self.flare_color[0].setVisible(self.lens_flare.isChecked())
@@ -1074,12 +1035,15 @@ class RoutedObjectEdit(RoutedEditor):
         super().setup_widgets()
         self.camera_edit = ObjectEdit(self.parent(), self.bound_to)
         route_obj = get_cmn_obj(self.bound_to).route_obj
+        if route_obj is not None and not isinstance(route_obj, list):
+            route_obj = [route_obj]
         self.route_edit = RouteEdit(self.parent(), route_obj)
 
         self.main_thing.addTab(self.camera_edit, "Object")
         self.main_thing.addTab(self.route_edit, "Route")
 
-        self.main_thing.setTabEnabled(1, len(route_obj) > 0)
+        route_tab_enabled = isinstance(route_obj, list) and len(route_obj) > 0
+        self.main_thing.setTabEnabled(1, route_tab_enabled)
 
 class ObjectEdit(DataEditor):
     #want it so that in the making stage, changing the id changes the defaults
@@ -1159,7 +1123,7 @@ class ObjectEdit(DataEditor):
     def update_lineedit(self, objectid):
         with QtCore.QSignalBlocker(self.objectid_edit):
             if objectid is not None:
-                self.objectid_edit.setValue(objectid)
+                self.objectid_edit.setValueQuiet(objectid)
 
     def update_combobox(self, objectid):
         with QtCore.QSignalBlocker(self.objectid):
@@ -1283,7 +1247,7 @@ class ObjectEdit(DataEditor):
                     index = widget.findData(value)
                     widget.setCurrentIndex(index if index != -1 else 0)
                 elif isinstance(widget, QtWidgets.QSpinBox):
-                    widget.setValue(value)
+                    widget.setValueQuiet(value)
 
 class BooEdit(ObjectEdit):
     def setup_widgets(self, inthemaking = False):
@@ -1323,7 +1287,7 @@ class KartStartPointEdit(DataEditor):
         obj: KartStartPoint = get_cmn_obj(self.bound_to)
         self.update_vector3("position", obj.position)
         self.update_vector3("rotation", obj.rotation)
-        self.playerid.setValue(obj.playerid)
+        self.playerid.setValueQuiet(obj.playerid)
 
 class AreaEdit(DataEditor):
 
@@ -1362,10 +1326,10 @@ class AreaEdit(DataEditor):
 
         if obj.shape is not None: self.shape.setCurrentIndex( obj.shape )
 
-        if obj.priority is not None: self.priority.setValue(obj.priority)
+        if obj.priority is not None: self.priority.setValueQuiet(obj.priority)
 
-        if obj.setting1 is not None: self.setting1.setValue(obj.setting1)
-        if obj.setting2 is not None: self.setting2.setValue(obj.setting2)
+        if obj.setting1 is not None: self.setting1.setValueQuiet(obj.setting1)
+        if obj.setting2 is not None: self.setting2.setValueQuiet(obj.setting2)
 
         self.set_settings_visible()
 
@@ -1407,7 +1371,9 @@ class ReplayAreaEdit(DataEditor):
         self.camera_edit = ReplayCameraEdit(self.parent(), cameras)
         #the problem call
         route_obj = get_cmn_obj(cameras).route_obj
-  
+        if route_obj is not None and not isinstance(route_obj, list):
+            route_obj = [route_obj]
+
         self.route_edit = CameraRouteEdit(self.parent(), route_obj)
 
         self.main_thing.addTab(self.area_edit, "Area")
@@ -1439,12 +1405,15 @@ class RoutedOpeningCameraEdit(RoutedEditor):
         super().setup_widgets()
         self.camera_edit = OpeningCameraEdit(self.parent(), self.bound_to)
         route_obj = get_cmn_obj(self.bound_to).route_obj
+        if route_obj is not None and not isinstance(route_obj, list):
+            route_obj = [route_obj]
         self.route_edit = CameraRouteEdit(self.parent(), route_obj)
 
         self.main_thing.addTab(self.camera_edit, "Camera")
         self.main_thing.addTab(self.route_edit, "Route")
 
-        self.main_thing.setTabEnabled(1, len(route_obj) > 0)
+        route_tab_enabled = isinstance(route_obj, list) and len(route_obj) > 0
+        self.main_thing.setTabEnabled(1, route_tab_enabled)
 
 class RoutedReplayCameraEdit(ReplayAreaEdit):
     def __init__(self, parent, bound_to, kmp_file=None):
@@ -1517,17 +1486,17 @@ class CameraEdit(DataEditor):
         self.update_vector3("pos2_play", obj.position2_player)
         self.update_vector3("pos3_play", obj.position3_player)
 
-        if obj.shake is not None: self.shake.setValue(obj.shake)
-        if obj.routespeed is not None: self.routespeed.setValue(obj.routespeed)
-        if obj.zoomspeed is not None: self.zoomspeed.setValue(obj.zoomspeed)
-        if obj.viewspeed is not None: self.viewspeed.setValue(obj.viewspeed)
+        if obj.shake is not None: self.shake.setValueQuiet(obj.shake)
+        if obj.routespeed is not None: self.routespeed.setValueQuiet(obj.routespeed)
+        if obj.zoomspeed is not None: self.zoomspeed.setValueQuiet(obj.zoomspeed)
+        if obj.viewspeed is not None: self.viewspeed.setValueQuiet(obj.viewspeed)
 
-        if obj.fov.start is not None: self.fov[0].setValue(obj.fov.start)
-        if obj.fov.end is not None: self.fov[1].setValue(obj.fov.end)
+        if obj.fov.start is not None: self.fov[0].setValueQuiet(obj.fov.start)
+        if obj.fov.end is not None: self.fov[1].setValueQuiet(obj.fov.end)
 
 
         obj: Route = obj.route_obj
-        has_route = len(obj) > 0
+        has_route = obj is not None
         self.set_visible_route(has_route)
 
     def update_positions(self, index):
@@ -1597,7 +1566,7 @@ class OpeningCameraEdit(CameraEdit):
     def update_data(self):
         super().update_data()
         obj: Camera = get_cmn_obj(self.bound_to)
-        self.camduration.setValue(obj.camduration)
+        self.camduration.setValueQuiet(obj.camduration)
 
 class GoalCameraEdit(CameraEdit):
     def setup_widgets(self):
@@ -1612,7 +1581,7 @@ class GoalCameraEdit(CameraEdit):
     def update_data(self):
         super().update_data()
         obj: Camera = get_cmn_obj(self.bound_to)
-        self.camduration.setValue(obj.camduration)
+        self.camduration.setValueQuiet(obj.camduration)
 
 class CamerasEdit(DataEditor):
     def setup_widgets(self):
@@ -1636,7 +1605,7 @@ class CameraSummaryEdit(DataEditor):
         self.camduration = self.add_integer_input("Camera Duration", "camduration",
                                     MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT)
     def update_data(self):
-        self.camduration.setValue(self.bound_to[0].camduration)
+        self.camduration.setValueQuiet(self.bound_to[0].camduration)
 
 class OpeningCamerasEdit(DataEditor):
     def setup_widgets(self):
@@ -1664,7 +1633,7 @@ class CameraRoutePointEdit(DataEditor):
 
     def update_data(self):
         obj = self.bound_to[0]
-        self.unk1.setValue((obj.unk1))
+        self.unk1.setValueQuiet((obj.unk1))
 
 class SpecialAreaEdit(DataEditor):
     def setup_widgets(self):
@@ -1679,6 +1648,8 @@ class SpecialAreaEdit(DataEditor):
         self.object_edit = QtWidgets.QWidget()
 
         route_obj = get_cmn_obj(self.bound_to).route_obj
+        if route_obj is not None and not isinstance(route_obj, list):
+            route_obj = [route_obj]
         has_boo_areas = any([area.type == 7 for area in self.bound_to])
 
         self.main_thing.addTab(self.area_edit, "Area")
@@ -1688,8 +1659,9 @@ class SpecialAreaEdit(DataEditor):
         if has_boo_areas:
             self.object_edit = BooEdit(self.parent(), [self.kmp_file.areas.boo_obj])
 
+        route_tab_enabled = isinstance(route_obj, list) and len(route_obj) > 0
         self.main_thing.addTab(self.route_edit, "Route")
-        self.main_thing.setTabVisible(1, len(route_obj) > 0)
+        self.main_thing.setTabVisible(1, route_tab_enabled)
         self.main_thing.addTab(self.object_edit, "Boo Object")
         self.main_thing.setTabVisible(2, has_boo_areas)
 
@@ -1734,8 +1706,8 @@ class AreaRoutePointEdit(DataEditor):
 
     def update_data(self):
         obj = self.bound_to[0]
-        self.unk1.setValue(obj.unk1)
-        self.unk2.setValue(obj.unk2)
+        self.unk1.setValueQuiet(obj.unk1)
+        self.unk2.setValueQuiet(obj.unk2)
 
 class RespawnPointEdit(DataEditor):
     def setup_widgets(self):
@@ -1751,7 +1723,7 @@ class RespawnPointEdit(DataEditor):
         obj: JugemPoint = get_cmn_obj(self.bound_to)
         self.update_vector3("position", obj.position)
         self.update_vector3("rotation", obj.rotation)
-        if obj.range is not None: self.range.setValue(obj.range)
+        self.range.setValueQuiet(obj.range)
 
 class CannonPointEdit(DataEditor):
     def setup_widgets(self):
@@ -1766,7 +1738,7 @@ class CannonPointEdit(DataEditor):
         obj: CannonPoint = get_cmn_obj(self.bound_to)
         self.update_vector3("position", obj.position)
         self.update_vector3("rotation", obj.rotation)
-        self.cannon_id.setValue(obj.id)
+        self.cannon_id.setValueQuiet(obj.id)
         self.shooteffect.setCurrentIndex( obj.shoot_effect )
 
 class MissionPointEdit(DataEditor):
@@ -1783,4 +1755,4 @@ class MissionPointEdit(DataEditor):
 
         self.update_vector3("position", obj.position)
         self.update_vector3("rotation", obj.rotation)
-        self.unk.setValue(obj.unk)
+        self.unk.setValueQuiet(obj.unk)

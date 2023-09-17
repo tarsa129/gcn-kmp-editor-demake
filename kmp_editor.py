@@ -2593,145 +2593,118 @@ class GenEditor(QtWidgets.QMainWindow):
         self.level_view.do_redraw()
 
     def select_from_3d_to_treeview(self):
-        if self.level_file is not None:
+        if self.level_file is None:
+            return
+        item = None
+        selected = self.level_view.selected
+        if len(selected) == 1:
+            currentobj = selected[0]
             item = None
-            selected = self.level_view.selected
-            if len(selected) == 1:
-                currentobj = selected[0]
-                item = None
-                if isinstance(currentobj, libkmp.EnemyPoint):
-                    for i in range(self.leveldatatreeview.enemyroutes.childCount()):
-                        child = self.leveldatatreeview.enemyroutes.child(i)
-                        item = get_treeitem(child, currentobj)
-                        if item is not None:
-                            break
+            if isinstance(currentobj, libkmp.MapObject):
+                item = get_treeitem(self.leveldatatreeview.objects, currentobj)
+            elif isinstance(currentobj, libkmp.Area):
+                if currentobj.type == 0:
+                    item = get_treeitem(self.leveldatatreeview.replayareas, currentobj)
+                else:
+                    item = get_treeitem(self.leveldatatreeview.areas, currentobj)
+            elif isinstance(currentobj, libkmp.KartStartPoint):
+                item = get_treeitem(self.leveldatatreeview.kartpoints, currentobj)
+            elif isinstance(currentobj, libkmp.CannonPoint):
+                item = get_treeitem(self.leveldatatreeview.cannons, currentobj)
+            #assert item is not None
 
-                if isinstance(currentobj, libkmp.ItemPoint):
-                    for i in range(self.leveldatatreeview.itemroutes.childCount()):
-                        child = self.leveldatatreeview.itemroutes.child(i)
-                        item = get_treeitem(child, currentobj)
-                        if item is not None:
-                            break
+            # Temporarily suppress signals to prevent both checkpoints from
+            # being selected when just one checkpoint is selected in 3D view.
+            suppress_signal = False
+            if (isinstance(currentobj, libkmp.Checkpoint)
+                and (currentobj.start in self.level_view.selected_positions
+                        or currentobj.end in self.level_view.selected_positions)):
+                suppress_signal = True
 
-                elif isinstance(currentobj, libkmp.Checkpoint):
-                    for i in range(self.leveldatatreeview.checkpointgroups.childCount()):
-                        child = self.leveldatatreeview.checkpointgroups.child(i)
-                        item = get_treeitem(child, currentobj)
+            if suppress_signal:
+                self.leveldatatreeview.blockSignals(True)
 
-                        if item is not None:
-                            break
+            if item is not None:
+                self.leveldatatreeview.setCurrentItem(item)
+            self.pik_control.set_buttons(currentobj)
 
-                elif isinstance(currentobj, libkmp.MapObject):
-                    item = get_treeitem(self.leveldatatreeview.objects, currentobj)
-                elif isinstance(currentobj, libkmp.OpeningCamera):
-                    item = get_treeitem(self.leveldatatreeview.cameras, currentobj)
-                elif isinstance(currentobj, libkmp.Area):
-                    if currentobj.type == 0:
-                        item = get_treeitem(self.leveldatatreeview.replayareas, currentobj)
-                    else:
-                        item = get_treeitem(self.leveldatatreeview.areas, currentobj)
-                elif isinstance(currentobj, libkmp.JugemPoint):
-                    item = get_treeitem(self.leveldatatreeview.respawnpoints, currentobj)
-                elif isinstance(currentobj, libkmp.KartStartPoint):
-                    item = get_treeitem(self.leveldatatreeview.kartpoints, currentobj)
-                elif isinstance(currentobj, libkmp.CannonPoint):
-                    item = get_treeitem(self.leveldatatreeview.cannons, currentobj)
-                #assert item is not None
+            if suppress_signal:
+                self.leveldatatreeview.blockSignals(False)
 
-                # Temporarily suppress signals to prevent both checkpoints from
-                # being selected when just one checkpoint is selected in 3D view.
-                suppress_signal = False
-                if (isinstance(currentobj, libkmp.Checkpoint)
-                    and (currentobj.start in self.level_view.selected_positions
-                         or currentobj.end in self.level_view.selected_positions)):
-                    suppress_signal = True
+        #if nothing is selected and the currentitem is something that can be selected
+        #clear out the buttons
+        curr_item = self.leveldatatreeview.currentItem()
+        if (not selected) and (curr_item is not None) and hasattr(curr_item, "bound_to"):
+            bound_to_obj = curr_item.bound_to
+            if bound_to_obj and hasattr(bound_to_obj, "position"):
+                self.pik_control.set_buttons(None)
 
-                if suppress_signal:
-                    self.leveldatatreeview.blockSignals(True)
-
-                if item is not None:
-                    self.leveldatatreeview.setCurrentItem(item)
-                self.pik_control.set_buttons(currentobj)
-
-                if suppress_signal:
-                    self.leveldatatreeview.blockSignals(False)
-
-            if item is None:
-                self.action_update_info()
-
-            #if nothing is selected and the currentitem is something that can be selected
-            #clear out the buttons
-            curr_item = self.leveldatatreeview.currentItem()
-            if (not selected) and (curr_item is not None) and hasattr(curr_item, "bound_to"):
-                bound_to_obj = curr_item.bound_to
-                if bound_to_obj and hasattr(bound_to_obj, "position"):
-                    self.pik_control.set_buttons(None)
     @catch_exception
     def action_update_info(self):
         self.pik_control.reset_info()
-        if self.level_file is not None:
-            selected = self.level_view.selected
-            if len(selected) == 1:
+        if self.level_file is None:
+            return
 
-                currentobj = selected[0]
+        selected = self.level_view.selected
+        if len(selected) == 1:
 
-
-                if isinstance(currentobj, RoutePoint):
-                    objects = []
-                    route = self.level_file.get_route_of_point(currentobj)
-                    for thing in self.level_file.route_used_by(route):
-                        if isinstance(thing, MapObject):
-                            objects.append(get_kmp_name(thing.objectid))
-                        elif isinstance(thing, Camera):
-                            for i, camera in enumerate(self.level_file.cameras):
-                                if camera is thing:
-                                    objects.append("Camera {0}".format(i))
-
-
-                    self.pik_control.set_info(currentobj, self.update_3d, objects)
-                else:
-                    self.pik_control.set_info(currentobj, self.update_3d)
+            currentobj = selected[0]
+            if isinstance(currentobj, RoutePoint):
+                objects = []
+                route = self.level_file.get_route_of_point(currentobj)
+                for thing in self.level_file.route_used_by(route):
+                    if isinstance(thing, MapObject):
+                        objects.append(get_kmp_name(thing.objectid))
+                    elif isinstance(thing, Camera):
+                        for i, camera in enumerate(self.level_file.cameras):
+                            if camera is thing:
+                                objects.append("Camera {0}".format(i))
 
 
-                self.pik_control.update_info()
-
-            elif len(selected) == 0:
-
-                #if self.leveldatatreeview.cameras.isSelected():
-                #    self.pik_control.set_info(self.leveldatatreeview.cameras.bound_to, self.update_3d)
-                #    self.pik_control.update_info()
-                if self.leveldatatreeview.kartpoints.isSelected():
-                    self.pik_control.set_info(self.leveldatatreeview.kartpoints.bound_to, self.update_3d)
-                    self.pik_control.update_info()
-                elif self.leveldatatreeview.cameras.isSelected():
-                    self.pik_control.set_info(self.leveldatatreeview.cameras.bound_to, self.update_3d)
-                    self.pik_control.update_info()
-                elif self.leveldatatreeview.kmpheader.isSelected():
-                    self.pik_control.set_info(self.level_file, self.update_3d)
-                    self.pik_control.update_info()
-                else:
-                    self.pik_control.reset_info()
-
+                self.pik_control.set_info(currentobj, self.update_3d, objects)
             else:
+                self.pik_control.set_info(currentobj, self.update_3d)
 
-                self.pik_control.set_info_multiple(selected, self.update_3d)
-                #self.pik_control.reset_info("{0} objects selected".format(len(self.level_view.selected)))
-                self.pik_control.set_objectlist(selected)
+
+            self.pik_control.update_info()
+
+        elif len(selected) == 0:
+
+            #if self.leveldatatreeview.cameras.isSelected():
+            #    self.pik_control.set_info(self.leveldatatreeview.cameras.bound_to, self.update_3d)
+            #    self.pik_control.update_info()
+            if self.leveldatatreeview.kartpoints.isSelected():
+                self.pik_control.set_info(self.leveldatatreeview.kartpoints.bound_to, self.update_3d)
                 self.pik_control.update_info()
+            elif self.leveldatatreeview.cameras.isSelected():
+                self.pik_control.set_info(self.leveldatatreeview.cameras.bound_to, self.update_3d)
+                self.pik_control.update_info()
+            elif self.leveldatatreeview.kmpheader.isSelected():
+                self.pik_control.set_info(self.level_file, self.update_3d)
+                self.pik_control.update_info()
+            else:
+                self.pik_control.reset_info()
 
-                # Without emitting any signal, programmatically update the currently selected item
-                # in the tree view.
-                with QtCore.QSignalBlocker(self.leveldatatreeview):
-                    if selected:
-                        # When there is more than one object selected, pick the last one.
-                        self.select_tree_item_bound_to(selected)
-                    else:
-                        # If no selection occurred, ensure that no tree item remains selected. This
-                        # is relevant to ensure that non-pickable objects (such as the top-level
-                        # items) do not remain selected when the user clicks on an empty space in
-                        # the viewport.
-                        for selected_item in self.leveldatatreeview.selectedItems():
-                            selected_item.setSelected(False)
+        else:
+
+            self.pik_control.set_info_multiple(selected, self.update_3d)
+            #self.pik_control.reset_info("{0} objects selected".format(len(self.level_view.selected)))
+            self.pik_control.set_objectlist(selected)
+            self.pik_control.update_info()
+
+            # Without emitting any signal, programmatically update the currently selected item
+            # in the tree view.
+            with QtCore.QSignalBlocker(self.leveldatatreeview):
+                if selected:
+                    # When there is more than one object selected, pick the last one.
+                    self.select_tree_item_bound_to(selected)
+                else:
+                    # If no selection occurred, ensure that no tree item remains selected. This
+                    # is relevant to ensure that non-pickable objects (such as the top-level
+                    # items) do not remain selected when the user clicks on an empty space in
+                    # the viewport.
+                    for selected_item in self.leveldatatreeview.selectedItems():
+                        selected_item.setSelected(False)
 
     @catch_exception
     def mapview_showcontextmenu(self, position):
