@@ -1247,7 +1247,7 @@ class ObjectEdit(DataEditor):
                     index = widget.findData(value)
                     widget.setCurrentIndex(index if index != -1 else 0)
                 elif isinstance(widget, QtWidgets.QSpinBox):
-                    widget.setValueQuiet(value)
+                    widget.setValue(value)
 
 class BooEdit(ObjectEdit):
     def setup_widgets(self, inthemaking = False):
@@ -1691,7 +1691,8 @@ class SpecialAreaEdit(DataEditor):
         else:
             self.object_edit = QtWidgets.QWidget()
 
-        self.main_thing.setTabVisible(1, len(route_obj) > 0 )
+        has_route = isinstance(route_obj, list) and len(route_obj) > 0
+        self.main_thing.setTabVisible(1, has_route )
         self.main_thing.setTabVisible(2, has_boo_areas)
 
 class AreaRoutePointEdit(DataEditor):

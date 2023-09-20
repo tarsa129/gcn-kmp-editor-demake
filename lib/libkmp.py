@@ -305,7 +305,6 @@ class PointGroups(object):
             group = self.groups[i]
             #if this group only has one next, and the nextgroup only has one prev, they can be merged
             if group.num_next() == 1 and group.nextgroup[0].num_prev() == 1:
-                print(i, first_group, group)
                 if first_group in group.nextgroup:
                     i += 1 #do not merge with the start
                     continue
