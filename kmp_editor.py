@@ -1532,6 +1532,8 @@ class GenEditor(QtWidgets.QMainWindow):
             if filename_only:
                 filepath_base = os.path.dirname(self.current_gen_path)
                 filename = filepath_base + '/' + filename
+            if not os.path.exists(filename):
+                return None, None
             with open(filename, "rb") as f:
                 kcl_coll.load_file(f)
 
@@ -2769,7 +2771,7 @@ class GenEditor(QtWidgets.QMainWindow):
                     select_type.triggered.connect(lambda new_type=new_type:
                         obj.change_type(new_type))
 
-        context_menu.exec(self.sender().mapToGlobal(position))
+        context_menu.exec(self.level_view.mapToGlobal(position))
         context_menu.destroy()
 
     def action_copy_coords_to_clipboard(self):

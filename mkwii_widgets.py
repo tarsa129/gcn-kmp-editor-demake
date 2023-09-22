@@ -561,6 +561,8 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                 continue
             if kcl_name not in self.additional_models.keys():
                 collision_model = MapObjectModel(kcl_name, self.editor.read_kcl_file).collision
+                if collision_model is None:
+                    continue
                 additional_collision[mapobject] = collision_model
         self.collision.obj_meshes = additional_collision
 
@@ -2441,6 +2443,10 @@ class FilterViewMenu(QtWidgets.QMenu):
 class MapObjectModel(object):
     def __init__(self, filepath, read_kcl_file) -> None:
         faces, model = read_kcl_file(filepath, True)
-        self.collision = Collision(faces)
-        self.visual_mesh = model
+        if faces is None:
+            self.collision = None
+            self.visual_mesh = None
+        else:
+            self.collision = Collision(faces)
+            self.visual_mesh = model
 

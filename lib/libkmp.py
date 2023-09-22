@@ -646,7 +646,7 @@ class ItemPoint(KMPPoint):
 
     @classmethod
     def new(cls):
-        return cls( Vector3(0.0, 0.0, 0.0), 1, 1, 0)
+        return cls( Vector3(0.0, 0.0, 0.0), 1, 0, 0)
 
     def set_setting2(self, setting2):
         self.unknown = setting2 & 0x4
@@ -2891,6 +2891,7 @@ class KMP(object):
                 return_string += "Multiple boo objects are in the .kmp. Only one of them will be preserved.\n"
 
 
+
         return return_string
 
     @classmethod
@@ -2992,7 +2993,7 @@ class KMP(object):
         count = 0
         for point in self.respawnpoints:
             point.write(f, count)
-        count += 1
+            count += 1
 
 
         offset = f.tell()
