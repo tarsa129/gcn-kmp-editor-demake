@@ -624,6 +624,8 @@ class RoutedEditor(DataEditor):
 
     def update_route(self):
         route_obj = get_cmn_obj(self.bound_to).route_obj
+        if route_obj is not None and not isinstance(route_obj, list):
+            route_obj = [route_obj]
         clear_layout(self.route_edit.vbox)
         self.route_edit.bound_to = route_obj
         if route_obj:
@@ -691,8 +693,8 @@ def choose_data_editor(obj):
         return RoutedObjectEdit
     elif isinstance(obj, Checkpoint):
         return CheckpointEdit
-    elif isinstance(obj, Route):
-        return RouteEdit
+    #elif isinstance(obj, Route):
+    #    return RouteEdit
     elif isinstance(obj, RoutePoint):
         return ObjectRoutePointEdit
     elif isinstance(obj, KMP):
@@ -1394,6 +1396,8 @@ class ReplayAreaEdit(DataEditor):
     def update_route(self):
         cameras = [x.camera for x in self.bound_to]
         route_obj = get_cmn_obj(cameras).route_obj
+        if route_obj is not None and not isinstance(route_obj, list):
+            route_obj = [route_obj]
         clear_layout(self.route_edit.vbox)
         self.route_edit.bound_to = route_obj
         if route_obj:
@@ -1654,7 +1658,6 @@ class SpecialAreaEdit(DataEditor):
         has_boo_areas = any([area.type == 7 for area in self.bound_to])
 
         self.main_thing.addTab(self.area_edit, "Area")
-
         if route_obj:
             self.route_edit = AreaRouteEdit(self.parent(), route_obj)
         if has_boo_areas:
@@ -1669,6 +1672,8 @@ class SpecialAreaEdit(DataEditor):
     def update_data(self):
         self.area_edit.update_data()
         route_obj = get_cmn_obj(self.bound_to).route_obj
+        if route_obj is not None and not isinstance(route_obj, list):
+            route_obj = [route_obj]
         has_boo_areas = any([area.type == 7 for area in self.bound_to])
 
         if isinstance(route_obj, DataEditor) and self.route_edit:

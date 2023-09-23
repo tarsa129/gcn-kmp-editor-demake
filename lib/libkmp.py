@@ -691,7 +691,7 @@ class ItemPoint(KMPPoint):
     def __itruediv__(self, scale):
         self.position /= scale
         self.scale /= scale
-        self.setting1 /= self.setting1
+        self.setting1 /= scale
 
         return self
 
@@ -896,8 +896,7 @@ class Checkpoint(KMPPoint):
     def __iadd__(self, other):
         self.start += other.start
         self.end += other.end
-        self.respawn_obj = self.respawn_obj if self.respawn_obj == other.respawn_obj else None
-        self.type = self.type if self.type == other.type else -1
+        self.type = self.type if self.type == other.type else 0
         self.lapcounter = self.lapcounter if self.lapcounter == other.lapcounter else 0
 
         return self
@@ -930,6 +929,14 @@ class CheckpointGroup(PointGroup):
 
     def num_key_cps(self):
         return sum( [1 for ckpt in self.points if ckpt.type > 0]  )
+
+    def calculate_key_cps(self, start):
+        for point in self.points:
+            if point.lapcounter == 1:
+                start = 0
+            elif point.type == 1:
+                start += 1
+        return start
 
     @classmethod
     def from_file(cls, f, all_points, id):
@@ -1034,14 +1041,15 @@ class CheckpointGroups(PointGroups):
         if len(self.groups) > 0:
             starting_key_cp[0] = 0
 
-        for i, group in enumerate(self.groups):
-            indices_offset.append(sum_points)
-            num_key = group.write_ckpt(f, starting_key_cp[i], sum_points)
-
+        for group in self.groups:
+            num_key = group.calculate_key_cps(num_key)
             for grp in group.nextgroup:
                 id = self.get_idx(grp)
                 starting_key_cp[ id ] = max( starting_key_cp[id], num_key)
 
+        for i, group in enumerate(self.groups):
+            indices_offset.append(sum_points)
+            num_key = group.write_ckpt(f, starting_key_cp[i], sum_points)
             sum_points += len(group.points)
         ckph_offset = f.tell()
 
@@ -2263,7 +2271,7 @@ class GoalCamera(Camera):
 # Section 9
 # Jugem Points
 class JugemPoint(RotatedObject):
-    def __init__(self, position, rotation):
+    def __init__(self, position, rotation=Rotation.default()):
         super().__init__(position, rotation)
         self.range = 0
 

@@ -1092,9 +1092,7 @@ class GenEditor(QtWidgets.QMainWindow):
 
             # After switching to the 3D view for the first time, the view will be framed to help
             # users find the objects in the world.
-            if self.first_time_3dview:
-                self.first_time_3dview = False
-                self.frame_selection(adjust_zoom=True)
+            self.frame_selection(adjust_zoom=True)
 
     def on_default_view_changed(self, view_string):
         self.editorconfig["default_view"] = view_string
@@ -1574,10 +1572,12 @@ class GenEditor(QtWidgets.QMainWindow):
                 self.button_add_from_addi_options( "add_routepoints", obj)
             elif isinstance(obj, ObjectContainer) and obj.assoc == JugemPoint:
                 self.button_add_from_addi_options( "add_jgpt", True)
-            elif isinstance(obj, (MapObject, Camera)) and obj.route_info():
-                if isinstance(obj, Camera) and obj.route_obj is None:
-                    obj.setup_route()
+            elif isinstance(obj, MapObject) and obj.route_info():
                 self.button_add_from_addi_options( "add_routepoints_end", obj)
+            elif isinstance(obj, Camera):
+                if obj.route_obj is None:
+                    obj.setup_route()
+                self.button_add_from_addi_options( "add_routepoints", obj.route_obj.points[0])
 
         self.update_3d()
 
