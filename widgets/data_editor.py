@@ -623,9 +623,7 @@ class RoutedEditor(DataEditor):
         self.vbox.addWidget(self.main_thing)
 
     def update_route(self):
-        route_obj = get_cmn_obj(self.bound_to).route_obj
-        if route_obj is not None and not isinstance(route_obj, list):
-            route_obj = [route_obj]
+        route_obj = list(set([x.route_obj for x in self.bound_to if x.route_obj is not None]))
         clear_layout(self.route_edit.vbox)
         self.route_edit.bound_to = route_obj
         if route_obj:
@@ -635,7 +633,7 @@ class RoutedEditor(DataEditor):
 
     def update_data(self):
         self.camera_edit.update_data()
-        route_obj = get_cmn_obj(self.bound_to).route_obj
+        route_obj = list(set([x.route_obj for x in self.bound_to if x.route_obj is not None]))
         if route_obj:
             self.route_edit.update_data()
 
@@ -1036,9 +1034,7 @@ class RoutedObjectEdit(RoutedEditor):
     def setup_widgets(self):
         super().setup_widgets()
         self.camera_edit = ObjectEdit(self.parent(), self.bound_to)
-        route_obj = get_cmn_obj(self.bound_to).route_obj
-        if route_obj is not None and not isinstance(route_obj, list):
-            route_obj = [route_obj]
+        route_obj = list(set([x.route_obj for x in self.bound_to if x.route_obj is not None]))
         self.route_edit = RouteEdit(self.parent(), route_obj)
 
         self.main_thing.addTab(self.camera_edit, "Object")
@@ -1369,12 +1365,10 @@ class ReplayAreaEdit(DataEditor):
         self.vbox.addWidget(self.main_thing)
 
         self.area_edit = AreaEdit(self.parent(), self.bound_to)
-        cameras = [x.camera for x in self.bound_to]
+        cameras = list(set([x.camera for x in self.bound_to]))
         self.camera_edit = ReplayCameraEdit(self.parent(), cameras)
         #the problem call
-        route_obj = get_cmn_obj(cameras).route_obj
-        if route_obj is not None and not isinstance(route_obj, list):
-            route_obj = [route_obj]
+        route_obj = list(set([x.route_obj for x in cameras if x.route_obj is not None]))
 
         self.route_edit = CameraRouteEdit(self.parent(), route_obj)
 
@@ -1382,22 +1376,21 @@ class ReplayAreaEdit(DataEditor):
         self.main_thing.addTab(self.camera_edit, "Camera")
         self.main_thing.addTab(self.route_edit, "Route")
 
-        has_route = route_obj is not None
+        has_route = route_obj is not None and len(route_obj) > 0
         self.main_thing.setTabEnabled(2, has_route)
     def update_data(self):
         self.area_edit.update_data()
         self.camera_edit.update_data()
         cameras = [x.camera for x in self.bound_to]
-        route_obj = get_cmn_obj(cameras).route_obj
+        route_obj = list(set([x.route_obj for x in cameras if x.route_obj is not None]))
 
         if route_obj:
             self.route_edit.update_data()
 
     def update_route(self):
         cameras = [x.camera for x in self.bound_to]
-        route_obj = get_cmn_obj(cameras).route_obj
-        if route_obj is not None and not isinstance(route_obj, list):
-            route_obj = [route_obj]
+        route_obj = list(set([x.route_obj for x in cameras if x.route_obj is not None]))
+
         clear_layout(self.route_edit.vbox)
         self.route_edit.bound_to = route_obj
         if route_obj:
@@ -1409,9 +1402,7 @@ class RoutedOpeningCameraEdit(RoutedEditor):
     def setup_widgets(self):
         super().setup_widgets()
         self.camera_edit = OpeningCameraEdit(self.parent(), self.bound_to)
-        route_obj = get_cmn_obj(self.bound_to).route_obj
-        if route_obj is not None and not isinstance(route_obj, list):
-            route_obj = [route_obj]
+        route_obj = list(set([x.route_obj for x in self.bound_to if x.route_obj is not None]))
         self.route_edit = CameraRouteEdit(self.parent(), route_obj)
 
         self.main_thing.addTab(self.camera_edit, "Camera")
@@ -1652,9 +1643,7 @@ class SpecialAreaEdit(DataEditor):
         self.route_edit = QtWidgets.QWidget()
         self.object_edit = QtWidgets.QWidget()
 
-        route_obj = get_cmn_obj(self.bound_to).route_obj
-        if route_obj is not None and not isinstance(route_obj, list):
-            route_obj = [route_obj]
+        route_obj = list(set([x.route_obj for x in self.bound_to if x.route_obj is not None]))
         has_boo_areas = any([area.type == 7 for area in self.bound_to])
 
         self.main_thing.addTab(self.area_edit, "Area")
@@ -1671,9 +1660,7 @@ class SpecialAreaEdit(DataEditor):
 
     def update_data(self):
         self.area_edit.update_data()
-        route_obj = get_cmn_obj(self.bound_to).route_obj
-        if route_obj is not None and not isinstance(route_obj, list):
-            route_obj = [route_obj]
+        route_obj = list(set([x.route_obj for x in self.bound_to if x.route_obj is not None]))
         has_boo_areas = any([area.type == 7 for area in self.bound_to])
 
         if isinstance(route_obj, DataEditor) and self.route_edit:

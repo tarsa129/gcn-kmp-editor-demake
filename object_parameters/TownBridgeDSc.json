@@ -24,5 +24,7 @@
         0
     ],
     "Route Info": null,
-    "Description": "Drawbridge from DS Delfino Square; the bridge in DS Delfino Square is created using two of these objects face to face. Regardless of Y-rotation, the object will always rotate on the Z-axis of the stage when the bridge is being lifted or lowered."
+    "Description": "Drawbridge from DS Delfino Square; the bridge in DS Delfino Square is created using two of these objects face to face. Regardless of Y-rotation, the object will always rotate on the Z-axis of the stage when the bridge is being lifted or lowered.",
+    "KCL File": "TownBridgeDS",
+    "KCL Index": null
 }

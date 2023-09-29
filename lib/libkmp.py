@@ -1196,6 +1196,15 @@ class Route(object):
 
     def __hash__(self):
         return hash(id(self))
+    
+    def __iadd__(self, other):
+        self.smooth = self.smooth if self.smooth == other.smooth else 1
+        self.cyclic = self.cyclic if self.cyclic == other.cyclic else 1
+
+        return self
+
+    def __itruediv__(self, scale):
+        return self
 
 #here for type checking - they function in the same way
 class ObjectRoute(Route):
@@ -1542,7 +1551,7 @@ class MapObject(RoutedObject, RotatedObject):
             return self
 
         for i in range(8):
-            self.user_data[i] += other.user_data[i]
+            self.userdata[i] += other.userdata[i]
         return self
 
     def __itruediv__(self, count):
