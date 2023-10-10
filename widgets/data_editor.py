@@ -12,7 +12,9 @@ import traceback
 
 def set_attr_mult(objs, attr, value):
     for obj in objs:
-        if isinstance(obj, list):
+        if isinstance(obj, MapObjects):
+            setattr(obj, attr, value)
+        elif isinstance(obj, list):
             for this_obj in obj:
                 setattr(this_obj, attr, value)
         else:
@@ -29,13 +31,11 @@ def set_userdata_mult(objs:list[MapObject], idx, value):
 
 #make a common thing to find all common, esp if copy is going to be used
 def get_cmn_obj(objs, kmp_file=None):
-    if isinstance(objs[0], (KartStartPoints, Cameras)):
+    if isinstance(objs[0], (KartStartPoints, Cameras, MapObjects)):
         return objs[0]
 
     cmn_obj = objs[0].copy()
 
-    if len(objs) == 1:
-        return cmn_obj
     for obj in objs[1:]:
         cmn_obj += obj
 
@@ -971,29 +971,20 @@ class ObjectRoutePointEdit(DataEditor):
         if obj.unk2 is not None:
             self.unk2.setValueQuiet(obj.unk2)
 
-class KMPEdit(DataEditor):
+class FlareColorEdit(DataEditor):
     def setup_widgets(self):
-
-        self.lap_count = self.add_integer_input("Lap Count", "lap_count",
-                                        MIN_UNSIGNED_BYTE, MAX_UNSIGNED_BYTE)
-
-        #self.speed_modifier = self.add_decimal_input("Speed Modifier", "speed_modifier", 0, 10000)
-
-
-
         self.lens_flare = self.add_checkbox("Enable Lens Flare", "lens_flare",
-                                            off_value=0, on_value=1)
+                                                off_value=0, on_value=1)
         self.lens_flare.stateChanged.connect(self.set_flare_visible)
 
         self.flare_color, self.flare_color_label, self.fc_picker = self.add_color_input("Flare Color", "flare_color")
         self.flare_alpha, self.flare_alpha_label = self.add_integer_input("Flare Alpha %", "flare_alpha",
-                                           MIN_UNSIGNED_BYTE, MAX_UNSIGNED_BYTE, return_both=True)
-
+                                            MIN_UNSIGNED_BYTE, MAX_UNSIGNED_BYTE, return_both=True)
 
     def update_data(self):
-        obj: KMP = self.bound_to[0]
-        self.lap_count.setValueQuiet(obj.lap_count)
-        self.lens_flare.setChecked(obj.lens_flare != 0)
+        obj: MapObjects = self.bound_to[0]
+        with QtCore.QSignalBlocker(self.lens_flare):
+            self.lens_flare.setChecked(obj.lens_flare != 0)
 
         self.flare_color[0].setValueQuiet(obj.flare_color.r)
         self.flare_color[1].setValueQuiet(obj.flare_color.g)
@@ -1001,7 +992,6 @@ class KMPEdit(DataEditor):
         self.flare_alpha.setValueQuiet(obj.flare_alpha)
 
         self.set_flare_visible()
-        #self.speed_modifier.setValueQuiet(obj.speed_modifier)
 
     def set_flare_visible(self):
         self.flare_color[0].setVisible(self.lens_flare.isChecked())
@@ -1016,7 +1006,6 @@ class KMPEdit(DataEditor):
     def open_color_picker_light(self, attrib):
         obj = self.bound_to[0]
 
-
         color_dia = QtWidgets.QColorDialog(self)
 
         color = color_dia.getColor()
@@ -1030,6 +1019,19 @@ class KMPEdit(DataEditor):
 
             self.update_data()
 
+class KMPEdit(DataEditor):
+    def setup_widgets(self):
+
+        self.lap_count = self.add_integer_input("Lap Count", "lap_count",
+                                        MIN_UNSIGNED_BYTE, MAX_UNSIGNED_BYTE)
+
+        #self.speed_modifier = self.add_decimal_input("Speed Modifier", "speed_modifier", 0, 10000)
+
+    def update_data(self):
+        obj: KMP = self.bound_to[0]
+        self.lap_count.setValueQuiet(obj.lap_count)
+        #self.speed_modifier.setValueQuiet(obj.speed_modifier)
+
 class RoutedObjectEdit(RoutedEditor):
     def setup_widgets(self):
         super().setup_widgets()
@@ -1042,6 +1044,16 @@ class RoutedObjectEdit(RoutedEditor):
 
         route_tab_enabled = isinstance(route_obj, list) and len(route_obj) > 0
         self.main_thing.setTabEnabled(1, route_tab_enabled)
+
+        self.flare_edit = FlareColorEdit(self.parent(), [self.kmp_file.objects])
+        flare_tab_enabled = 3 in [obj.objectid for obj in self.bound_to]
+        self.main_thing.addTab(self.flare_edit, "Flare")
+        self.main_thing.setTabVisible(2, flare_tab_enabled)
+
+    def update_data(self):
+        self.flare_edit.update_data()
+        flare_tab_enabled = 3 in [obj.objectid for obj in self.bound_to]
+        self.main_thing.setTabVisible(2, flare_tab_enabled)
 
 class ObjectEdit(DataEditor):
     #want it so that in the making stage, changing the id changes the defaults

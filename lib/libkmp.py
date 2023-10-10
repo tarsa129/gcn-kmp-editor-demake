@@ -1571,6 +1571,11 @@ class MapObjects(ObjectContainer):
     def __init__(self):
         super().__init__()
 
+        self.lens_flare = 1
+        self.flare_color = ColorRGB(255, 255, 255)
+        self.flare_alpha = 0x32
+        self.speed_modifier = 0
+
     @classmethod
     def from_file(cls, f, objectcount):
         mapobjs = cls()
@@ -2654,10 +2659,10 @@ class KMP(object):
         kmp.lap_count = read_uint8(f)
         kmp.kartpoints.pole_position = read_uint8(f)
         kmp.kartpoints.start_squeeze = read_uint8(f)
-        kmp.lens_flare = read_uint8(f)
+        kmp.objects.lens_flare = read_uint8(f)
         read_uint8(f)
-        kmp.flare_color = ColorRGB.from_file(f)
-        kmp.flare_alpha = read_uint8(f)
+        kmp.objects.flare_color = ColorRGB.from_file(f)
+        kmp.objects.flare_alpha = read_uint8(f)
 
         read_uint8(f)
 
@@ -2907,8 +2912,6 @@ class KMP(object):
             if len(boo_objs) > 1:
                 return_string += "Multiple boo objects are in the .kmp. Only one of them will be preserved.\n"
 
-
-
         return return_string
 
     @classmethod
@@ -3043,8 +3046,8 @@ class KMP(object):
         f.write(pack(">HH", 1, 0 ) )
         f.write(pack(">B", self.lap_count))
         f.write(pack(">BB", self.kartpoints.pole_position, self.kartpoints.start_squeeze) )
-        f.write(pack(">B", self.lens_flare))
-        f.write(pack(">BBBBB", 0, self.flare_color.r, self.flare_color.b, self.flare_color.b, self.flare_alpha ) )
+        f.write(pack(">B", self.objects.lens_flare))
+        f.write(pack(">BBBBB", 0, self.objects.flare_color.r, self.objects.flare_color.b, self.objects.flare_color.b, self.objects.flare_alpha ) )
         f.write(pack(">b", 0 ) )
 
         byte_array = pack(">f", self.speed_modifier)

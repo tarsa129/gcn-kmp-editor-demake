@@ -1,8 +1,6 @@
 updates:
 
 improve json files
-move flare color information to lens_fx objects, add tab infrastructure for objects
-exclude lensfx / sun from framing calculations
 fix visual issue with point size
 
 new features:
