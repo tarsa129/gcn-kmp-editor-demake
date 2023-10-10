@@ -436,6 +436,8 @@ class GenEditor(QtWidgets.QMainWindow):
                     extend(checkpoint.end)
         if self.visibility_menu.objects.is_visible():
             for object_ in self.level_file.objects:
+                if object_.objectid in (3, 111, 114):
+                    continue
                 extend(object_.position)
         if self.visibility_menu.areas.is_visible():
             for area in self.level_file.areas:
