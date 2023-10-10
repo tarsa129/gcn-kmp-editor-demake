@@ -2023,7 +2023,7 @@ class Camera(RoutedObject):
         self.routeclass = CameraRoute
         self.position2_simple = self.position2
         self.position3_simple = self.position3
-        self.position2_player = Vector3Relative(Vector3(200, 100, -500), self.position)
+        self.position2_player = Vector3Relative(Vector3(200, 5, -500), self.position)
         self.position3_player = Vector3Relative(Vector3(0.0, 0.0, 0.0), self.position)
 
 

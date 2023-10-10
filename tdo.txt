@@ -5,7 +5,7 @@ move flare color information to lens_fx objects, add tab infrastructure for obje
 move lap count to start points
 exclude lensfx / sun from framing calculations
 better handling for incorrect types
-support eline control for groups (add tab to enemy points)
+fix visual issue with point size
 
 new features:
 area / object shared routes
