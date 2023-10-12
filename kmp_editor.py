@@ -1578,7 +1578,7 @@ class GenEditor(QtWidgets.QMainWindow):
                 self.button_add_from_addi_options( "add_routepoints_end", obj)
             elif isinstance(obj, Camera):
                 if obj.route_obj is None:
-                    obj.setup_route()
+                    obj.setup_route(override=True)
                 self.button_add_from_addi_options( "add_routepoints", obj.route_obj.points[0])
 
         self.update_3d()
@@ -1800,7 +1800,7 @@ class GenEditor(QtWidgets.QMainWindow):
         elif option == "add_routepoints": #add new route point here - 15
             pos_in_grp = -1
 
-            group = self.level_file.get_route_of_point(obj)
+            group = self.level_file.get_route_of_point(obj, include_empty=True)
             pos_in_grp = group.points.index(obj)
 
             self.object_to_be_added = [group.pointclass.new(), group, pos_in_grp + 1 ]

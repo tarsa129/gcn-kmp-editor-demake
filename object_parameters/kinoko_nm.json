@@ -23,5 +23,7 @@
         null
     ],
     "Route Info": null,
-    "Description": "Green mushroom. It appears on the minimap as a solid circle in non-racing modes."
+    "Description": "Green mushroom. It appears on the minimap as a solid circle in non-racing modes.",
+    "KCL File": "kinoko_g",
+    "KCL Index": null
 }

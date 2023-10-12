@@ -1546,7 +1546,7 @@ class MapObject(RoutedObject, RotatedObject):
         self.triple = self.triple if self.triple == other.triple else 1
 
         if self.objectid != other.objectid:
-            self.object_id = None
+            self.objectid = None
             self.user_data = [0] * 8
             return self
 
@@ -1559,11 +1559,11 @@ class MapObject(RoutedObject, RotatedObject):
         self.rotation /= count
         self.scale /= count
 
-        if self.object_id is None:
+        if self.objectid is None:
             return self
 
         for i in range(8):
-            self.user_data[i] //= count
+            self.userdata[i] //= count
         return self
 
 
@@ -1937,9 +1937,11 @@ class ReplayAreas(Areas):
     def get_cameras(self):
         return list(set([area.camera for area in self if area.camera is not None]))
 
-    def get_routes(self):
+    def get_routes(self, include_empty=False):
         cameras = self.get_cameras()
         routes = [cam.route_obj for cam in cameras if cam.route_obj is not None and cam.route_info()]
+        if include_empty:
+            return list(set(routes))
         return list(set([x for x in routes if len(x.points) > 1]))
 # Section 8
 # Cameras
@@ -3344,13 +3346,13 @@ class KMP(object):
             self.remove_object(obj)
 
     #grabbing functions
-    def get_route_collec_for(self, obj):
+    def get_route_collec_for(self, obj, include_empty = False):
         if isinstance(obj, (Area, AreaRoute, AreaRoutePoint)):
             return self.areas.get_routes()
         elif isinstance(obj, (MapObject, ObjectRoute, ObjectRoutePoint)):
             return self.objects.get_routes()
         elif isinstance(obj, (ReplayCamera, ReplayCameraRoute, ReplayCameraRoutePoint)):
-            return self.replayareas.get_routes()
+            return self.replayareas.get_routes(include_empty)
         elif isinstance(obj, (Camera, CameraRoute, CameraRoutePoint)):
             return self.cameras.get_routes()
         else:
@@ -3392,8 +3394,8 @@ class KMP(object):
         else:
             self.areas.remove(area)
 
-    def get_route_of_point(self, point:RoutePoint):
-        collect = self.get_route_collec_for(point)
+    def get_route_of_point(self, point:RoutePoint, include_empty=False):
+        collect = self.get_route_collec_for(point, include_empty)
         for route in collect:
             if point in route.points:
                 return route

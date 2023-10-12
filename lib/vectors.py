@@ -294,6 +294,17 @@ class Line(object):
         self.direction = direction
         self.direction.normalize()
 
+    def collide_plane(self, plane: Plane):
+        pos = self.origin
+        direction = self.direction
+
+        if not plane.is_parallel(direction):
+            d = ((plane.origin - pos).dot(plane.normal)) / plane.normal.dot(direction)
+            if d >= 0:
+                point = pos + (direction * d)
+                return point, d
+
+        return False
 
 class Matrix4x4(object):
     def __init__(self,

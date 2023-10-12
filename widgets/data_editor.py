@@ -725,12 +725,7 @@ def choose_data_editor(obj):
 
 class EnemyPointGroupEdit(DataEditor):
     def setup_widgets(self):
-        self.groupid = self.add_integer_input("Group ID", "id", MIN_UNSIGNED_BYTE, MAX_UNSIGNED_BYTE)
-
-        self.prevgroup = self.add_multiple_integer_input_list("Previous Groups", "prevgroup",
-                                                              MIN_SIGNED_SHORT, MAX_SIGNED_SHORT)
-        self.nextgroup = self.add_multiple_integer_input_list("Next Groups", "nextgroup",
-                                                              MIN_SIGNED_SHORT, MAX_SIGNED_SHORT)
+        
 
         self.groupid.setReadOnly(True)
         for widget in self.prevgroup:
@@ -1051,6 +1046,7 @@ class RoutedObjectEdit(RoutedEditor):
         self.main_thing.setTabVisible(2, flare_tab_enabled)
 
     def update_data(self):
+        super().update_data()
         self.flare_edit.update_data()
         flare_tab_enabled = 3 in [obj.objectid for obj in self.bound_to]
         self.main_thing.setTabVisible(2, flare_tab_enabled)

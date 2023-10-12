@@ -24,5 +24,7 @@
         null
     ],
     "Route Info": null,
-    "Description": "Bouncy mushroom. The model perpetually loops an animation that resembles pulling a rubber band and letting go. It appears on the minimap as a solid circle in non-racing modes."
+    "Description": "Bouncy mushroom. The model perpetually loops an animation that resembles pulling a rubber band and letting go. It appears on the minimap as a solid circle in non-racing modes.",
+    "KCL File": "kinoko_r",
+    "KCL Index": null
 }
