@@ -109,6 +109,17 @@ class ObjectContainer(list):
 
         return container
 
+    def set_selected(self, state):
+        for point in self:
+            point.selected = state
+
+    def set_selected_from_float(self):
+        for point in self:
+            point.set_selected_from_float()
+
+    def get_selected(self):
+        return [point for point in self if point.selected]
+
 class ColorRGB(object):
     def __init__(self, r, g, b):
         self.r = r
@@ -136,8 +147,25 @@ class ColorRGBA(ColorRGB):
         f.write(pack(">B", self.a))
 
 class PositionedObject(object):
-    def __init__(self, position) -> None:
+    def __init__(self, position):
         self.position = position
+        self.selected = False
+
+    def write_position(self, f):
+        if self.selected:
+            modified_int = unpack('>L', pack('>f', self.position.x))[0] | 0x1
+        else:
+            modified_int = unpack('>L', pack('>f', self.position.x))[0] & 0xFFFFFFFE
+        modified_float = unpack( '>f', pack('>L', modified_int))[0]
+        modified_position = Vector3(modified_float, self.position.y, self.position.z)
+        modified_position.write(f)
+
+    def set_selected_from_float(self):
+        hex_value = unpack('>l', pack('>f', self.position.x))[0]
+        if hex_value & 0x1:
+            self.selected = True
+        if self.selected:
+            self.position.x = round(self.position.x, 3)
 
 class RotatedObject(PositionedObject):
     def __init__(self, position, rotation) -> None:
@@ -154,19 +182,23 @@ class RotatedObject(PositionedObject):
 
 class RoutedObject(PositionedObject):
     def __init__(self, position):
-        self.position = position
+        PositionedObject.__init__(self, position)
         self.route_obj = None
         self.route = -1
         self.routeclass = Route
 
-    def create_route(self, add_points=False, ref_points=None, absolute_pos=False, overwrite=False):
+    def create_route(self, add_points=False, ref_route=None, absolute_pos=False, overwrite=False):
         if self.route_info() < 1:
             return
         if not (overwrite or self.route_obj is None):
             return
         self.route_obj = self.routeclass()
+        ref_points = ref_route.points if ref_route else None
         if add_points:
             self.route_obj.add_points(self.position, absolute_pos, ref_points)
+        if ref_route:
+            self.route_obj.smooth = ref_route.smooth
+            self.route_obj.cyclic = ref_route.cyclic
 
     def route_info(self):
         return 0
@@ -260,6 +292,17 @@ class PointGroup(object):
     def remove_next(self, group):
         if group in self.nextgroup:
             self.nextgroup.remove(group)
+
+    def set_selected(self, state):
+        for point in self.points:
+            point.selected = state
+
+    def set_selected_from_float(self):
+        for point in self.points:
+            point.set_selected_from_float()
+
+    def get_selected(self):
+        return [point for point in self.points if point.selected]
 
 class PointGroups(object):
     def __init__(self):
@@ -435,9 +478,50 @@ class PointGroups(object):
 
         self.merge_groups()
 
+    def set_selected(self, state):
+        for group in self.groups:
+            group.set_selected(state)
+
+    def set_selected_from_float(self):
+        for group in self.groups:
+            group.set_selected_from_float()
+
+    def get_selected(self):
+        selected_points = []
+        for group in self.groups:
+            selected_points.extend(group.get_selected())
+        return selected_points
 
 # Section 1
 # Enemy/Item Route Code Start
+
+class ELineControl():
+    def __init__(self, settings) -> None:
+        self.entry = settings[0]
+        self.time = settings[1]
+        self.id = settings[2]
+        self.next_id = settings[3]
+
+        self.next_control = None
+
+        self.skipped = settings[7] != -1
+        self.group = settings[7]
+
+    def __eq__(self, other):
+        return self.id == other.id
+
+    def __hash__(self) -> int:
+        return hash(self.id)
+
+    def copy(self):
+        next_control = self.next_control
+
+        new_control = deepcopy(self)
+        self.next_control = next_control
+        new_control.next_control = next_control
+        return new_control
+
+
 class EnemyPoint(KMPPoint):
     def __init__(self,
                  position,
@@ -473,7 +557,7 @@ class EnemyPoint(KMPPoint):
 
     def write(self, f):
 
-        self.position.write(f)
+        self.write_position(f)
         f.write(pack(">f", self.scale ) )
         f.write(pack(">H", self.enemyaction) )
         f.write(pack(">bB", self.enemyaction2, self.unknown) )
@@ -499,6 +583,7 @@ class EnemyPoint(KMPPoint):
 class EnemyPointGroup(PointGroup):
     def __init__(self):
         super().__init__()
+        self.eline_controls = []
 
     @classmethod
     def new(cls):
@@ -668,7 +753,7 @@ class ItemPoint(KMPPoint):
 
     def write(self, f):
 
-        self.position.write(f)
+        self.write_position(f)
 
         setting2 = self.unknown << 0x2
         setting2 = setting2 | (self.lowpriority << 0x1)
@@ -933,7 +1018,7 @@ class CheckpointGroup(PointGroup):
     def calculate_key_cps(self, start):
         for point in self.points:
             if point.lapcounter == 1:
-                start = 0
+                start = 1
             elif point.type == 1:
                 start += 1
         return start
@@ -1038,14 +1123,30 @@ class CheckpointGroups(PointGroups):
         num_key = 0
         starting_key_cp = [0] * len(self.groups)
 
+        to_visit = []
+        visited = []
+        for i in range(len(self.groups)):
+            visited.append(0)
+
         if len(self.groups) > 0:
             starting_key_cp[0] = 0
+            to_visit.append(0)
 
-        for group in self.groups:
-            num_key = group.calculate_key_cps(num_key)
-            for grp in group.nextgroup:
-                id = self.get_idx(grp)
-                starting_key_cp[ id ] = max( starting_key_cp[id], num_key)
+        while to_visit:
+            curr_group_idx = to_visit.pop(0)
+            curr_group = self.groups[curr_group_idx]
+            if visited[curr_group_idx] == curr_group.num_prev():
+                continue
+            visited[curr_group_idx] += 1
+
+            num_key = curr_group.calculate_key_cps(starting_key_cp[curr_group_idx])
+
+            for grp in curr_group.nextgroup:
+                next_idx = self.get_idx(grp)
+                starting_key_cp[ next_idx ] = max( starting_key_cp[next_idx], num_key)
+                to_visit.append(next_idx)
+
+        
 
         for i, group in enumerate(self.groups):
             indices_offset.append(sum_points)
@@ -1206,6 +1307,17 @@ class Route(object):
     def __itruediv__(self, scale):
         return self
 
+    def set_selected(self, state):
+        for point in self.points:
+            point.selected = state
+
+    def set_selected_from_float(self):
+        for point in self.points:
+            point.set_selected_from_float()
+
+    def get_selected(self):
+        return [point for point in self.points if point.selected]
+
 #here for type checking - they function in the same way
 class ObjectRoute(Route):
     def __init__(self):
@@ -1294,7 +1406,7 @@ class RoutePoint(PositionedObject):
         return obj
 
     def write(self, f):
-        self.position.write(f)
+        self.write_position(f)
         f.write(pack(">HH", self.unk1, self.unk2) )
 
     def __iadd__(self, other):
@@ -1439,7 +1551,7 @@ class MapObject(RoutedObject, RotatedObject):
 
 
         f.write(pack(">H", 0) )
-        self.position.write(f)
+        self.write_position(f)
         self.rotation.write(f)
         self.scale.write(f)
         route = self.set_route(routes)
@@ -1538,6 +1650,7 @@ class MapObject(RoutedObject, RotatedObject):
         return kcl_file + str(self.userdata[kcl_index]) + ".kcl"
 
     def __iadd__(self, other):
+        print(other)
         self = RoutedObject.__iadd__(self, other)
         self.rotation += other.rotation
         self.scale += other.scale
@@ -1599,6 +1712,22 @@ class MapObjects(ObjectContainer):
     def get_routes(self):
         return list(set([obj.route_obj for obj in self if obj.route_obj is not None and obj.route_info()]))
 
+    def set_selected(self, state):
+        super().set_selected(state)
+        for route in self.get_routes():
+            route.set_selected(state)
+
+    def set_selected_from_float(self):
+        super().set_selected_from_float()
+        for route in self.get_routes():
+            route.set_selected_from_float()
+
+    def get_selected(self):
+        selected_points = super().get_selected()
+        for route in self.get_routes():
+            selected_points.extend(route.get_selected())
+        return selected_points
+
 # Section 6
 # Kart/Starting positions
 
@@ -1620,7 +1749,7 @@ class KartStartPoint(RotatedObject):
         return kstart
 
     def write(self,f):
-        self.position.write(f)
+        self.write_position(f)
         self.rotation.write(f)
 
         if self.playerid == 0xFF:
@@ -1664,7 +1793,7 @@ class KartStartPoints(ObjectContainer):
     def write(self, f):
         f.write(b"KTPT")
         f.write(pack(">H", len(self)))
-        f.write(pack(">H", 0) )
+        f.write(pack(">H", 1) )
         for position in self:
             position.write(f)
 
@@ -1750,7 +1879,7 @@ class Area(RoutedObject, RotatedObject):
         f.write(pack(">B", cameraid) )
         f.write(pack(">B", self.priority) ) #priority
 
-        self.position.write(f)
+        self.write_position(f)
         self.rotation.write(f)
         self.scale.write(f)
 
@@ -1929,6 +2058,21 @@ class Areas(ObjectContainer):
     def get_routes(self):
         return list(set([area.route_obj for area in self if area.type == 3]))
 
+    def set_selected(self, state):
+        super().set_selected(state)
+        for route in self.get_routes():
+            route.set_selected(state)
+    
+    def set_selected_from_float(self):
+        super().set_selected_from_float()
+        for route in self.get_routes():
+            route.set_selected_from_float()
+    
+    def get_selected(self):
+        selected_points = super().get_selected()
+        for route in self.get_routes():
+            selected_points.extend(route.get_selected())
+        return selected_points
 
 class ReplayAreas(Areas):
     def __init__(self):
@@ -1943,6 +2087,27 @@ class ReplayAreas(Areas):
         if include_empty:
             return list(set(routes))
         return list(set([x for x in routes if len(x.points) > 1]))
+    
+    def set_selected(self, state):
+        super().set_selected(state)
+        for route in self.get_routes():
+            route.set_selected(state)
+        for camera in self.get_cameras():
+            camera.selected = state
+
+    def set_selected_from_float(self):
+        super().set_selected_from_float()
+        for route in self.get_routes():
+            route.set_selected_from_float()
+        for camera in self.get_cameras():
+            camera.set_selected_from_float()
+
+    def get_selected(self):
+        selected_points = super().get_selected()
+        for route in self.get_routes():
+            selected_points.extend(route.get_selected())
+        selected_points.extend( [camera for camera in self.get_cameras() if camera.selected])
+        return selected_points
 # Section 8
 # Cameras
 class FOV:
@@ -1997,11 +2162,27 @@ class Cameras(ObjectContainer):
             next_cam = next_cam.nextcam_obj
         return opening_cams
 
+    def set_selected(self, state):
+        super().set_selected(state)
+        for route in self.get_routes():
+            route.set_selected(state)
+
+    def set_selected_from_float(self):
+        super().set_selected_from_float()
+        for route in self.get_routes():
+            route.set_selected_from_float()
+
+    def get_selected(self):
+        selected_points = super().get_selected()
+        for route in self.get_routes():
+            selected_points.extend(route.get_selected())
+        return selected_points
+
 class Camera(RoutedObject):
     level_file = None
     can_copy = True
     def __init__(self, position):
-        super().__init__(position)
+        RoutedObject.__init__(self, position)
         self.type = 1
         self.nextcam = -1
         self.nextcam_obj = None
@@ -2128,7 +2309,7 @@ class Camera(RoutedObject):
         f.write(pack(">B", self.startflag ) )
         f.write(pack(">B", self.movieflag ) )
 
-        self.position.write(f)
+        self.write_position(f)
         self.rot.write(f)
 
         f.write(pack(">ff", self.fov.start, self.fov.end))
@@ -2311,7 +2492,7 @@ class JugemPoint(RotatedObject):
 
 
     def write(self, f, count):
-        self.position.write(f)
+        self.write_position(f)
         self.rotation.write(f)
         f.write(pack(">H", count) )
         f.write(pack(">h", self.range ) )
@@ -2355,7 +2536,7 @@ class CannonPoint(RotatedObject):
 
 
     def write(self, f):
-        self.position.write(f)
+        self.write_position(f)
         self.rotation.write(f)
         f.write(pack(">Hh", self.id, self.shoot_effect) )
 
@@ -2400,7 +2581,7 @@ class MissionPoint(object):
 
 
     def write(self, f, count):
-        self.position.write(f)
+        self.write_position(f)
         self.rotation.write(f)
         f.write(pack(">HH", count, self.unk) )
 
@@ -2438,6 +2619,8 @@ class KMP(object):
         Camera.level_file = self
         MapObject.level_file = self
         EnemyPointGroups.level_file = self
+
+        self.selected = False
 
         self.set_assoc()
 
@@ -2589,7 +2772,7 @@ class KMP(object):
         f.seek(ktpt_offset + header_len)
         assert f.read(4) == b"KTPT"
         count = read_uint16(f)
-        f.read(2)
+        kmp.selected = read_uint16(f)
         kmp.kartpoints = KartStartPoints.from_file(f, count)
 
         f.seek(enpt_offset + header_len)
@@ -2914,6 +3097,19 @@ class KMP(object):
             if len(boo_objs) > 1:
                 return_string += "Multiple boo objects are in the .kmp. Only one of them will be preserved.\n"
 
+
+        if self.selected:
+            self.kartpoints.set_selected_from_float()
+            self.enemypointgroups.set_selected_from_float()
+            self.itempointgroups.set_selected_from_float()
+            self.checkpoints.set_selected_from_float()
+            self.objects.set_selected_from_float()
+            self.areas.set_selected_from_float()
+            self.replayareas.set_selected_from_float()
+            self.cameras.set_selected_from_float()
+            self.respawnpoints.set_selected_from_float()
+            self.cannonpoints.set_selected_from_float()
+            self.missionpoints.set_selected_from_float()
         return return_string
 
     @classmethod
@@ -3131,8 +3327,6 @@ class KMP(object):
 
     def remove_unused_respawns(self):
         unused_respawns = [rsp for rsp in self.respawnpoints if rsp not in self.checkpoints.get_used_respawns()]
-        unused_respawns.sort()
-        unused_respawns.reverse()
         for rsp_idx in unused_respawns:
             self.remove_respawn( self.respawnpoints[rsp_idx]   )
 
@@ -3502,6 +3696,61 @@ class KMP(object):
                     prev_positions.append(prev_point.end)
                 prev_positions.append(prev_point.position)
         return prev_points, prev_positions, prev_rotations
+
+    def set_selected(self, points, state=True):
+
+        #set everything unselected
+        self.kartpoints.set_selected(False)
+        self.enemypointgroups.set_selected(False)
+        self.itempointgroups.set_selected(False)
+        self.checkpoints.set_selected(False)
+        self.objects.set_selected(False)
+        self.areas.set_selected(False)
+        self.replayareas.set_selected(False)
+        self.cameras.set_selected(False)
+        self.respawnpoints.set_selected(False)
+        self.cannonpoints.set_selected(False)
+        self.missionpoints.set_selected(False)
+
+        if not state:
+            return
+
+        for point in points:
+            point.selected = state
+
+    def get_selected(self):
+        selected_points = []
+        selected_points.extend( self.kartpoints.get_selected() )
+        selected_points.extend( self.enemypointgroups.get_selected() )
+        selected_points.extend( self.itempointgroups.get_selected() )
+        selected_points.extend( self.checkpoints.get_selected() )
+        selected_points.extend( self.objects.get_selected() )
+        selected_points.extend( self.areas.get_selected() )
+        selected_points.extend( self.replayareas.get_selected() )
+        selected_points.extend( self.cameras.get_selected() )
+        selected_points.extend( self.respawnpoints.get_selected() )
+        selected_points.extend( self.cannonpoints.get_selected() )
+        selected_points.extend( self.missionpoints.get_selected() )
+
+        return selected_points
+
+    @classmethod
+    def get_positions(cls, points):
+        
+        return [point.position for point in points]
+
+    @classmethod
+    def get_rotations(cls, points):
+        return [point.rotation for point in points if isinstance(point, RotatedObject)]
+
+
+    def get_average_position(self, points):
+        avg_position = Vector3.new()
+        positioned_points = [obj for obj in points if hasattr(obj, "position")]
+        for point in positioned_points:
+            avg_position += point.position
+        avg_position /= len(positioned_points)
+        return avg_position
 
 with open("lib/mkwiiobjects.json", "r") as f:
     tmp = json.load(f)

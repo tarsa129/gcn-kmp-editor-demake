@@ -1,10 +1,13 @@
 updates:
 
 improve json files
-fix visual issue with point size
+arrow key route point selection with objects - shift arrow vs arrow
+- arrow will always only ever follow the same type
+- shift will follow a logical progression
+bring in camera stuff from mkdd editor
+route point data editor should be tabbed + should list all data points if route point settings used + better support for unused values
 
 new features:
-area / object shared routes
 handle that enemy point switching object
 area scale handlers
 add option to select x to y points

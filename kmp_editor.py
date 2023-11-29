@@ -47,25 +47,22 @@ class UndoEntry:
 
     class _UndoCacheEntry:
 
-        def __init__(self, bol_document, enemy_path_data):
+        def __init__(self, bol_document):
             self.bol_document = bol_document
-            self.enemy_path_data = enemy_path_data
 
-    def __init__(self, bol_document: bytes, enemy_path_data: 'tuple[tuple[bool, int]]', selected_items_data: tuple):
-        self.bol_hash = hash((bol_document, enemy_path_data))
+    def __init__(self, bol_document: bytes):
+        self.bol_hash = hash((bol_document))
 
         # To avoid keeping track of duplicates of the BOL document (likely the case when the part
         # that changes in the undo entry is the selection data), a cache is used.
         if self.bol_hash not in UndoEntry._cache:
-            self._cache_entry = UndoEntry._UndoCacheEntry(bol_document, enemy_path_data)
+            self._cache_entry = UndoEntry._UndoCacheEntry(bol_document)
             UndoEntry._cache[self.bol_hash] = self._cache_entry
         else:
             self._cache_entry = UndoEntry._cache[self.bol_hash]
         
         self.bol_document = self._cache_entry.bol_document
-        self.enemy_path_data = self._cache_entry.enemy_path_data
-        self.selected_items_data = selected_items_data
-        self.hash = hash((self.bol_hash, self.selected_items_data))
+        self.hash = hash(self.bol_hash)
 
     def __eq__(self, other) -> bool:
         return self.hash == other.hash
@@ -241,23 +238,9 @@ class GenEditor(QtWidgets.QMainWindow):
                 self.setWindowTitle("gcn kmp editor (demake)")
 
     def generate_undo_entry(self) -> UndoEntry:
+        self.level_file.set_selected(self.level_view.selected)
         bol_document = self.level_file.to_bytes()
-
-        # List containing a tuple with the emptiness and ID of each of the enemy paths.
-        enemy_paths = self.level_file.enemypointgroups
-        enemy_path_data = tuple((not path.points, enemy_paths.get_idx(path)) for path in enemy_paths.groups)
-
-        selected_items_data = []
-        for model_index in self.leveldatatreeview.selectionModel().selectedIndexes():
-            selected_item_data = [model_index.row()]
-            model_index_parent = model_index.parent()
-            while model_index_parent.isValid():
-                selected_item_data.append(model_index_parent.row())
-                model_index_parent = model_index_parent.parent()
-            selected_items_data.append(tuple(selected_item_data))
-        selected_items_data = tuple(selected_items_data)
-
-        return UndoEntry(bol_document, enemy_path_data, selected_items_data)
+        return UndoEntry(bol_document)
 
     def load_top_undo_entry(self):
         if not self.undo_history:
@@ -270,38 +253,13 @@ class GenEditor(QtWidgets.QMainWindow):
 
         self.level_file = KMP.from_bytes(undo_entry.bol_document)
 
-        # The BOL document cannot store information on empty enemy paths; this information is
-        # sourced from a separate list.
-        bol_enemy_paths = list(self.level_file.enemypointgroups.groups)
-        self.level_file.enemypointgroups.groups.clear()
-        enemy_path_data = undo_entry.enemy_path_data
-        for empty, enemy_path_id in enemy_path_data:
-            if empty:
-                empty_enemy_path = libkmp.EnemyPointGroup()
-                empty_enemy_path.id = enemy_path_id
-                self.level_file.enemypointgroups.groups.append(empty_enemy_path)
-            else:
-                enemy_path = bol_enemy_paths.pop(0)
-                assert enemy_path.id == enemy_path_id
-                self.level_file.enemypointgroups.groups.append(enemy_path)
-
-        with QtCore.QSignalBlocker(self.leveldatatreeview):
-            for item in self.leveldatatreeview.selectedItems():
-                item.setSelected(False)
-
         self.level_view.level_file = self.level_file
         self.leveldatatreeview.set_objects(self.level_file)
 
         # Restore the selection that was current when the undo entry was produced.
-        items_to_select = []
-        with QtCore.QSignalBlocker(self.leveldatatreeview):
-            for selected_item_data in undo_entry.selected_items_data:
-                item = self.leveldatatreeview.invisibleRootItem()
-                for row in reversed(selected_item_data):
-                    item = item.child(row)
-                item.setSelected(True)
-                items_to_select.append(item)
-        self.tree_select_object(items_to_select)
+        self.level_view.selected = self.level_file.get_selected()
+        self.level_view.selected_positions = KMP.get_positions(self.level_view.selected)
+        self.level_file.selected_rotations = KMP.get_rotations(self.level_view.selected)
 
         self.update_3d()
         self.pik_control.update_info()
@@ -1732,7 +1690,7 @@ class GenEditor(QtWidgets.QMainWindow):
             self.level_view.set_mouse_mode(mkwii_widgets.MOUSE_MODE_ADDWP)
         elif option == "generic_copy_routed":  #copy with new route
             new_object = obj.copy()
-            new_object.create_route(True, obj.route_obj.points, False, True)
+            new_object.create_route(True, obj.route_obj, False, True)
             self.object_to_be_added = [new_object, True, True ]
 
             self.pik_control.button_add_object.setChecked(True)
@@ -1998,8 +1956,13 @@ class GenEditor(QtWidgets.QMainWindow):
                         placeobject.camera = object.camera.copy()
                         placeobject.camera.position = placeobject.position + Vector3(3000, 1000, 0)
                         if placeobject.camera.route_obj is not None:
+                            dummy_route = ReplayCameraRoute()
+                            dummy_route.smooth = placeobject.camera.route_obj.smooth
+                            dummy_route.cyclic = placeobject.camera.route_obj.cyclic
                             diffed_points = [RoutePoint(x.position - object.position) for x in object.camera.route_obj.points]
-                            placeobject.camera.create_route(True, diffed_points, True, overwrite=True)
+                            dummy_route.points = diffed_points
+
+                            placeobject.camera.create_route(True, dummy_route, True, overwrite=True)
                             placeobject.camera.route_obj.points[0].position = placeobject.camera.position
                         placeobject.camera.position2_player = Vector3Relative(Vector3(200, 100, -500), placeobject.camera.position)
                         placeobject.camera.position3_player = Vector3Relative(Vector3(0.0, 0.0, 0.0), placeobject.camera.position)
@@ -2607,11 +2570,8 @@ class GenEditor(QtWidgets.QMainWindow):
             item = None
             if isinstance(currentobj, libkmp.MapObject):
                 item = get_treeitem(self.leveldatatreeview.objects, currentobj)
-            elif isinstance(currentobj, libkmp.Area):
-                if currentobj.type == 0:
-                    item = get_treeitem(self.leveldatatreeview.replayareas, currentobj)
-                else:
-                    item = get_treeitem(self.leveldatatreeview.areas, currentobj)
+            elif isinstance(currentobj, libkmp.Area) and currentobj.type != 0:
+                item = get_treeitem(self.leveldatatreeview.areas, currentobj)
             elif isinstance(currentobj, libkmp.KartStartPoint):
                 item = get_treeitem(self.leveldatatreeview.kartpoints, currentobj)
             elif isinstance(currentobj, libkmp.CannonPoint):
@@ -2922,7 +2882,12 @@ class GenEditor(QtWidgets.QMainWindow):
                 pos2.y = pos1.y
             diff = pos2 - pos1
             if self.connect_start.route_obj:
+                dummy_route = ObjectRoute()
+                dummy_route.smooth = self.connect_start.route_obj.smooth
+                dummy_route.cyclic =self.connect_start.route_obj.cyclic
                 diffed_points = [RoutePoint(x.position - pos1) for x in self.connect_start.route_obj.points]
+                dummy_route.points = diffed_points
+
             for i in range(1, 1 + self.level_view.linedraw_count):
                 position = diff * (i/self.level_view.linedraw_count) + pos1
                 new_copy = self.connect_start.copy()
@@ -2932,7 +2897,7 @@ class GenEditor(QtWidgets.QMainWindow):
 
                 #deal with route:
                 if self.connect_start.route_obj:
-                    new_copy.create_route(True, diffed_points, True, overwrite=True)
+                    new_copy.create_route(True, dummy_route, True, overwrite=True)
                     self.action_ground_objects( [x.position for x in new_copy.route_obj.points]  )
                 self.level_file.objects.append(new_copy)
                 #copy the route, if the route is type 2
@@ -3048,9 +3013,11 @@ class GenEditor(QtWidgets.QMainWindow):
         if new_route and isinstance(self.obj_to_copy, RoutedObject) and self.obj_to_copy.route_info():
             new_object = self.obj_to_copy.copy()
             if self.obj_to_copy.route_obj is not None :
-                new_object.create_route(True, self.obj_to_copy.route_obj.points, False, True)
+                new_object.create_route(True, self.obj_to_copy.route_obj, False, True)
             else:
-                new_object.create_route(True, None, False, True)
+                new_object.create_route(True, None, False, True, self.obj_to_copy.route_obj)
+                new_object.route_obj.smooth = self.obj_to_copy.route_obj.smooth
+                new_object.route_obj.cyclic = self.obj_to_copy.route_obj.cyclic
 
             self.object_to_be_added = [new_object, True, True ]
         elif isinstance(self.obj_to_copy, Area) and self.obj_to_copy.type == 0:

@@ -691,7 +691,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
 
 
         self.gizmo_scale = gizmo_scale
-        if self.editor.scale_points.isChecked():
+        if self.editor.scale_points.isChecked() and self.mode == MODE_TOPDOWN:
             point_scale = Vector3(gizmo_scale/64, gizmo_scale/64, gizmo_scale/64)
         else:
             point_scale = Vector3(1, 1, 1)
@@ -1091,6 +1091,9 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                 if kcl_name not in self.additional_models.keys():
                     self.additional_models[kcl_name] = MapObjectModel(kcl_name, self.editor.read_kcl_file)
                 visual_model = self.additional_models[kcl_name].visual_mesh
+
+                if visual_model is None:
+                    continue
 
                 glPushMatrix()
                 glTranslatef(mapobject.position.x, -mapobject.position.z, mapobject.position.y)

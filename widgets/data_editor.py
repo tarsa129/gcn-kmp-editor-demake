@@ -678,7 +678,7 @@ MAX_UNSIGNED_INT = 2**32 - 1
 
 def choose_data_editor(obj):
     if isinstance(obj, EnemyPoint):
-        return EnemyPointEdit
+        return EnemyPointGroupEdit
     elif isinstance(obj, EnemyPointGroup):
         return EnemyPointGroupEdit
     elif isinstance(obj, ItemPoint):
@@ -725,22 +725,34 @@ def choose_data_editor(obj):
 
 class EnemyPointGroupEdit(DataEditor):
     def setup_widgets(self):
-        
+        super().setup_widgets()
+        self.main_thing = QtWidgets.QTabWidget()
+        self.vbox.addWidget(self.main_thing)
 
-        self.groupid.setReadOnly(True)
-        for widget in self.prevgroup:
-            widget.setReadOnly(True)
-        for widget in self.nextgroup:
-            widget.setReadOnly(True)
+        self.enemypointedit = EnemyPointEdit(self.parent(), self.bound_to)
+        self.main_thing.addTab(self.enemypointedit, "Enemy Point")
+
+        groups = []
+        for point in self.bound_to:
+            groups.append(self.kmp_file.enemypointgroups.find_group_of_point(point)[1])
+        groups = list(set(groups))
+
+        self.enemygroupedit = EnemyGroupEdit(self.parent(), groups)
+        self.main_thing.addTab(self.enemygroupedit, "Enemy Group")
+        self.main_thing.setTabEnabled(1, len(groups) == 1)
 
     def update_data(self):
-        obj : EnemyPointGroup = self.bound_to
+        self.enemypointedit.update_data()
 
-        self.groupid.setValueQuiet(self.bound_to.id)
-        for i, widget in enumerate(self.prevgroup):
-            widget.setValueQuiet(obj.prevgroup[i])
-        for i, widget in enumerate(self.nextgroup):
-            widget.setValueQuiet(obj.nextgroup[i])
+class EnemyGroupEdit(DataEditor):
+    def setup_widgets(self):
+        if len(self.bound_to) != 1:
+            return
+        
+        return super().setup_widgets()
+    
+    def update_data(self):
+        return super().update_data()
 
 class EnemyPointEdit(DataEditor):
     def setup_widgets(self, group_editable=False):
