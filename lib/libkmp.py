@@ -504,7 +504,7 @@ class ELineControl():
 
         self.next_control = None
 
-        self.skipped = settings[7] != -1
+        self.skipped = settings[7] != 65535
         self.group = settings[7]
 
     def __eq__(self, other):
@@ -1650,7 +1650,6 @@ class MapObject(RoutedObject, RotatedObject):
         return kcl_file + str(self.userdata[kcl_index]) + ".kcl"
 
     def __iadd__(self, other):
-        print(other)
         self = RoutedObject.__iadd__(self, other)
         self.rotation += other.rotation
         self.scale += other.scale
@@ -3097,6 +3096,14 @@ class KMP(object):
             if len(boo_objs) > 1:
                 return_string += "Multiple boo objects are in the .kmp. Only one of them will be preserved.\n"
 
+        """eline_control"""
+        eline_control_objs = [obj for obj in self.objects if obj.objectid == 20]
+        if eline_control_objs:
+            return_string += self.fixup_eline_control(eline_control_objs)
+
+        self.enemypointgroups.merge_groups()
+        self.itempointgroups.merge_groups()
+        self.checkpoints.merge_groups()
 
         if self.selected:
             self.kartpoints.set_selected_from_float()
@@ -3736,7 +3743,6 @@ class KMP(object):
 
     @classmethod
     def get_positions(cls, points):
-        
         return [point.position for point in points]
 
     @classmethod
@@ -3751,6 +3757,61 @@ class KMP(object):
             avg_position += point.position
         avg_position /= len(positioned_points)
         return avg_position
+
+    def fixup_eline_control(self, eline_control_objs):
+        controls = []
+        # controls CAN be cyclic
+        return_string = ""
+        for eline_control_obj in eline_control_objs:
+            control = ELineControl(eline_control_obj.userdata)
+            if control in controls:
+                return_string += "A control with duplicate id {0} has been found. It will be removed".format(control.id)
+                continue
+            if control.id == 0:
+                return_string += "A control with id 0 has been found. It will be removed".format(control.id)
+                continue
+            controls.append(control)
+        print("passed initial parsing")
+        print(eline_control_objs)
+
+        #set next control
+        for control in [control_obj for control_obj in controls if control_obj.next_id != 0]:
+            for other_control in controls:
+                if control.next_id == other_control.id:
+                    control.next_control = other_control
+                    continue
+        #from now on, we do not need to worry about ids
+        print("set next controls")
+
+        control_graphs = []
+        #a maps a head node to a tuple of ( cycle, list of eline_controls)
+
+
+
+        visited_controls = []
+        for control in controls:
+            #see if it can be prepended
+            for i, sep_graph in enumerate(control_graphs):
+                items = sep_graph[0]
+                if control.next_control == items[0]:
+                    items.insert(0, control)
+
+                    if items[-1].next_control == control:
+                        sep_graph[1] = control.id #cyclic flag
+                    break
+            #see if any new connections have been formed
+            for i, sep_graph in enumerate(control_graphs):
+                items = sep_graph[0]
+                if items[-1].next_control == control:
+                    items.append(control)
+                if control.next_control in items:
+                    sep_graph[1] = control.next_control.id
+            
+
+        print("make all paths unique")
+
+        return return_string
+
 
 with open("lib/mkwiiobjects.json", "r") as f:
     tmp = json.load(f)

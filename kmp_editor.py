@@ -2283,6 +2283,9 @@ class GenEditor(QtWidgets.QMainWindow):
                 #do not allow used route to fall under 2 points
                 group = self.level_file.get_route_of_point(obj)
 
+                if group is None:
+                    continue
+
                 min_points = 2
                 used_by = self.level_file.route_used_by(group, mandatory=True)
 
@@ -2974,7 +2977,6 @@ class GenEditor(QtWidgets.QMainWindow):
                         self.connect_two_groups(obj, endpoint, to_deal_with)
             elif isinstance(endpoint, JugemPoint) and isinstance(obj_type, Checkpoint):
                 for obj in self.connect_start:
-                    print(endpoint)
                     obj.respawn_obj = endpoint
             elif isinstance(endpoint, ObjectRoutePoint) and isinstance(obj_type, MapObject):
                 for obj in self.connect_start:
