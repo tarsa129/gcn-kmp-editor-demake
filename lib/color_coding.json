@@ -16,6 +16,11 @@
   "Objects": [1.0, 0.0, 1.0, 1.0],
   "ObjectRoutes": [1.0, 0.5, 1.0, 1.0],
   "UnusedObjectRoutes": [0.7, 0.5, 0.7, 1.0],
+  "ObjectAreas": [0.5, 0.0, 0.5, 1.0],
+  "ObjectArea8Fill": [0.0, 0.5, 0.0, 0.33],
+  "ObjectArea8FillSelected": [0.0, 0.75, 0.0, 0.33],
+  "ObjectArea9Fill": [0.5, 0.0, 0.0, 0.33],
+  "ObjectArea9FillSelected": [0.75, 0.0, 0.0, 0.33],
 
   "Camera": [0.5, 0.1, 0.7, 1],
   "CameraRoutes": [0.7, 0.1, 1, 1],

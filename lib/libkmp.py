@@ -1688,6 +1688,8 @@ class MapObjects(ObjectContainer):
         self.flare_alpha = 0x32
         self.speed_modifier = 0
 
+        self.areas = []
+
     @classmethod
     def from_file(cls, f, objectcount):
         mapobjs = cls()
@@ -1957,7 +1959,7 @@ class Area(RoutedObject, RotatedObject):
         forward, up, left = self.rotation.get_vectors()
         diff = pos - self.position
         dotVec = Vector3( left.dot(diff), up.dot(diff), forward.dot(diff) )
-        scale = self.scale.scale_by( Vector3(5000, 10000, 5000))
+        scale = self.scale.scale_vec( Vector3(5000, 10000, 5000))
         if scale.y < dotVec.y or dotVec.y < 0:
             return False
         if self.shape == 1: #cylinder
@@ -3096,6 +3098,11 @@ class KMP(object):
             if len(boo_objs) > 1:
                 return_string += "Multiple boo objects are in the .kmp. Only one of them will be preserved.\n"
 
+        object_areas = [area for area in self.areas if area.type in (8, 9)]
+        self.objects.areas = object_areas
+        for area in object_areas:
+            self.areas.remove(area)
+
         """eline_control"""
         eline_control_objs = [obj for obj in self.objects if obj.objectid == 20]
         if eline_control_objs:
@@ -3196,6 +3203,7 @@ class KMP(object):
         areas = Areas()
         areas.extend( self.areas  )
         areas.extend( self.replayareas )
+        areas.extend( self.objects.areas )
         areas.write(f, cameras, routes, self.enemypointgroups )
 
         startcam = self.cameras.startcam
@@ -3335,7 +3343,7 @@ class KMP(object):
     def remove_unused_respawns(self):
         unused_respawns = [rsp for rsp in self.respawnpoints if rsp not in self.checkpoints.get_used_respawns()]
         for rsp_idx in unused_respawns:
-            self.remove_respawn( self.respawnpoints[rsp_idx]   )
+            self.remove_respawn( rsp_idx  )
 
     def find_closest_enemy_to_rsp(self, rsp: JugemPoint):
         enemy_groups = self.enemypointgroups.groups
@@ -3592,6 +3600,8 @@ class KMP(object):
             self.replayareas.remove(area)
             if area.camera is not None and not self.camera_used_by(area.camera):
                 self.remove_camera(area.camera)
+        elif area.type in (8, 9):
+            self.objects.areas.remove(area)
         else:
             self.areas.remove(area)
 

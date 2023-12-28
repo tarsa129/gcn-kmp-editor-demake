@@ -46,6 +46,8 @@ with open("lib/color_coding.json", "r") as f:
     colors_replayarea = colors_json["ReplayArea"]
     colors_replaycamera = colors_json["ReplayCamera"]
 
+with open("lib/groupedobjects.json", "r") as f:
+    grouped_objects_json = json.load(f)
 
 class SelectionQueue(list):
     def queue_selection(self, x, y, width, height, shift_pressed, do_gizmo=False):
@@ -696,6 +698,8 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
         else:
             point_scale = Vector3(1, 1, 1)
 
+        SPHERE_UNITS = 300 * point_scale.x
+
         check_gizmo_hover_id = self.should_check_gizmo_hover_id()
 
         # If multisampling is enabled, the draw/read operations need to happen on the mono-sampled
@@ -940,6 +944,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                 for is_selectable, collection in (
                         (vismenu.kartstartpoints.is_selectable(), self.level_file.kartpoints),
                         (vismenu.areas.is_selectable(), self.level_file.areas),
+                        (vismenu.objects.is_selectable(), self.level_file.objects.areas),
                         (vismenu.replaycameras.is_selectable(), self.level_file.replayareas),
                         (vismenu.respawnpoints.is_selectable(), self.level_file.respawnpoints),
                         (vismenu.cannonpoints.is_selectable(), self.level_file.cannonpoints),
@@ -1208,7 +1213,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
 
         if self.preview is not None:
             glColor3f(0.0, 0.0, 0.0)
-            self.models.draw_sphere(self.preview.view_pos, 600)
+            self.models.draw_sphere(self.preview.view_pos, 2 * SPHERE_UNITS)
 
         #do rendering of the points
         if self.level_file is not None:
@@ -1244,11 +1249,11 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
 
                         if point_index in enemypoints_to_highlight:
                             glColor3f(1.0, 1.0, 0.0)
-                            self.models.draw_sphere(point.position, 300)
+                            self.models.draw_sphere(point.position, SPHERE_UNITS)
 
                         if point in points_to_circle:
                             glColor3f(0.0, 0.0, 1.0)
-                            self.models.draw_sphere(point.position, 600)
+                            self.models.draw_sphere(point.position, 2 * SPHERE_UNITS)
 
                         point_type = "enemypoint"
                         if i == 0 and j == 0:
@@ -1339,7 +1344,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
 
                         if point_index in enemypoints_to_highlight:
                             glColor3f(1.0, 1.0, 0.0)
-                            self.models.draw_sphere(point.position, 300)
+                            self.models.draw_sphere(point.position, SPHERE_UNITS)
 
                         point_type = "itempoint"
                         if i == 0 and j == 0:
@@ -1648,7 +1653,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
 
                         if point in routepoints_to_circle:
                             glColor3f(*colors_json["ObjectRoutes"][:3])
-                            self.models.draw_sphere(point.position, 300)
+                            self.models.draw_sphere(point.position, SPHERE_UNITS)
                     if selected:
                         glLineWidth(3.0)
 
@@ -1665,7 +1670,42 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
 
                 for obj in objs_to_highlight:
                     glColor3f(*colors_json["Objects"][:3])
-                    self.models.draw_sphere(obj.position, 300)
+                    self.models.draw_sphere(obj.position, SPHERE_UNITS)
+
+                object_areas = self.level_file.objects.areas
+
+                selected_object_areas = list(set([area.setting1 for area in object_areas if area in select_optimize]))
+                for object in object_areas:
+                    self.models.render_generic_position_rotation_colored("objectarea",
+                                                                object.position, object.rotation,
+                                                                object in select_optimize, point_scale)
+                    if object in select_optimize:
+                        glColor4f(*colors_selection)
+                        glLineWidth(3.0)
+                    else:
+                        glColor4f(*colors_area)
+                        glLineWidth(1.0)
+
+                    glColor3f(1.0, 0.0, 1.0)
+                    if object.setting1 in selected_object_areas:
+                        glColor3f(1.0, 0.0, 0.0)
+                        if object.type == 8:
+                            glColor3f(0.0, 1.0, 0.0)
+                        self.models.draw_sphere(object.position, SPHERE_UNITS)
+
+                    if object.shape == 0:
+                        self.models.draw_wireframe_cube(object.position, object.rotation, object.scale*100 * 100)
+                    else:
+                        self.models.draw_wireframe_cylinder(object.position, object.rotation, object.scale*50 * 100)
+
+                glColor3f(0.0, 1.0, 0.0)
+                load_areas_selected = [area for area in object_areas
+                                       if area.setting1 in selected_object_areas and area.type == 8]
+                for object in [obj for obj in self.level_file.objects if obj.objectid in grouped_objects_json]:
+                    for area in load_areas_selected:
+                        if area.check(object.position):
+                            self.models.draw_sphere( object.position, SPHERE_UNITS)
+                            break
 
             if vismenu.kartstartpoints.is_visible():
                 for object in self.level_file.kartpoints:
@@ -1708,7 +1748,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                             self.models.render_generic_position_colored(point.position, point_selected, "areapoint", point_scale)
                             if circle:
                                 glColor3f(*colors_json["Areas"][:3])
-                                self.models.draw_sphere(point.position, 600)
+                                self.models.draw_sphere(point.position, 2 * SPHERE_UNITS)
                             selected = selected or point_selected
                             if last_point is not None:
                                 self.draw_arrow_head(last_point.position, point.position)
@@ -1788,8 +1828,8 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                             pos2 = object.position2_simple.render() #if absolute_poses else object.position2.absolute()
                             pos3 = object.position3_simple.render() #if absolute_poses else object.position3.absolute()
 
-                            self.models.draw_sphere(pos2, 300)
-                            self.models.draw_sphere(pos3, 300)
+                            self.models.draw_sphere(pos2, SPHERE_UNITS)
+                            self.models.draw_sphere(pos3, SPHERE_UNITS)
 
                             if bolded:
                                 glLineWidth(3.0)
@@ -1808,8 +1848,8 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                                                                 bolded, "replaycamerasplayer", point_scale)
                         pos2 = object.position2_player.render()
                         pos3 = object.position3_player.render()
-                        self.models.draw_sphere(pos2, 300)
-                        self.models.draw_sphere(pos3, 300)
+                        self.models.draw_sphere(pos2, SPHERE_UNITS)
+                        self.models.draw_sphere(pos3, SPHERE_UNITS)
                         glBegin(GL_LINE_STRIP)
 
                         glVertex3f(pos2.x, -pos2.z, pos2.y)
@@ -1852,8 +1892,8 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                         glColor3f(*colors_json["CameraUnselected"][:3])
                     pos1 = object.position2_simple
                     pos2 = object.position3_simple
-                    self.models.draw_sphere(pos1, 300)
-                    self.models.draw_sphere(pos2, 300)
+                    self.models.draw_sphere(pos1, SPHERE_UNITS)
+                    self.models.draw_sphere(pos2, SPHERE_UNITS)
                     glLineWidth(2.0)
                     glBegin(GL_LINES)
                     glVertex3f(pos1.x, -pos1.z, pos1.y)
@@ -1874,7 +1914,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
 
                     if object == self.level_file.cameras.startcam:
                         glColor3f(*colors_json["Camera"][:3])
-                        self.models.draw_sphere(object.position, 600)
+                        self.models.draw_sphere(object.position, 2 * SPHERE_UNITS)
 
                 routes_to_highlight = set( [camera.route_obj for camera in self.level_file.cameras if camera in select_optimize]  )
                 glLineWidth(1.0)
@@ -1914,7 +1954,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
 
                     if object in respawns_to_highlight:
                         glColor3f(*colors_json["Respawn"][:3]) # will be replaced with the respawn color
-                        self.models.draw_sphere(object.position, 600)
+                        self.models.draw_sphere(object.position, 2 * SPHERE_UNITS)
                     self.models.draw_wireframe_cube( object.position,
                                                         object.rotation,
                                                         Vector3( 900, 50, 600   ), kartstart = True)
@@ -1946,6 +1986,22 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
             if vismenu.areas.is_visible():
                 for object in self.level_file.areas:
                     color = colors_json["SelectedAreaFill"] if object in select_optimize else colors_json["AreaFill"]
+                    if object.shape == 0 and self.mode == MODE_TOPDOWN:
+                            TransPlane.render_srt(object.position, object.rotation, object.scale,
+                                                Vector3(-100, 0, -100), Vector3(100, 0, 100),
+                                                color)
+                    elif object.shape == 0:
+                        TransPlane.render_box_srt(object.position, object.rotation, object.scale, color)
+                    else:
+                        glColor4f(*color)
+                        self.models.render_trans_cylinder(object.position, object.rotation, object.scale*50 * 100)
+
+            if vismenu.objects.is_visible():
+                for object in self.level_file.objects.areas:
+                    if object.type == 8:
+                        color = colors_json["ObjectArea8FillSelected"] if object in select_optimize else colors_json["ObjectArea8Fill"]
+                    else:
+                        color = colors_json["ObjectArea9FillSelected"] if object in select_optimize else colors_json["ObjectArea9Fill"]
                     if object.shape == 0 and self.mode == MODE_TOPDOWN:
                             TransPlane.render_srt(object.position, object.rotation, object.scale,
                                                 Vector3(-100, 0, -100), Vector3(100, 0, 100),

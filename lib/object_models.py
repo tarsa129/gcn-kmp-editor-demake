@@ -37,6 +37,7 @@ class ObjectModels(object):
         self.objects = GenericObject(colors["Objects"])
         self.objectpoint = Cylinder(colors["ObjectRoutes"])
         self.unusedobjectpoint = Cylinder(colors["UnusedObjectRoutes"])
+        self.objectarea = GenericObject(colors["ObjectAreas"])
 
         self.camera = Cube(colors["Camera"])
         self.camerapoint = Cylinder(colors["CameraRoutes"])
@@ -76,7 +77,7 @@ class ObjectModels(object):
                      self.enemypoint, self.enemypointfirst, self.itempoint, self.itempointfirst,
                      self.checkpointleft, self.checkpointright,
                      self.respawn, self.unusedrespawn,
-                     self.objects, self.objectpoint, self.unusedobjectpoint,
+                     self.objects, self.objectpoint, self.unusedobjectpoint, self.objectarea,
                      self.camera, self.camerapoint,
                      self.replayareas, self.replaycameras, self.replaycamerasplayer, self.replaycamerapoint,
                      self.areas, self.areapoint,

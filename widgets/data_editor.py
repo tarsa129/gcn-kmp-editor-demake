@@ -704,6 +704,8 @@ def choose_data_editor(obj):
     elif isinstance(obj, Area):
         if obj.type == 0:
             return ReplayAreaEdit
+        elif obj.type in (8, 9):
+            return ObjectAreaEdit
         else:
             return SpecialAreaEdit
     elif isinstance(obj, ReplayCamera):
@@ -1706,6 +1708,37 @@ class SpecialAreaEdit(DataEditor):
         has_route = isinstance(route_obj, list) and len(route_obj) > 0
         self.main_thing.setTabVisible(1, has_route )
         self.main_thing.setTabVisible(2, has_boo_areas)
+
+class ObjectAreaEdit(AreaEdit):
+    def setup_widgets(self):
+        self.position = self.add_multiple_decimal_input("Position", "position", ["x", "y", "z"],
+                                                        -inf, +inf)
+        self.scale = self.add_multiple_decimal_input("Scale", "scale", ["x", "y", "z"],
+                                                     0, +inf)
+        self.rotation = self.add_rotation_input()
+
+        self.area_type, self.area_type_label = self.add_dropdown_input("Area Type", "type", OBJECT_AREA_TYPE, True)
+
+        self.shape = self.add_dropdown_input("Shape", "shape", AREA_Shape)
+
+        self.priority = self.add_integer_input("Priority", "priority",
+                                           MIN_UNSIGNED_BYTE, MAX_UNSIGNED_BYTE)
+
+        self.setting1, self.setting1_label = self.add_integer_input("Group ID", "setting1", MIN_UNSIGNED_SHORT, MAX_UNSIGNED_SHORT, True)
+
+    def update_data(self):
+        obj: Area = get_cmn_obj(self.bound_to)
+        self.update_vector3("position", obj.position)
+        self.update_vector3("rotation", obj.rotation)
+        self.update_vector3("scale", obj.scale)
+
+        typeindex = self.area_type.findData(obj.type )
+        with QtCore.QSignalBlocker(self.area_type):
+            self.area_type.setCurrentIndex(typeindex if typeindex != -1 else 1)
+
+        if obj.shape is not None: self.shape.setCurrentIndex( obj.shape )
+        if obj.priority is not None: self.priority.setValueQuiet(obj.priority)
+        if obj.setting1 is not None: self.setting1.setValueQuiet(obj.setting1)
 
 class AreaRoutePointEdit(DataEditor):
     def __init__(self, parent, bound_to, idx=-1, kmp_file=None):

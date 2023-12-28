@@ -178,6 +178,9 @@ class MoreButtons(QtWidgets.QWidget):
             crs_options = ButtonSelectPanel("Course Groups", False, courses)
             self.vbox.addWidget(crs_options)
 
+            self.add_button("Add Object Grouper", "add_area_gener", 8)
+            self.add_button("Add Object Unloading", "add_area_gener", 9)
+
         elif isinstance(obj, MapObject):
             route_info = obj.route_info()
             if route_info:
@@ -204,8 +207,6 @@ class MoreButtons(QtWidgets.QWidget):
             self.add_button("Add Minimap Control", "add_area_gener", 5)
             self.add_button("Add BBLM Swapper", "add_area_gener", 6)
             self.add_button("Add Flying Boos", "add_area_gener", 7)
-            self.add_button("Add Object Grouper", "add_area_gener", 8)
-            self.add_button("Add Object Unloading", "add_area_gener", 9)
             self.add_button("Add Fall Boundary", "add_area_gener", 10)
 
         elif isinstance(obj, Area):
@@ -216,6 +217,9 @@ class MoreButtons(QtWidgets.QWidget):
                 self.add_button("Copy With Same Route", "copy_area_camera", obj)
             elif area.type == 4:
                 self.add_button("Assign to Closest Enemypoint", "assign_closest_enemy", obj)
+            elif area.type in (8, 9):
+                self.add_button("Add Object Grouper", "add_area_gener", 8)
+                self.add_button("Add Object Unloading", "add_area_gener", 9)
 
         elif isinstance(obj, OpeningCamera):
 
