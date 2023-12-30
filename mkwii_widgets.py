@@ -893,13 +893,11 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                         pos1 = obj.position
                         pos2 = None
                         pos3 = None
-                        if (obj.type == 1 and not obj.follow_player) or obj.type == 3:
+                        if (obj.type == 1 and not obj.follow_player):
                             pos2 = obj.position2_simple.render()
                             pos3 = obj.position3_simple.render()
                         if obj.type == 3:
                             pos1 = obj.position.render()
-                            pos2 = obj.position2_player.render()
-                            pos3 = obj.position3_player.render()
                         objlist.append( ObjectSelectionEntry(obj=obj,
                                                     pos1=pos1,
                                                     pos2=pos2,
@@ -1846,16 +1844,6 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                     elif object.type == 3:
                         self.models.render_generic_position_colored(object.position,
                                                                 bolded, "replaycamerasplayer", point_scale)
-                        pos2 = object.position2_player.render()
-                        pos3 = object.position3_player.render()
-                        self.models.draw_sphere(pos2, SPHERE_UNITS)
-                        self.models.draw_sphere(pos3, SPHERE_UNITS)
-                        glBegin(GL_LINE_STRIP)
-
-                        glVertex3f(pos2.x, -pos2.z, pos2.y)
-                        glVertex3f(pos3.x, -pos3.z, pos3.y)
-                        glEnd()
-
                 for i, route in enumerate(replaycameraroutes):
                     selected = route in selected_routes
                     bolded = route in linked_routes
