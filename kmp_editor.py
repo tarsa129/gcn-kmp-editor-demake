@@ -1188,6 +1188,9 @@ class GenEditor(QtWidgets.QMainWindow):
         self.leveldatatreeview.set_objects(self.level_file)
         self.set_has_unsaved_changes(True)
 
+    def make_default_group(self, group):
+        self.level_file.itempointgroups.make_default_group(group)
+
     def remove_all_of_type(self, item):
         obj = item.bound_to
         to_delete = []
@@ -2723,6 +2726,13 @@ class GenEditor(QtWidgets.QMainWindow):
                 delete_all_group = QtGui.QAction("Delete All in Group", self)
                 delete_all_group.triggered.connect(lambda: self.delete_all_of_group(obj))
                 context_menu.addAction(delete_all_group)
+                
+                if isinstance(obj, ItemPoint):
+                    group_idx, group, point_idx = self.level_file.itempointgroups.find_group_of_point(obj)
+                    if point_idx == 0:
+                        make_default = QtGui.QAction("Make Default Group", self)
+                        make_default.triggered.connect(lambda: self.make_default_group(group))
+                        context_menu.addAction(make_default)
             elif isinstance(obj, MapObject):
                 select_type = QtGui.QAction("Select All of Type", self)
                 select_type.triggered.connect(lambda: self.select_all_of_type(obj))

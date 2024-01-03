@@ -1325,6 +1325,9 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                 all_groups = self.level_file.itempointgroups.groups
                 selected_groups = [False] * len(all_groups)
 
+                default_points = list(set([group.nextgroup[0].points[0] for group in all_groups
+                                           if len(group.nextgroup) > 0 and len(group.points) > 0]))
+
                 point_index = 0
                 for i, group in enumerate( all_groups ):
                     if len(group.points) == 0:
@@ -1351,9 +1354,9 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                         self.models.render_generic_position_colored(point.position, point in select_optimize, point_type, point_scale)
 
 
-                        billaction_colors = [ [1.0, 0.0, 0.0], [0.5, 0.5, 0.5], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]  ]
-                        glColor3f(*billaction_colors[point.setting1])
-                        self.models.draw_cylinder(point.position, 400, 400)
+                        #billaction_colors = [ [1.0, 0.0, 0.0], [0.5, 0.5, 0.5], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]  ]
+                        #glColor3f(*billaction_colors[point.setting1])
+                        #self.models.draw_cylinder(point.position, 400, 400)
 
                         if point.dontdrop != 0:
                             glColor3f(1.0, 0.0, 0.0)
@@ -1364,7 +1367,6 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
 
                         if point.scale > 0 and point in select_optimize:
                             self.models.draw_sphere(point.position, point.scale * 50)
-
 
                         point_index += 1
 
@@ -1398,11 +1400,20 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                     if len(nextpoints) == 0:
                         continue
 
-                    glColor3f(*colors_json["ItemRoutes"][:3])
-                    for group, point in nextpoints:
+                    for j, (group, point) in enumerate(nextpoints):
+                        glColor3f(*colors_json["ItemRoutes"][:3])
+                        line_width = 4.0
 
                         if selected_groups[i]: #or selected_groups[group]:
-                            glLineWidth(8.0)
+                            line_width *= 1.5
+
+                        if j == 0 and point in default_points:
+                            glLineWidth(line_width)
+                            glColor3f(1.0, 0.0, 0.0)
+                            self.models.draw_sphere(point.position, SPHERE_UNITS)
+                            line_width *= 1.5
+
+                        glLineWidth(line_width)
 
                         glBegin(GL_LINES)
                         glVertex3f(prevpoint.position.x, -prevpoint.position.z, prevpoint.position.y)
@@ -1411,8 +1422,8 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
 
                         self.draw_arrow_head(prevpoint.position, point.position)
 
-                        if selected_groups[i]: #or selected_groups[group]:
-                            glLineWidth(4.0)
+                        #if selected_groups[i]: #or selected_groups[group]:
+                        #    glLineWidth(4.0)
 
             #for checkpoints
             all_groups = self.level_file.checkpoints.groups

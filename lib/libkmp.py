@@ -813,6 +813,10 @@ class ItemPointGroup(PointGroup):
         group = ItemPointGroup()
         return super().copy_group_after( point, group)
 
+    def make_default(self, group):
+        self.nextgroup.remove(group)
+        self.nextgroup.insert(0, group)
+
     def write_itpt(self, f):
         for point in self.points:
             point.write(f)
@@ -871,6 +875,11 @@ class ItemPointGroups(PointGroups):
             itempath = ItemPointGroup.from_file(f, i, all_points)
             itempointgroups.groups.append(itempath)
         return itempointgroups
+
+    def make_default_group(self, default_group):
+        for group in self.groups:
+            if default_group in group.nextgroup:
+                group.make_default(default_group)
 
     def write(self, f):
 
