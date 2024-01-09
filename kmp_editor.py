@@ -2327,6 +2327,8 @@ class GenEditor(QtWidgets.QMainWindow):
                     self.level_file.remove_camera(obj)
             elif isinstance(obj, PointGroup ):
                 self.level_file.remove_group(obj)
+            elif isinstance(obj, CannonPoint):
+                self.level_file.cannonpoints.remove(obj)
         self.level_view.selected = []
         self.level_view.selected_positions = []
         self.level_view.selected_rotations = []
