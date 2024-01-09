@@ -358,8 +358,8 @@ class PointGroups(object):
                     #continue
 
                 group.copy_into_group( del_group )
-
-                self.groups.remove(del_group)
+                if del_group in self.groups:
+                    self.groups.remove(del_group)
 
                 #replace this group's next with the deleted group's next
                 group.nextgroup = del_group.nextgroup.copy()
@@ -2221,7 +2221,7 @@ class Camera(RoutedObject):
         self.routeclass = CameraRoute
         self.position2_simple = self.position2
         self.position3_simple = self.position3
-        self.position2_player = Vector3Relative(Vector3(200, 5, -500), self.position)
+        self.position2_player = Vector3Relative(Vector3(200, 5, 500), self.position)
         self.position3_player = Vector3Relative(Vector3(0.0, 0.0, 0.0), self.position)
 
 

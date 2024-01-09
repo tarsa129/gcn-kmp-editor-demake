@@ -1967,7 +1967,7 @@ class GenEditor(QtWidgets.QMainWindow):
 
                             placeobject.camera.create_route(True, dummy_route, True, overwrite=True)
                             placeobject.camera.route_obj.points[0].position = placeobject.camera.position
-                        placeobject.camera.position2_player = Vector3Relative(Vector3(200, 100, -500), placeobject.camera.position)
+                        placeobject.camera.position2_player = Vector3Relative(Vector3(180, 5, 600), placeobject.camera.position)
                         placeobject.camera.position3_player = Vector3Relative(Vector3(0.0, 0.0, 0.0), placeobject.camera.position)
                 elif placeobject.type in (8, 9):
                     self.level_file.objects.areas.append(placeobject)

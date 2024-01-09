@@ -1,7 +1,7 @@
 updates:
 
 improve json files
-arrow key route point selection with objects - shift arrow vs arrow
+arrow key route point selection with objects - control arrow vs arrow
 - arrow will always only ever follow the same type
 - shift will follow a logical progression
 bring in camera stuff from mkdd editor
