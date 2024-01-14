@@ -2145,6 +2145,10 @@ class GenEditor(QtWidgets.QMainWindow):
             self.select_prev_objects()
         elif event.key() == QtCore.Qt.Key_Right:
             self.select_next_objects()
+        elif event.key() == QtCore.Qt.Key_Up:
+            self.select_parent_objects()
+        elif event.key() == QtCore.Qt.Key_Down:
+            self.select_child_objects()
 
     def keyReleaseEvent(self, event: QtGui.QKeyEvent):
         if event.key() == QtCore.Qt.Key_Shift:

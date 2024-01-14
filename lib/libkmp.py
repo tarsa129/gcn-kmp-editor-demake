@@ -216,6 +216,8 @@ class RoutedObject(PositionedObject):
         elif self.route_obj:
             self.route_obj.append(other.route_obj)
 
+        return self
+
 
 class KMPPoint(PositionedObject):
     def __init__(self, position):
@@ -1659,6 +1661,8 @@ class MapObject(RoutedObject, RotatedObject):
         return kcl_file + str(self.userdata[kcl_index]) + ".kcl"
 
     def __iadd__(self, other):
+
+        
         self = RoutedObject.__iadd__(self, other)
         self.rotation += other.rotation
         self.scale += other.scale

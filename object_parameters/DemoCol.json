@@ -24,5 +24,7 @@
         null
     ],
     "Route Info": null,
-    "Description": "Collision zone from the losing demo screen, located in a grass part from Mario Circuit; object not used in any track."
+    "Description": "Collision zone from the losing demo screen, located in a grass part from Mario Circuit; object not used in any track.",
+    "KCL File": "DemoCol",
+    "KCL Index": null
 }
