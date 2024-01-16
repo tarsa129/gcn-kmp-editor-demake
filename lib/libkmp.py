@@ -3724,7 +3724,8 @@ class KMP(object):
                 if isinstance(prev_point, Checkpoint):
                     prev_positions.append(prev_point.start)
                     prev_positions.append(prev_point.end)
-                prev_positions.append(prev_point.position)
+                else:
+                    prev_positions.append(prev_point.position)
         return prev_points, prev_positions, prev_rotations
 
     def set_selected(self, points, state=True):

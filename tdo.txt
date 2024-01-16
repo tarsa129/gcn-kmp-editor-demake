@@ -5,8 +5,6 @@ arrow key route point selection with objects -  up vs down
 - down to go to the child object, up to go to a parent object
 route point data editor should be tabbed + should list all data points if route point settings used + better support for unused values
 
---fix "select all of type" when selecting all of type of routed
-
 new features:
 handle that enemy point switching object
 area scale handlers
