@@ -129,10 +129,13 @@ class MoreButtons(QtWidgets.QWidget):
     def add_buttons(self, obj = None):
         clear_layout(self.vbox)
 
-        if obj is None or isinstance(obj, KMPHeader):
+        if obj is None:
             return
 
-        if isinstance(obj, (KMPPoint, PointGroup, PointGroups)):
+        if isinstance(obj, (KMPHeader, KMP)) or (isinstance(obj, Area) and obj.type == 5):
+            self.add_button("Add Minimap Control Area", "add_area_gener", 5)
+
+        elif isinstance(obj, (KMPPoint, PointGroup, PointGroups)):
             point_type = "Enemy"
             if isinstance(obj, (ItemPoint, ItemPointGroup, ItemPointGroups) ):
                 point_type = "Item"
@@ -204,7 +207,7 @@ class MoreButtons(QtWidgets.QWidget):
             self.add_button("Add BFG Swapper", "add_area_gener", 2)
             self.add_button("Add Moving Road With Route", "add_area_gener", 3)
             self.add_button("Add Destination Point", "add_area_gener", 4)
-            self.add_button("Add Minimap Control", "add_area_gener", 5)
+            #self.add_button("Add Minimap Control", "add_area_gener", 5)
             self.add_button("Add BBLM Swapper", "add_area_gener", 6)
             self.add_button("Add Flying Boos", "add_area_gener", 7)
             self.add_button("Add Fall Boundary", "add_area_gener", 10)
@@ -217,9 +220,13 @@ class MoreButtons(QtWidgets.QWidget):
                 self.add_button("Copy With Same Route", "copy_area_camera", obj)
             elif area.type == 4:
                 self.add_button("Assign to Closest Enemypoint", "assign_closest_enemy", obj)
+                self.add_button("Copy Current Area", "copy_area_camera", obj)
             elif area.type in (8, 9):
                 self.add_button("Add Object Grouper", "add_area_gener", 8)
                 self.add_button("Add Object Unloading", "add_area_gener", 9)
+                self.add_button("Copy Current Area", "copy_area_camera", obj)
+            else:
+                self.add_button("Copy Current Area", "copy_area_camera", obj)
 
         elif isinstance(obj, OpeningCamera):
 

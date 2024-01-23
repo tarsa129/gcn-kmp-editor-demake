@@ -375,6 +375,9 @@ class GenEditor(QtWidgets.QMainWindow):
                 extend(selected_position.absolute())
             return tuple(extent) or (0, 0, 0, 0, 0, 0)
 
+        if self.visibility_menu.trackinfo.is_visible():
+            for area in self.level_file.minimap_areas:
+                extend(area.position)
         if self.visibility_menu.enemyroutes.is_visible():
             for enemy_path in self.level_file.enemypointgroups.groups:
                 for enemy_path_point in enemy_path.points:
@@ -1969,6 +1972,8 @@ class GenEditor(QtWidgets.QMainWindow):
                             placeobject.camera.route_obj.points[0].position = placeobject.camera.position
                         placeobject.camera.position2_player = Vector3Relative(Vector3(180, 5, 600), placeobject.camera.position)
                         placeobject.camera.position3_player = Vector3Relative(Vector3(0.0, 0.0, 0.0), placeobject.camera.position)
+                elif placeobject.type == 5:
+                    self.level_file.minimap_areas.append(placeobject)
                 elif placeobject.type in (8, 9):
                     self.level_file.objects.areas.append(placeobject)
                 else:

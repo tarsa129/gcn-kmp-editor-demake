@@ -402,8 +402,8 @@ class LevelDataTreeView(QtWidgets.QTreeWidget):
         self.setHeaderHidden(True)
         self.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
 
-        self.kmpheader = KMPHeader()
-        self.addTopLevelItem(self.kmpheader)
+        self.kmpheader = self._add_group("Track Info")# MPHeader()
+        #self.addTopLevelItem(self.kmpheader)
 
         self.kartpoints = self._add_group("Kart Start Points", ObjectGroupKartPoints)
         self.enemyroutes = self._add_group("Enemy Routes")
@@ -612,6 +612,7 @@ class LevelDataTreeView(QtWidgets.QTreeWidget):
             self.objects.addChild(item)"""
 
     def bound_to_group(self, levelfile):
+        self.kmpheader.bound_to = levelfile
         self.enemyroutes.bound_to = levelfile.enemypointgroups
         self.itemroutes.bound_to = levelfile.itempointgroups
         self.checkpointgroups.bound_to = levelfile.checkpoints

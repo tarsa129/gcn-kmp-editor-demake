@@ -704,6 +704,8 @@ def choose_data_editor(obj):
     elif isinstance(obj, Area):
         if obj.type == 0:
             return ReplayAreaEdit
+        elif obj.type == 5:
+            return MinimapAreaEdit
         elif obj.type in (8, 9):
             return ObjectAreaEdit
         else:
@@ -1341,8 +1343,8 @@ class AreaEdit(DataEditor):
             with QtCore.QSignalBlocker(self.area_type):
                 self.area_type.setCurrentIndex(typeindex if typeindex != -1 else 1)
 
-        self.area_type.setVisible(obj.type != 0)
-        self.area_type_label.setVisible(obj.type != 0)
+        self.area_type.setVisible(obj.type not in (0,5))
+        self.area_type_label.setVisible(obj.type not in (0,5))
 
         if obj.shape is not None: self.shape.setCurrentIndex( obj.shape )
 
@@ -1708,6 +1710,14 @@ class SpecialAreaEdit(DataEditor):
         has_route = isinstance(route_obj, list) and len(route_obj) > 0
         self.main_thing.setTabVisible(1, has_route )
         self.main_thing.setTabVisible(2, has_boo_areas)
+
+
+class MinimapAreaEdit(AreaEdit):
+    def setup_widgets(self):
+        super().setup_widgets()
+        self.area_type.setVisible(False)
+        self.area_type_label.setVisible(False)
+
 
 class ObjectAreaEdit(AreaEdit):
     def setup_widgets(self):

@@ -781,7 +781,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                 objlist = []
                 offset = 0
 
-                #self.dolphin.render_collision(self, objlist)
+                #self.dolphin.render_collision(self, objlist)s
 
                 if vismenu.enemyroutes.is_selectable():
                     for i, obj in enumerate(obj for obj in self.level_file.enemypointgroups.points() if obj not in selected):
@@ -946,7 +946,8 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                         (vismenu.replaycameras.is_selectable(), self.level_file.replayareas),
                         (vismenu.respawnpoints.is_selectable(), self.level_file.respawnpoints),
                         (vismenu.cannonpoints.is_selectable(), self.level_file.cannonpoints),
-                        (vismenu.missionsuccesspoints.is_selectable(), self.level_file.missionpoints)
+                        (vismenu.missionsuccesspoints.is_selectable(), self.level_file.missionpoints),
+                        (vismenu.trackinfo.is_selectable(), self.level_file.minimap_areas),
 
                         ):
                     if not is_selectable:
@@ -1219,6 +1220,22 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
             positions = self.selected_positions
 
             select_optimize = {x:True for x in selected}
+
+            if vismenu.trackinfo.is_visible():
+                for object in self.level_file.minimap_areas:
+                    self.models.render_generic_position_rotation_colored("minimapareas",
+                                                                object.position, object.rotation,
+                                                                object in select_optimize, point_scale)
+                    if object in select_optimize:
+                        glColor4f(*colors_selection)
+                        glLineWidth(3.0)
+                    else:
+                        glColor4f(*colors_json["MinimapArea"])
+                        glLineWidth(1.0)
+                    if object.shape == 0:
+                        self.models.draw_wireframe_cube(object.position, object.rotation, object.scale*100 * 100)
+                    else:
+                        self.models.draw_wireframe_cylinder(object.position, object.rotation, object.scale*50 * 100)
 
             if vismenu.enemyroutes.is_visible():
                 enemypoints_to_highlight = set()
@@ -1970,23 +1987,20 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                                                                  object in select_optimize, point_scale)
 
         if self.level_file is not None:
-            if vismenu.replaycameras.is_visible():
-                for object in self.level_file.replayareas:
-                    color = colors_json["SelectedReplayAreaFill"] if object in select_optimize else colors_json["ReplayAreaFill"]
+            normal_areas = (
+                (vismenu.replaycameras.is_visible(), self.level_file.replayareas, "SelectedReplayAreaFill", "ReplayAreaFill"),
+                (vismenu.areas.is_visible(), self.level_file.areas, "SelectedAreaFill", "AreaFill"),
+                (vismenu.objects.is_visible(), self.level_file.objects.areas.get_type(8),  "ObjectArea8FillSelected",  "ObjectArea8Fill"  ),
+                (vismenu.objects.is_visible(), self.level_file.objects.areas.get_type(9),  "ObjectArea9FillSelected",  "ObjectArea9Fill"  ),
+                (vismenu.trackinfo.is_visible(), self.level_file.minimap_areas, "SelectedMinimapAreaFill", "MinimapAreaFill")
+            )
+            for condition, areas, area_color1, area_color2 in normal_areas:
+                if not condition:
+                    continue
+                for object in areas:
+                    color = colors_json[area_color1] if object in select_optimize else colors_json[area_color2]
                     if object.shape == 0 and self.mode == MODE_TOPDOWN:
                         TransPlane.render_srt(object.position, object.rotation, object.scale,
-                                              Vector3(-100, 0, -100), Vector3(100, 0, 100),
-                                              color)
-                    elif object.shape == 0:
-                        TransPlane.render_box_srt(object.position, object.rotation, object.scale, color)
-                    else:
-                        glColor4f(*color)
-                        self.models.render_trans_cylinder(object.position, object.rotation, object.scale*50 * 100)
-            if vismenu.areas.is_visible():
-                for object in self.level_file.areas:
-                    color = colors_json["SelectedAreaFill"] if object in select_optimize else colors_json["AreaFill"]
-                    if object.shape == 0 and self.mode == MODE_TOPDOWN:
-                            TransPlane.render_srt(object.position, object.rotation, object.scale,
                                                 Vector3(-100, 0, -100), Vector3(100, 0, 100),
                                                 color)
                     elif object.shape == 0:
@@ -1995,22 +2009,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                         glColor4f(*color)
                         self.models.render_trans_cylinder(object.position, object.rotation, object.scale*50 * 100)
 
-            if vismenu.objects.is_visible():
-                for object in self.level_file.objects.areas:
-                    if object.type == 8:
-                        color = colors_json["ObjectArea8FillSelected"] if object in select_optimize else colors_json["ObjectArea8Fill"]
-                    else:
-                        color = colors_json["ObjectArea9FillSelected"] if object in select_optimize else colors_json["ObjectArea9Fill"]
-                    if object.shape == 0 and self.mode == MODE_TOPDOWN:
-                            TransPlane.render_srt(object.position, object.rotation, object.scale,
-                                                Vector3(-100, 0, -100), Vector3(100, 0, 100),
-                                                color)
-                    elif object.shape == 0:
-                        TransPlane.render_box_srt(object.position, object.rotation, object.scale, color)
-                    else:
-                        glColor4f(*color)
-                        self.models.render_trans_cylinder(object.position, object.rotation, object.scale*50 * 100)
-            if vismenu.checkpoints.is_visible() and self.mode == MODE_3D:
+            if False and vismenu.checkpoints.is_visible() and self.mode == MODE_3D:
                 glEnable(GL_CULL_FACE)
                 rotation = Rotation.from_euler(Vector3(0, 90, 0))
                 for group in self.level_file.checkpoints.groups:
@@ -2435,6 +2434,8 @@ class FilterViewMenu(QtWidgets.QMenu):
             colors = json.load(f)
             colors = {k: (round(r * 255), round(g * 255), round(b * 255)) for k, (r, g, b, _a) in colors.items()}
 
+        self.trackinfo = ObjectViewSelectionToggle("Track Info", self, True, [colors["StartPoints"]])
+
         self.kartstartpoints = ObjectViewSelectionToggle("Kart Start Points", self, True,
                                                          [colors["StartPoints"]])
 
@@ -2459,7 +2460,8 @@ class FilterViewMenu(QtWidgets.QMenu):
             action.action_select_toggle.triggered.connect(self.emit_update)
 
     def get_entries(self):
-        return (self.enemyroutes,
+        return (self.trackinfo,
+                self.enemyroutes,
                 self.itemroutes,
                 self.checkpoints,
                 self.respawnpoints,

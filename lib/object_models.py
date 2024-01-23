@@ -50,6 +50,8 @@ class ObjectModels(object):
         self.areas = GenericObject(colors["Areas"])
         self.areapoint = Cylinder(colors["AreaRoutes"])
 
+        self.minimapareas = GenericObject(colors["MinimapArea"])
+
         self.startpoints = GenericObject(colors["StartPoints"])
         self.cannons = GenericObject(colors["Cannons"])
         self.missions = GenericObject(colors["Missions"])
@@ -81,6 +83,7 @@ class ObjectModels(object):
                      self.camera, self.camerapoint,
                      self.replayareas, self.replaycameras, self.replaycamerasplayer, self.replaycamerapoint,
                      self.areas, self.areapoint,
+                     self.minimapareas,
                      self.startpoints, self.cannons, self.missions):
             cube.generate_displists()
 

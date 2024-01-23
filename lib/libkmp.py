@@ -1701,7 +1701,7 @@ class MapObjects(ObjectContainer):
         self.flare_alpha = 0x32
         self.speed_modifier = 0
 
-        self.areas = []
+        self.areas = Areas()
 
     @classmethod
     def from_file(cls, f, objectcount):
@@ -2609,6 +2609,8 @@ class KMP(object):
         self.flare_alpha = 0x32
         self.speed_modifier = 0
 
+        self.minimap_areas = []
+
         self.kartpoints = KartStartPoints()
         self.enemypointgroups = EnemyPointGroups()
         self.itempointgroups = ItemPointGroups()
@@ -2619,6 +2621,9 @@ class KMP(object):
         self.objects = MapObjects()
 
         self.areas = Areas()
+
+        self.effect_areas = Areas()
+        self.collision_areas = Areas()
 
         self.replayareas = ReplayAreas()
 
@@ -2677,12 +2682,6 @@ class KMP(object):
         for route in self.routes:
             for point in route.points:
                 yield point
-        for route in self.cameraroutes():
-            for point in route.points:
-                yield point
-        for route in self.arearoutes():
-            for point in route.points:
-                yield point
 
     def objects_with_2positions(self):
         for group in self.checkpoints.groups:
@@ -2690,6 +2689,10 @@ class KMP(object):
                 yield point
 
     def objects_with_rotations(self):
+        for object in self.minimap_areas:
+            assert object is not None
+            yield object
+
         for object in self.objects:
             assert object is not None
             yield object
@@ -3000,11 +3003,15 @@ class KMP(object):
                     It will be assigned to the closest enemypoint instead.\n"
                 area.find_closest_enemypoint()
 
-        """separate areas into replay and not"""
+        """separate areas"""
         self.replayareas.extend( self.areas.get_type(0) )
         for area in self.replayareas:
             self.areas.remove(area)
         self.areas.sort( key = lambda h: h.type)
+
+        self.minimap_areas.extend(self.areas.get_type(5))
+        for area in self.minimap_areas:
+            self.areas.remove(area)
 
         """separate cameras into replay and not"""
 
@@ -3037,6 +3044,8 @@ class KMP(object):
         #sep replay cameras
         replaycams = self.replayareas.get_cameras()
         for camera in replaycams:
+            if isinstance(camera, GoalCamera):
+                continue
             self.cameras.remove(camera)
             camera = ReplayCamera.from_generic(camera)
 
@@ -3111,7 +3120,8 @@ class KMP(object):
             if len(boo_objs) > 1:
                 return_string += "Multiple boo objects are in the .kmp. Only one of them will be preserved.\n"
 
-        object_areas = [area for area in self.areas if area.type in (8, 9)]
+        object_areas = Areas()
+        object_areas.extend([area for area in self.areas if area.type in (8, 9)])
         self.objects.areas = object_areas
         for area in object_areas:
             self.areas.remove(area)
@@ -3217,6 +3227,7 @@ class KMP(object):
         areas.extend( self.areas  )
         areas.extend( self.replayareas )
         areas.extend( self.objects.areas )
+        areas.extend( self.minimap_areas )
         areas.write(f, cameras, routes, self.enemypointgroups )
 
         startcam = self.cameras.startcam
@@ -3613,6 +3624,8 @@ class KMP(object):
             self.replayareas.remove(area)
             if area.camera is not None and not self.camera_used_by(area.camera):
                 self.remove_camera(area.camera)
+        elif area.type == 5:
+            self.minimap_areas.remove(area)
         elif area.type in (8, 9):
             self.objects.areas.remove(area)
         else:
