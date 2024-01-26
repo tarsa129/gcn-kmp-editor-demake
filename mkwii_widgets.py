@@ -942,7 +942,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                 for is_selectable, collection in (
                         (vismenu.kartstartpoints.is_selectable(), self.level_file.kartpoints),
                         (vismenu.areas.is_selectable(), self.level_file.areas),
-                        (vismenu.objects.is_selectable(), self.level_file.objects.areas),
+                        (vismenu.objectareas.is_selectable(), self.level_file.object_areas),
                         (vismenu.replaycameras.is_selectable(), self.level_file.replayareas),
                         (vismenu.respawnpoints.is_selectable(), self.level_file.respawnpoints),
                         (vismenu.cannonpoints.is_selectable(), self.level_file.cannonpoints),
@@ -1698,10 +1698,14 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                     glColor3f(*colors_json["Objects"][:3])
                     self.models.draw_sphere(obj.position, SPHERE_UNITS)
 
-                object_areas = self.level_file.objects.areas
+            if vismenu.objectareas.is_visible():
+                object_areas = self.level_file.object_areas
 
-                selected_object_areas = list(set([area.setting1 for area in object_areas if area in select_optimize]))
-                for object in object_areas:
+                object_load_areas = [area for area in object_areas if area.type in (8,9)]
+                boo_areas = [area for area in object_areas if area.type == 7]
+
+                selected_object_areas = list(set([area.setting1 for area in object_load_areas if area in select_optimize]))
+                for object in object_load_areas:
                     self.models.render_generic_position_rotation_colored("objectarea",
                                                                 object.position, object.rotation,
                                                                 object in select_optimize, point_scale)
@@ -1724,14 +1728,31 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                     else:
                         self.models.draw_wireframe_cylinder(object.position, object.rotation, object.scale*50 * 100)
 
-                glColor3f(0.0, 1.0, 0.0)
-                load_areas_selected = [area for area in object_areas
-                                       if area.setting1 in selected_object_areas and area.type == 8]
-                for object in [obj for obj in self.level_file.objects if obj.objectid in grouped_objects_json]:
-                    for area in load_areas_selected:
-                        if area.check(object.position):
-                            self.models.draw_sphere( object.position, SPHERE_UNITS)
-                            break
+                for object in boo_areas:
+                    self.models.render_generic_position_rotation_colored("areas",
+                                                                object.position, object.rotation,
+                                                                object in select_optimize, point_scale)
+                    if object in select_optimize:
+                        glColor4f(*colors_selection)
+                        glLineWidth(3.0)
+                    else:
+                        glColor4f(*colors_area)
+                        glLineWidth(1.0)
+
+                    if object.shape == 0:
+                        self.models.draw_wireframe_cube(object.position, object.rotation, object.scale*100 * 100)
+                    else:
+                        self.models.draw_wireframe_cylinder(object.position, object.rotation, object.scale*50 * 100)
+
+                if vismenu.objects.is_visible() and object_load_areas:
+                    glColor3f(0.0, 1.0, 0.0)
+                    load_areas_selected = [area for area in object_areas
+                                        if area.setting1 in selected_object_areas and area.type == 8]
+                    for object in [obj for obj in self.level_file.objects if obj.objectid in grouped_objects_json]:
+                        for area in load_areas_selected:
+                            if area.check(object.position):
+                                self.models.draw_sphere( object.position, SPHERE_UNITS)
+                                break
 
             if vismenu.kartstartpoints.is_visible():
                 for object in self.level_file.kartpoints:
@@ -1990,8 +2011,8 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
             normal_areas = (
                 (vismenu.replaycameras.is_visible(), self.level_file.replayareas, "SelectedReplayAreaFill", "ReplayAreaFill"),
                 (vismenu.areas.is_visible(), self.level_file.areas, "SelectedAreaFill", "AreaFill"),
-                (vismenu.objects.is_visible(), self.level_file.objects.areas.get_type(8),  "ObjectArea8FillSelected",  "ObjectArea8Fill"  ),
-                (vismenu.objects.is_visible(), self.level_file.objects.areas.get_type(9),  "ObjectArea9FillSelected",  "ObjectArea9Fill"  ),
+                (vismenu.objectareas.is_visible(), self.level_file.object_areas.get_type(8),  "ObjectArea8FillSelected",  "ObjectArea8Fill"  ),
+                (vismenu.objectareas.is_visible(), self.level_file.object_areas.get_type(9),  "ObjectArea9FillSelected",  "ObjectArea9Fill"  ),
                 (vismenu.trackinfo.is_visible(), self.level_file.minimap_areas, "SelectedMinimapAreaFill", "MinimapAreaFill")
             )
             for condition, areas, area_color1, area_color2 in normal_areas:
@@ -2448,6 +2469,7 @@ class FilterViewMenu(QtWidgets.QMenu):
         self.respawnpoints = ObjectViewSelectionToggle("Respawn Points", self, True,
                                                        [colors["Respawn"]])
         self.objects = ObjectViewSelectionToggle("Objects", self, True, [colors["Objects"]])
+        self.objectareas = ObjectViewSelectionToggle("Object Areas", self, True, [colors["Objects"]])
         self.areas = ObjectViewSelectionToggle("Areas", self, True, [colors["Areas"]])
         self.replaycameras = ObjectViewSelectionToggle("ReplayCameras", self, True, [colors["Camera"]])
         self.cameras = ObjectViewSelectionToggle("Cameras", self, True, [colors["Camera"]])
@@ -2466,6 +2488,7 @@ class FilterViewMenu(QtWidgets.QMenu):
                 self.checkpoints,
                 self.respawnpoints,
                 self.objects,
+                self.objectareas,
                 self.areas,
                 self.replaycameras,
                 self.cameras,

@@ -42,17 +42,21 @@ AREA_Type["Environment Effect"] = 1
 AREA_Type["BFG Swapper"] = 2
 AREA_Type["Moving Road"] = 3
 AREA_Type["Destination Point"] = 4
-AREA_Type["Minimap Control"] = 5
 AREA_Type["BBLM Swapper"] = 6
-AREA_Type["Flying Boos"] = 7
 AREA_Type["Fall Boundary"] = 10
 
 OBJECT_AREA_TYPE = OrderedDict()
+OBJECT_AREA_TYPE["Flying Boos"] = 7
 OBJECT_AREA_TYPE["Object Grouper"] = 8
 OBJECT_AREA_TYPE["Group Unloading"] = 9
 
+AREA_TYPES  = OrderedDict()
+
 AREA_TYPES = [ "Camera (don't use aaaa)", "Environment Effect","BFG Swapper", "Moving Road", "Destination Point" , "Minimap Control",
-               "BBLM Swapper", "Flying Boos", "Object Grouper", "Group Unloading", "Fall Boundary"]
+               "BBLM Swapper", "Flying Boos", "Group Load", "Group Unload", "Fall Boundary"]
+
+
+
 
 AREA_Shape = OrderedDict()
 AREA_Shape["Box"] = 0

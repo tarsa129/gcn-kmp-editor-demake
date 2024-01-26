@@ -1701,8 +1701,6 @@ class MapObjects(ObjectContainer):
         self.flare_alpha = 0x32
         self.speed_modifier = 0
 
-        self.areas = Areas()
-
     @classmethod
     def from_file(cls, f, objectcount):
         mapobjs = cls()
@@ -2000,8 +1998,8 @@ class Area(RoutedObject, RotatedObject):
         elif self.type == 4:
             self.find_closest_enemypoint
         elif self.type == 7:
-            if __class__.level_file.areas.boo_obj is None:
-                __class__.level_file.areas.boo_obj = MapObject.new(396)
+            if __class__.level_file.object_areas.boo_obj is None:
+                __class__.level_file.object_areas.boo_obj = MapObject.new(396)
 
     def __iadd__(self, other):
         self = RoutedObject.__iadd__(self, other)
@@ -2032,7 +2030,6 @@ class Area(RoutedObject, RotatedObject):
 class Areas(ObjectContainer):
     def __init__(self):
         super().__init__()
-        self.boo_obj = None
 
     @classmethod
     def from_file(cls, f, count):
@@ -2076,17 +2073,24 @@ class Areas(ObjectContainer):
         super().set_selected(state)
         for route in self.get_routes():
             route.set_selected(state)
-    
+
     def set_selected_from_float(self):
         super().set_selected_from_float()
         for route in self.get_routes():
             route.set_selected_from_float()
-    
+
     def get_selected(self):
         selected_points = super().get_selected()
         for route in self.get_routes():
             selected_points.extend(route.get_selected())
         return selected_points
+
+
+class ObjectAreas(Areas):
+    def __init__(self):
+        super().__init__()
+        self.boo_obj = None
+
 
 class ReplayAreas(Areas):
     def __init__(self):
@@ -2101,7 +2105,7 @@ class ReplayAreas(Areas):
         if include_empty:
             return list(set(routes))
         return list(set([x for x in routes if len(x.points) > 1]))
-    
+
     def set_selected(self, state):
         super().set_selected(state)
         for route in self.get_routes():
@@ -2619,6 +2623,7 @@ class KMP(object):
         self.routes = ObjectContainer()
 
         self.objects = MapObjects()
+        self.object_areas = ObjectAreas()
 
         self.areas = Areas()
 
@@ -3112,19 +3117,18 @@ class KMP(object):
         boo_areas = [area for area in self.areas if area.type == 7]
         if not boo_objs and boo_areas:
             return_string += "Boo Areas are in the .kmp, but no boo objects exist. A boo object will be added.\n"
-            self.areas.boo_obj = MapObject.new(396)
+            self.object_areas.boo_obj = MapObject.new(396)
         elif boo_objs and not boo_areas:
             return_string += "Boo objects are in the .kmp, but no boo areas exist. The boo objects will be removed.\n"
         elif boo_objs and boo_areas:
-            self.areas.boo_obj = boo_objs[0]
+            self.object_areas.boo_obj = boo_objs[0]
             if len(boo_objs) > 1:
                 return_string += "Multiple boo objects are in the .kmp. Only one of them will be preserved.\n"
 
-        object_areas = Areas()
-        object_areas.extend([area for area in self.areas if area.type in (8, 9)])
-        self.objects.areas = object_areas
-        for area in object_areas:
-            self.areas.remove(area)
+        self.object_areas.extend([area for area in self.areas if area.type in (8, 9)])
+        [self.areas.remove(area) for area in self.object_areas]
+        self.object_areas.extend(boo_areas)
+        [self.areas.remove(boo_area) for boo_area in boo_areas]
 
         """eline_control"""
         eline_control_objs = [obj for obj in self.objects if obj.objectid == 20]
@@ -3194,8 +3198,8 @@ class KMP(object):
 
         all_objects = MapObjects()
         all_objects.extend(self.objects)
-        if self.areas.boo_obj is not None and self.areas.get_type(7):
-            all_objects.append(self.areas.boo_obj)
+        if self.object_areas.boo_obj is not None and self.object_areas.get_type(7):
+            all_objects.append(self.object_areas.boo_obj)
 
         offsets.append(f.tell() ) #offset 8 for gobj
         all_objects.write(f, routes)
@@ -3226,7 +3230,7 @@ class KMP(object):
         areas = Areas()
         areas.extend( self.areas  )
         areas.extend( self.replayareas )
-        areas.extend( self.objects.areas )
+        areas.extend( self.object_areas )
         areas.extend( self.minimap_areas )
         areas.write(f, cameras, routes, self.enemypointgroups )
 
@@ -3626,8 +3630,8 @@ class KMP(object):
                 self.remove_camera(area.camera)
         elif area.type == 5:
             self.minimap_areas.remove(area)
-        elif area.type in (8, 9):
-            self.objects.areas.remove(area)
+        elif area.type in (7, 8, 9):
+            self.object_areas.remove(area)
         else:
             self.areas.remove(area)
 

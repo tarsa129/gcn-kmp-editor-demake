@@ -413,6 +413,7 @@ class LevelDataTreeView(QtWidgets.QTreeWidget):
         self.respawnpoints = self._add_group("Respawn Points")
 
         self.objects = self._add_group("Objects", ObjectGroupObjects)
+        self.objectareas = self._add_group("Object Areas")
 
         self.areas = self._add_group("Areas")
         self.replayareas = self._add_group("Replay Cameras")
@@ -523,6 +524,7 @@ class LevelDataTreeView(QtWidgets.QTreeWidget):
         self.itemroutes.remove_children()
         self.checkpointgroups.remove_children()
         self.objects.remove_children()
+        self.objectareas.remove_children()
         self.kartpoints.remove_children()
         self.areas.remove_children()
         self.replayareas.remove_children()
@@ -559,6 +561,9 @@ class LevelDataTreeView(QtWidgets.QTreeWidget):
 
         for object in kmpdata.objects:
             object_item = ObjectEntry(self.objects, "Object", object)
+        
+        for objectarea in kmpdata.object_areas:
+            item = AreaEntry(self.objectareas, "Object Areas", objectarea)
 
         self.sort_objects()
 
@@ -617,6 +622,7 @@ class LevelDataTreeView(QtWidgets.QTreeWidget):
         self.itemroutes.bound_to = levelfile.itempointgroups
         self.checkpointgroups.bound_to = levelfile.checkpoints
         self.objects.bound_to = levelfile.objects
+        self.objectareas.bound_to = levelfile.object_areas
         self.kartpoints.bound_to = levelfile.kartpoints
         levelfile.kartpoints.widget = self.kartpoints
         self.kartpoints.set_name()

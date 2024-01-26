@@ -706,6 +706,8 @@ def choose_data_editor(obj):
             return ReplayAreaEdit
         elif obj.type == 5:
             return MinimapAreaEdit
+        elif obj.type == 7:
+            return BooAreaEdit
         elif obj.type in (8, 9):
             return ObjectAreaEdit
         else:
@@ -1655,6 +1657,24 @@ class CameraRoutePointEdit(DataEditor):
         obj = self.bound_to[0]
         self.unk1.setValueQuiet((obj.unk1))
 
+class BooAreaEdit(DataEditor):
+    def setup_widgets(self):
+        self.main_thing = QtWidgets.QTabWidget()
+        self.vbox.addWidget(self.main_thing)
+
+        self.area_edit = AreaEdit(self.parent(), self.bound_to)
+        self.area_edit.area_type.setVisible(False)
+        self.area_edit.area_type_label.setVisible(False)
+        self.main_thing.addTab(self.area_edit, "Area")
+
+        self.object_edit = BooEdit(self.parent(), [self.kmp_file.object_areas.boo_obj])
+        self.main_thing.addTab(self.object_edit, "Boo Object")
+
+    def update_data(self):
+        self.area_edit.update_data()
+        self.object_edit.update_data()
+
+
 class SpecialAreaEdit(DataEditor):
     def setup_widgets(self):
         self.main_thing = QtWidgets.QTabWidget()
@@ -1674,7 +1694,7 @@ class SpecialAreaEdit(DataEditor):
         if route_obj:
             self.route_edit = AreaRouteEdit(self.parent(), route_obj)
         if has_boo_areas:
-            self.object_edit = BooEdit(self.parent(), [self.kmp_file.areas.boo_obj])
+            self.object_edit = BooEdit(self.parent(), [self.kmp_file.object_areas.boo_obj])
 
         route_tab_enabled = isinstance(route_obj, list) and len(route_obj) > 0
         self.main_thing.addTab(self.route_edit, "Route")
@@ -1700,7 +1720,7 @@ class SpecialAreaEdit(DataEditor):
         if isinstance(self.object_edit, DataEditor) and has_boo_areas:
             self.object_edit.update_data()
         elif has_boo_areas:
-            self.object_edit = BooEdit(self.parent(), [self.kmp_file.areas.boo_obj], self.kmp_file)
+            self.object_edit = BooEdit(self.parent(), [self.kmp_file.object_areas.boo_obj], self.kmp_file)
             self.object_edit.update_data()
             self.main_thing.removeTab(2)
             self.main_thing.addTab(self.object_edit, "Boo Object")

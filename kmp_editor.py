@@ -1974,15 +1974,14 @@ class GenEditor(QtWidgets.QMainWindow):
                         placeobject.camera.position3_player = Vector3Relative(Vector3(0.0, 0.0, 0.0), placeobject.camera.position)
                 elif placeobject.type == 5:
                     self.level_file.minimap_areas.append(placeobject)
-                elif placeobject.type in (8, 9):
-                    self.level_file.objects.areas.append(placeobject)
+                elif placeobject.type in (7, 8, 9):
+                    self.level_file.object_areas.append(placeobject)
+                    if placeobject.type == 7 and self.level_file.object_areas.boo_obj is None:
+                        self.level_file.object_areas.boo_obj = MapObject.new(396)
                 else:
                     self.level_file.areas.append(placeobject)
                     if placeobject.type == 4:
                         placeobject.find_closest_enemypoint()
-                    elif placeobject.type == 7:
-                        if self.level_file.areas.boo_obj is None:
-                            self.level_file.areas.boo_obj = MapObject.new(396)
             elif isinstance(object, libkmp.OpeningCamera):
                 self.level_file.cameras.append(placeobject)
                 if placeobject.route_obj is not None:

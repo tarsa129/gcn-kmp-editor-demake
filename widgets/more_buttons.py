@@ -202,6 +202,11 @@ class MoreButtons(QtWidgets.QWidget):
             self.add_button("Add Area + Player Origin Stationary Cam", "add_rarea_player", False)
             self.add_button("Preview Cameras", "preview_replay", obj)
 
+        elif isinstance(obj, ObjectAreas):
+            self.add_button("Add Flying Boos", "add_area_gener", 7)
+            self.add_button("Add Object Grouper", "add_area_gener", 8)
+            self.add_button("Add Object Unloading", "add_area_gener", 9)
+
         elif isinstance(obj, Areas):
             self.add_button("Add Environment Effect", "add_area_gener", 1)
             self.add_button("Add BFG Swapper", "add_area_gener", 2)
@@ -209,7 +214,6 @@ class MoreButtons(QtWidgets.QWidget):
             self.add_button("Add Destination Point", "add_area_gener", 4)
             #self.add_button("Add Minimap Control", "add_area_gener", 5)
             self.add_button("Add BBLM Swapper", "add_area_gener", 6)
-            self.add_button("Add Flying Boos", "add_area_gener", 7)
             self.add_button("Add Fall Boundary", "add_area_gener", 10)
 
         elif isinstance(obj, Area):
