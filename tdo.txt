@@ -5,6 +5,11 @@ improve area rendering
 * setting to scale cylinder indicators separate from points
 * move these settings to "view"
 
+improve rendering in general
+* setting to render / not render arrows
+
+separate out effect vs collision areas
+
 improve json files
 arrow key route point selection with objects -  up vs down
 - down to go to the child object, up to go to a parent object

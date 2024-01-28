@@ -241,7 +241,7 @@ def _collide_ray_and_triangle(
             if dot(nx, ny, nz, *cross(*subtract(x0, y0, z0, x2, y2, z2), *C2)) >= 0.0:
                 return d, *intersection_point
 
-    return 999999999990.0, 0.0, 0.0, 0.0
+    return -1, 0.0, 0.0, 0.0
 
 
 @numba.jit(nopython=True, nogil=True, cache=True)
