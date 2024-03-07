@@ -349,7 +349,9 @@ class PointGroups(object):
                 return
             group = self.groups[i]
             #if this group only has one next, and the nextgroup only has one prev, they can be merged
+            print(f"group {hex(i)} with numnuext of {group.num_next()}, {group.nextgroup}")
             if group.num_next() == 1 and group.nextgroup[0].num_prev() == 1:
+                print(f"merge group {hex(i)}")
                 if first_group in group.nextgroup:
                     i += 1 #do not merge with the start
                     continue
@@ -599,8 +601,8 @@ class EnemyPointGroup(PointGroup):
         len = read_uint8(f)
 
 
-        group.prevgroup = list(unpack(">bbbbbb", f.read(6)) )
-        group.nextgroup = list(unpack(">bbbbbb", f.read(6)) )
+        group.prevgroup = list(unpack(">BBBBBB", f.read(6)) )
+        group.nextgroup = list(unpack(">BBBBBB", f.read(6)) )
         f.read( 2)
 
         for i in range(start_idx, start_idx + len):
@@ -733,7 +735,7 @@ class ItemPoint(KMPPoint):
 
     @classmethod
     def new(cls):
-        return cls( Vector3(0.0, 0.0, 0.0), 1, 0, 0)
+        return cls( Vector3(0.0, 0.0, 0.0), 10, 0, 0)
 
     def set_setting2(self, setting2):
         self.unknown = setting2 & 0x4
@@ -798,8 +800,8 @@ class ItemPointGroup(PointGroup):
         len = read_uint8(f)
 
 
-        group.prevgroup = list( unpack(">bbbbbb", f.read(6)) )
-        group.nextgroup = list(unpack(">bbbbbb", f.read(6)) )
+        group.prevgroup = list( unpack(">BBBBBB", f.read(6)) )
+        group.nextgroup = list(unpack(">BBBBBB", f.read(6)) )
         f.read( 2)
 
         for i in range(start_idx, start_idx + len):
@@ -1049,8 +1051,8 @@ class CheckpointGroup(PointGroup):
                 assert( all_points[start_point + length - 1].next == 0xFF)
         checkpointgroup.points = all_points[start_point: start_point + length]
 
-        checkpointgroup.prevgroup = list(unpack(">bbbbbb", f.read(6)))
-        checkpointgroup.nextgroup = list(unpack(">bbbbbb", f.read(6)))
+        checkpointgroup.prevgroup = list(unpack(">BBBBBB", f.read(6)))
+        checkpointgroup.nextgroup = list(unpack(">BBBBBB", f.read(6)))
         f.read(2)
 
         return checkpointgroup
@@ -2549,6 +2551,8 @@ class CannonPoint(RotatedObject):
         cannon = cls(position, rotation)
         cannon.id = read_uint16(f)
         cannon.shoot_effect = read_int16(f)
+        if cannon.shoot_effect > 3 or cannon.shoot_effect < 0:
+            cannon.shoot_effect = 0
 
         return cannon
 
@@ -2556,6 +2560,7 @@ class CannonPoint(RotatedObject):
     def write(self, f):
         self.write_position(f)
         self.rotation.write(f)
+        print(self.shoot_effect)
         f.write(pack(">Hh", self.id, self.shoot_effect) )
 
 
@@ -2964,11 +2969,12 @@ class KMP(object):
                 obj.route_obj = route
 
         #remove self-linked routes
-        for grouped_things in (self.enemypointgroups.groups, self.itempointgroups.groups, self.checkpoints.groups):
+        for group_collection in (self.enemypointgroups, self.itempointgroups, self.checkpoints):
+            grouped_things = group_collection.groups
             #set the proper prevnext
             for i, group in enumerate(grouped_things):
-                group.prevgroup = [grouped_things[i] for i in group.prevgroup if i != -1 and i < len(grouped_things)]
-                group.nextgroup = [grouped_things[i] for i in group.nextgroup if i != -1 and i < len(grouped_things)]
+                group.prevgroup = [grouped_things[i] for i in group.prevgroup if i != 255 and i < len(grouped_things)]
+                group.nextgroup = [grouped_things[i] for i in group.nextgroup if i != 255 and i < len(grouped_things)]
 
             if len(grouped_things) < 2:
                 continue
@@ -2976,9 +2982,11 @@ class KMP(object):
                 if group in group.prevgroup and len(group.points) == 1:
                     return_string += "Group {0} was self-linked as a previous group. The link has been removed.\n".format(i)
                     group.remove_prev(group)
-                if group in group.nextgroup  and len(group.points) == 1:
+                    group_collection.merge_groups()
+                if group in group.nextgroup and len(group.points) == 1:
                     return_string += "Group {0} was self-linked as a next group. The link has been removed.\n".format(i)
                     group.remove_next(group)
+                    group_collection.merge_groups()
 
         """sort cannonpoints by id"""
         self.cannonpoints.sort( key = lambda h: h.id)

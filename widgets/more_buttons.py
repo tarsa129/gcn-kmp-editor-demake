@@ -269,6 +269,11 @@ class MoreButtons(QtWidgets.QWidget):
             self.add_multi_button("Decrease Scale by 5", "dec_enemy_scale", options[3])
             self.add_multi_button("Increase Scale by 5", "inc_enemy_scale", options[3])
 
+        if 4 in options:
+            self.add_multi_button("Decrease Scale by 5", "dec_enemy_scale", options[4])
+            self.add_multi_button("Increase Scale by 5", "inc_enemy_scale", options[4])
+
+
     def check_options(self, objs):
         #item box check for fill in
         options = {}

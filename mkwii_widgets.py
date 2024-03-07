@@ -1237,11 +1237,10 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                     else:
                         self.models.draw_wireframe_cylinder(object.position, object.rotation, object.scale*50 * 100)
 
-            if vismenu.enemyroutes.is_visible():
-                enemypoints_to_highlight = set()
+            if vismenu.enemyroutes.is_visible(): 
+                #basic enemyroute drawing is the points, lines between points, lines between groups, and area connections
                 all_groups = self.level_file.enemypointgroups.groups
                 selected_groups = [False] * len(all_groups) #used to determine if a group should be selected - use instead of group_selected
-
                 #figure out based on area type 4:
                 type_4_areas = self.level_file.areas.get_type(4)
                 points_to_circle = [ area.enemypoint for area in type_4_areas if (area in select_optimize)  ]
@@ -1253,89 +1252,82 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                     if len(group.points) == 0:
                         continue
 
-                    if group in self.selected:
-                        selected_groups[i] = True
-
                     for j, point in enumerate(group.points):
+                        point_type = "enemypoint"
+                        if i == 0 and j == 0:
+                            point_type = "enemypointfirst"
                         if point in select_optimize:
                             selected_groups[i] = True
-                            glColor3f(0.3, 0.3, 0.3)
-                            self.models.draw_sphere(point.position, point.scale * 50)
-
-                        if point_index in enemypoints_to_highlight:
-                            glColor3f(1.0, 1.0, 0.0)
-                            self.models.draw_sphere(point.position, SPHERE_UNITS)
-
                         if point in points_to_circle:
                             glColor3f(0.0, 0.0, 1.0)
                             self.models.draw_sphere(point.position, 2 * SPHERE_UNITS)
 
-                        point_type = "enemypoint"
-                        if i == 0 and j == 0:
-                            point_type = "enemypointfirst"
-
                         self.models.render_generic_position_colored(point.position, point in select_optimize, point_type, point_scale)
 
-                        enemyaction_colors = [ [1.0, 0.0, 0.0], [0.5, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.5, 0.0]    ]
-                        if point.enemyaction in [1, 2, 3, 4]:
-                            glColor3f(  *enemyaction_colors[point.enemyaction - 1]  )
-                            self.models.draw_cylinder(point.position, 400, 400)
-                        enemyaction2_colors = [ [0.0, 0.0, 0.5], [0.0, 0.0, 0.75], [0.0, 0.0, 0.1]  ]
-                        if point.enemyaction2 in [1, 2, 3]:
-                            glColor3f(  *enemyaction2_colors[point.enemyaction2 - 1]  )
-                            self.models.draw_cylinder(point.position, 600, 600)
-
-
-                        point_index += 1
-
-                    # Draw the connections between each enemy point.
-
+                    glLineWidth(1.0)
                     if selected_groups[i]:
                         glLineWidth(3.0)
 
                     glBegin(GL_LINE_STRIP)
                     glColor3f(*colors_json["EnemyRoutes"][:3])
-                    prev_point = None
                     for point in group.points:
                         pos = point.position
                         glVertex3f(pos.x, -pos.z, pos.y)
                     glEnd()
+
+            if vismenu.enemyroutes.is_visible() and vismenu.enemyroutes.is_visibleplus():
+                #plus drawing are the arrows and enemy settings
+                all_groups = self.level_file.enemypointgroups.groups
+                for i, group in enumerate(all_groups):
+                    if len(group.points) == 0:
+                        continue
+                    for j, point in enumerate(group.points):
+                        enemyaction_colors = [ [1.0, 0.0, 0.0], [0.5, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.5, 0.0]    ]
+                        if point.enemyaction in [1, 2, 3, 4]:
+                            glColor3f(  *enemyaction_colors[point.enemyaction - 1]  )
+                            self.models.draw_cylinder(point.position, 400 * point_scale.x, 400 * point_scale.x)
+                        enemyaction2_colors = [ [0.0, 0.0, 0.5], [0.0, 0.0, 0.75], [0.0, 0.0, 0.1]  ]
+                        if point.enemyaction2 in [1, 2, 3]:
+                            glColor3f(  *enemyaction2_colors[point.enemyaction2 - 1]  )
+                            self.models.draw_cylinder(point.position, 600 * point_scale.x, 600 * point_scale.x)
+
+                    glLineWidth(1.0)
+                    if selected_groups[i]:
+                        glLineWidth(3.0)
+                    glColor3f(*colors_json["EnemyRoutes"][:3])
 
                     prev_point = None
                     for point in group.points:
                         if prev_point is not None:
                             self.draw_arrow_head(prev_point, point.position)
                         prev_point = point.position
-
-                    if selected_groups[i] :
-                        glLineWidth(1.0)
-
+            if vismenu.enemyroutes.is_visible():
+                glColor3f(*colors_json["EnemyRoutes"][:3])
                 #draw connections between groups
                 for i, group in enumerate( all_groups ):
                     if len(group.points) == 0:
                         continue
                     # Draw the connections between each enemy point group.
                     # draw to nextgroup only
-                    prevpoint = group.points[-1]
                     #stores (group index, point)
                     nextpoints = [ (grp, grp.points[0]) for grp in group.nextgroup if len(grp.points) > 0]
                     if len(nextpoints) == 0:
                         continue
 
-                    #draw arrows
-                    glColor3f(*colors_json["EnemyRoutes"][:3])
+                    glLineWidth(1.0)
+                    if selected_groups[i]: #or selected_groups[groupgroup]:
+                        glLineWidth(3.0)
+                    prevpoint = group.points[-1]
                     for group, point in nextpoints:
-                        if selected_groups[i]: #or selected_groups[groupgroup]:
-                            glLineWidth(3.0)
                         glBegin(GL_LINES)
                         glVertex3f(prevpoint.position.x, -prevpoint.position.z, prevpoint.position.y)
                         glVertex3f(point.position.x, -point.position.z, point.position.y)
                         glEnd()
 
+                        glColor3f(*colors_json["EnemyRoutes"][:3])
                         self.draw_arrow_head(prevpoint.position, point.position)
 
-                        if selected_groups[i]: #or selected_groups[group]:
-                            glLineWidth(1.0)
+
             if vismenu.itemroutes.is_visible():
                 enemypoints_to_highlight = set()
 
@@ -1638,7 +1630,11 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
             #go between the groups
             if vismenu.objects.is_visible():
                 for object in self.level_file.objects:
-                    object_scale = point_scale.scale_vec(object.scale)
+                    object_scale = Vector3(1, 1, 1)
+                    if self.editor.render_gobj_scale.isChecked():
+                        object_scale = object.scale
+                    if self.editor.scale_points.isChecked():
+                        object_scale = point_scale.scale_vec(object_scale)
                     self.models.render_generic_position_rotation_colored("objects",
                                                                  object.position, object.rotation,
                                                                  object in select_optimize,
@@ -2007,7 +2003,7 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
                                                                 object.position, object.rotation,
                                                                  object in select_optimize, point_scale)
 
-        if self.level_file is not None:
+        if self.level_file is not None and self.editor.render_area_fill.isChecked():
             normal_areas = (
                 (vismenu.replaycameras.is_visible(), self.level_file.replayareas, "SelectedReplayAreaFill", "ReplayAreaFill"),
                 (vismenu.areas.is_visible(), self.level_file.areas, "SelectedAreaFill", "AreaFill"),
@@ -2161,12 +2157,17 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
 
     def draw_arrow_head(self, startpos, endpos):
         mid_position = (startpos + endpos) / 2
+        
+        scale = 1
+        if self.editor.scale_points.isChecked() and self.mode == MODE_TOPDOWN:
+            scale = self.gizmo_scale / 100
+
         if self.mode == MODE_TOPDOWN:
-            scale = self.zoom_factor / 16
+        #    scale = self.zoom_factor / 16
             up_dir = Vector3(0.0, 1.0, 0.0)
         else:
             up_dir = (mid_position - self.campos).normalized()
-            scale = (mid_position - self.campos).norm() / 8192
+        #    scale = (mid_position - self.campos).norm() / 8192
         self.models.draw_arrow_head(startpos, mid_position, up_dir, scale)
 
     def do_selection(self):
@@ -2383,23 +2384,28 @@ class ObjectViewSelectionToggle(object):
         self.name = name
         self.menuparent = menuparent
 
-        icon = QtGui.QIcon()
-        for size in (16, 22, 24, 28, 32, 40, 48, 64, 80, 96):
-            icon.addPixmap(create_object_type_pixmap(size, directed, colors))
+        #icon = QtGui.QIcon()
+        #for size in (16, 22, 24, 28, 32, 40, 48, 64, 80, 96):
+        #    icon.addPixmap(create_object_type_pixmap(size, directed, colors))
 
         self.action_view_toggle = QtGui.QAction("{0}".format(name), menuparent)
+        self.action_viewplus_toggle = QtGui.QAction("", menuparent)
         self.action_select_toggle = QtGui.QAction("{0} selectable".format(name), menuparent)
         self.action_view_toggle.setCheckable(True)
         self.action_view_toggle.setChecked(True)
-        self.action_view_toggle.setIcon(icon)
+
+        self.action_viewplus_toggle.setCheckable(True)
+        self.action_viewplus_toggle.setChecked(True)
+        #self.action_view_toggle.setIcon(icon)
         self.action_select_toggle.setCheckable(True)
         self.action_select_toggle.setChecked(True)
-        self.action_select_toggle.setIcon(icon)
+        #self.action_select_toggle.setIcon(icon)
 
         self.action_view_toggle.triggered.connect(self.handle_view_toggle)
         self.action_select_toggle.triggered.connect(self.handle_select_toggle)
 
         menuparent.addAction(self.action_view_toggle)
+        menuparent.addAction(self.action_viewplus_toggle)
         menuparent.addAction(self.action_select_toggle)
 
     def change_view_status(self):
@@ -2417,6 +2423,9 @@ class ObjectViewSelectionToggle(object):
             self.action_view_toggle.setChecked(True)
             self.action_select_toggle.setChecked(True)
 
+    def change_viewplus_status(self):
+        self.action_viewplus_toggle.setChecked(not self.is_visibleplus())
+
     def handle_view_toggle(self, val):
         if not val:
             self.action_select_toggle.setChecked(False)
@@ -2429,6 +2438,9 @@ class ObjectViewSelectionToggle(object):
 
     def is_visible(self):
         return self.action_view_toggle.isChecked()
+
+    def is_visibleplus(self):
+        return self.action_viewplus_toggle.isChecked()
 
     def is_selectable(self):
         return self.action_select_toggle.isChecked()
@@ -2479,6 +2491,7 @@ class FilterViewMenu(QtWidgets.QMenu):
 
         for action in self.get_entries():
             action.action_view_toggle.triggered.connect(self.emit_update)
+            action.action_viewplus_toggle.triggered.connect(self.emit_update)
             action.action_select_toggle.triggered.connect(self.emit_update)
 
     def get_entries(self):

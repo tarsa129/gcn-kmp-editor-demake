@@ -34,9 +34,12 @@ class VisiSelecButtons(QtWidgets.QWidget):
         self.hlayout = QtWidgets.QHBoxLayout()
         self.visbutton = ToggleButton("V", status[0])
         self.visbutton.clicked.connect(lambda: self.emit_change(0))
+        self.visplusbutton = ToggleButton("V", status[0])
+        self.visplusbutton.clicked.connect(lambda: self.emit_change(2))
         self.selbutton = ToggleButton("S", status[1])
         self.selbutton.clicked.connect(lambda: self.emit_change(1))
         self.hlayout.addWidget(self.visbutton)
+        self.hlayout.addWidget(self.visplusbutton)
         self.hlayout.addWidget(self.selbutton)
         self.setLayout(self.hlayout)
 
@@ -56,6 +59,11 @@ class VisiSelecButtons(QtWidgets.QWidget):
             else: #turning selbutton true
                 self.visbutton.set_state(True)
                 self.selbutton.set_state(True)
+        elif index == 2:
+            if self.visplusbutton.status:
+                self.visplusbutton.set_state(False)
+            else:
+                self.visplusbutton.set_state(True)
 
         self.emitter.emit(self.element, index)
 

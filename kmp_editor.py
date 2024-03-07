@@ -697,12 +697,26 @@ class GenEditor(QtWidgets.QMainWindow):
 
         self.view_menu.addSeparator()
 
-        self.scale_points = QtGui.QAction("Scale Points in Viewport", self)
-        self.scale_points.setCheckable(True)
-        self.scale_points.setChecked(self.editorconfig.get("scale_viewpoints") == "True")
-        self.scale_points.triggered.connect(lambda: self.on_editing_setting_changed(
-            "scale_viewpoints",  self.scale_points) )
-        self.edit_menu.addAction(self.scale_points)
+        def create_checkable_action(action_name, action_config):
+            new_action = QtGui.QAction(action_name)
+            new_action.setCheckable(True)
+            new_action.setChecked(self.editorconfig.get(action_config) == "True")
+            new_action.triggered.connect(lambda: self.on_editing_setting_changed(
+                action_config,  new_action) )
+            return new_action
+
+        self.renderer_menu = self.view_menu.addMenu('Rendering Options')
+        self.render_area_fill = create_checkable_action("Render Area Fill", "render_area_fill")
+        self.renderer_menu.addAction(self.render_area_fill)
+
+        self.scale_points = create_checkable_action("Dynamically Scale Points", "scale_viewpoints")
+        self.renderer_menu.addAction(self.scale_points)
+
+        self.render_arrows = create_checkable_action("Show Arrows in Paths", "render_arrows")
+        self.renderer_menu.addAction(self.render_arrows)
+
+        self.render_gobj_scale = create_checkable_action("Show Object Scale", "scale_gobj_entries")
+        self.renderer_menu.addAction(self.render_gobj_scale)
 
         # --------------- Generation
         self.generation_menu = QtWidgets.QMenu(self.menubar)
@@ -1000,6 +1014,8 @@ class GenEditor(QtWidgets.QMainWindow):
                 toggle.change_view_status()
             elif index == 1:
                 toggle.change_select_status()
+            elif index == 2:
+                toggle.change_viewplus_status()
             self.on_filter_update()
 
     def on_filter_update(self):
@@ -1007,6 +1023,8 @@ class GenEditor(QtWidgets.QMainWindow):
         for object_toggle in self.visibility_menu.get_entries():
             if not object_toggle.action_view_toggle.isChecked():
                 filters.append(object_toggle.action_view_toggle.text())
+            if not object_toggle.action_viewplus_toggle.isChecked():
+                filters.append(object_toggle.action_viewplus_toggle.text())
             if not object_toggle.action_select_toggle.isChecked():
                 filters.append(object_toggle.action_select_toggle.text())
 
@@ -1378,11 +1396,11 @@ class GenEditor(QtWidgets.QMainWindow):
                 self.level_file.write(kmp_file_obj)
 
             clear_temp_folder()
-            self.root_directory.extract_to(dump_path)
+            self.root_directory.extract_to(full_path)
 
             self.set_has_unsaved_changes(False)
             self.statusbar.showMessage("Saved to {0}".format(self.current_gen_path))
-            szs_path = dump_path = os.path.join(os.getcwd(), "lib\szsdump")
+            szs_path = os.path.join(os.getcwd(), "lib\szsdump")
             os.system(f'wszst create "{szs_path}" -d "{self.current_gen_path}.szs" -o' )
         else:
             gen_path = self.current_gen_path[:-3] + "backup.kmp"

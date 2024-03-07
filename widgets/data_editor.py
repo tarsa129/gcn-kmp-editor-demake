@@ -45,7 +45,7 @@ def get_cmn_obj(objs, kmp_file=None):
 
 def load_parameter_names(objectid):
     if (objectid is None) or (not objectid in OBJECTNAMES):
-            return None
+        return None
     name = OBJECTNAMES[objectid]
     path = os.path.join("object_parameters", name+".json")
     with open(path, "r") as f:
@@ -390,7 +390,6 @@ class DataEditor(QtWidgets.QWidget):
         combobox.setSizePolicy(policy)
         #create the layout and label
         layout = self.create_labeled_widget(self, text, combobox)
-
         def item_selected(index):
             val = combobox.itemData(index)
             if "." in attribute:
@@ -897,7 +896,7 @@ class CheckpointEdit(DataEditor):
 class RouteEdit(DataEditor):
     def setup_widgets(self):
         self.smooth = self.add_dropdown_input("Sharp/Smooth motion", "smooth", POTI_Setting1)
-        self.cyclic = self.add_dropdown_input("Cyclic/Back and forth motion", "cycle", POTI_Setting2)
+        self.cyclic = self.add_dropdown_input("Cyclic/Back and forth motion", "cyclic", POTI_Setting2)
 
     def update_data(self):
         obj: Route = get_cmn_obj(self.bound_to)
