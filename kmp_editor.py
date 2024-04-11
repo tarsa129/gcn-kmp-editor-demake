@@ -1724,6 +1724,7 @@ class GenEditor(QtWidgets.QMainWindow):
             obj.create_route(False)
 
             new_point = obj.route_obj.pointclass.new()
+            new_point.unk1 = obj.unk1
             self.object_to_be_added = [new_point, obj.route_obj, -1 ]
 
             self.pik_control.button_add_object.setChecked(True)

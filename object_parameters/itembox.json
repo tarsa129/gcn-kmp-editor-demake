@@ -36,8 +36,8 @@
     ],
     "Widgets": [
         null,
-        null,
-        null,
+        ["combobox", {"Default": 0, "Banana": 1, "Mushroom": 2, "Triple Mushrooms": 3, "Star": 4, "Triple Green Shells": 5, "Banana/Mushroom": 6, "Green Shell": 7, "Bob-omb": 8, "Red Shell": 9, "Mega Mushroom": 10, "Thunder Cloud": 11, "Star / Mushroom": 12}],
+        ["combobox", {"Default": 0, "Banana": 1, "Mushroom": 2, "Triple Mushrooms": 3, "Star": 4, "Triple Green Shells": 5, "Banana/Mushroom": 6, "Green Shell": 7, "Bob-omb": 8, "Red Shell": 9, "Mega Mushroom": 10, "Thunder Cloud": 11, "Star / Mushroom": 12}],
         "checkbox",
         null,
         null,

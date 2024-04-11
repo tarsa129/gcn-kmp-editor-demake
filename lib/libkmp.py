@@ -349,9 +349,9 @@ class PointGroups(object):
                 return
             group = self.groups[i]
             #if this group only has one next, and the nextgroup only has one prev, they can be merged
-            print(f"group {hex(i)} with numnuext of {group.num_next()}, {group.nextgroup}")
+            #print(f"group {hex(i)} with numnuext of {group.num_next()}, {group.nextgroup}")
             if group.num_next() == 1 and group.nextgroup[0].num_prev() == 1:
-                print(f"merge group {hex(i)}")
+                #print(f"merge group {hex(i)}")
                 if first_group in group.nextgroup:
                     i += 1 #do not merge with the start
                     continue
