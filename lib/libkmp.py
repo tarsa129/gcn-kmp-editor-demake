@@ -1759,7 +1759,8 @@ class KartStartPoint(RotatedObject):
         position = Vector3.from_file(f)
         rotation = Rotation.from_file(f)
         kstart = cls(position, rotation)
-        kstart.playerid = read_uint8(f)
+        kstart.playerid = read_uint16(f)
+        read_uint16(f)
         return kstart
 
     def write(self,f):
