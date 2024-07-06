@@ -2580,7 +2580,7 @@ class CannonPoint(RotatedObject):
 
         return self
 
-class MissionPoint(object):
+class MissionPoint(PositionedObject):
     def __init__(self, position):
         self.position = position
         self.rotation = Rotation.default()
