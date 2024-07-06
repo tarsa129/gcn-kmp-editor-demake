@@ -10,6 +10,15 @@ from lib.vectors import Vector3
 from widgets.data_editor_options import *
 import traceback
 
+def do_stuff():
+    raise Exception("test exception")
+
+def print_traceback():
+    try:
+        do_stuff()
+    except Exception:
+        print(traceback.format_exc())
+
 def set_attr_mult(objs, attr, value):
     for obj in objs:
         if isinstance(obj, MapObjects):
@@ -20,6 +29,9 @@ def set_attr_mult(objs, attr, value):
         else:
             setattr(obj, attr, value)
 def set_subattrs_mult(objs, attrs, value):
+    if len(attrs) == 1:
+        set_attr_mult(objs, attrs[0], value)
+
     for obj in objs:
         element = obj
         for attr in attrs[:-1]:
@@ -452,14 +464,7 @@ class DataEditor(QtWidgets.QWidget):
 
             spinbox.setRange(min_val, max_val)
 
-            if attribute is not None:
-                input_edited = create_setter(spinbox, self.bound_to, attribute, subattr, self.catch_text_update, isFloat=False)
-            else:
-                def sub_input_edited():
-                    value = spinbox.value()
-                    set_attr_mult(self.bound_to, value)
-                input_edited = sub_input_edited
-
+            input_edited = create_setter(spinbox, self.bound_to, attribute, subattr, self.catch_text_update, isFloat=False)
             spinbox.editingFinished.connect(input_edited)
             spinboxes.append(spinbox)
 
@@ -645,12 +650,16 @@ def create_setter_list(lineedit, bound_to, attribute, index):
     return input_edited
 
 def create_setter(lineedit, bound_to, attribute, subattr, update3dview, isFloat):
+    attrs_list = [subattr]
+    if attribute is not None:
+        attrs_list.insert(0, attribute)
+
     if isFloat:
         def input_edited(text=None):
             text = lineedit.text() if not text else text
             #mainattr = getattr(get_cmn_obj(bound_to), attribute)
 
-            set_subattrs_mult(bound_to, [attribute, subattr], float(text))
+            set_subattrs_mult(bound_to, attrs_list, float(text))
             update3dview()
         return input_edited
     else:
@@ -658,7 +667,7 @@ def create_setter(lineedit, bound_to, attribute, subattr, update3dview, isFloat)
             text = lineedit.text() if not text else text
             #mainattr = getattr(get_cmn_obj(bound_to), attribute)
 
-            set_subattrs_mult(bound_to, [attribute, subattr], int(text))
+            set_subattrs_mult(bound_to, attrs_list, int(text))
             update3dview()
         return input_edited
 
