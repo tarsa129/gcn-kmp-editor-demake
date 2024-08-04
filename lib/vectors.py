@@ -474,7 +474,7 @@ class Rotation(Vector3):
 
     def get_euler(self):
 
-        vec = [self.x % 360, self.y % 360 , self.z % 360]
+        vec = [self.x, self.y , self.z]
 
         return vec
 

@@ -1,21 +1,20 @@
-updates:
+improve rendering
+* flesh out options for full/partial view
 
-improve area rendering
-* setting to disable fill on areas
-* setting to scale cylinder indicators separate from points
-* move these settings to "view"
+functionality
+* up and down parent select
+* route point data editor should instead be the route editor with setFocus for the relevant point
 
-improve rendering in general
-* setting to render / not render arrows
+bugs
+* fix copy/paste of areas with different types
+* when disabling a single use group, disable the group and the flag. 
 
-separate out effect vs collision areas
+presentation
+* improve json files
+* give descriptions for single kcl group usage
 
-improve json files
-arrow key route point selection with objects -  up vs down
-- down to go to the child object, up to go to a parent object
-route point data editor should be tabbed + should list all data points if route point settings used + better support for unused values
 
-new features:
+backlog
 handle that enemy point switching object
 area scale handlers
 add option to select x to y points
