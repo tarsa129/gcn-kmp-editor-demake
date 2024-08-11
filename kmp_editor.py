@@ -1529,7 +1529,7 @@ class GenEditor(QtWidgets.QMainWindow):
         self.pathsconfig["collision"] = filepath
         editor_config = self.configuration["editor"]
         hidden_coltypes = set(int(t) for t in editor_config.get("hidden_collision_types", "").split(",") if t)
-        hidden_colgroups = set(int(t) for t in editor_config.get("hidden_collision_types", "").split(",") if t)
+        hidden_colgroups = set(int(t) for t in editor_config.get("hidden_collision_type_groups", "").split(",") if t)
 
         CollisionModel.hidden_coltypes = hidden_coltypes
         CollisionModel.hidden_colgroups = hidden_colgroups
