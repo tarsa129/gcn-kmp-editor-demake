@@ -1650,6 +1650,8 @@ class KMPMapViewer(QtOpenGLWidgets.QOpenGLWidget):
 
                 objs_to_highlight = set()
 
+                glLineWidth(1.0)
+
                 for i, route in enumerate(objectroutes):
 
                     selected = route in routes_to_highlight
