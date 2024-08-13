@@ -1397,6 +1397,7 @@ class GenEditor(QtWidgets.QMainWindow):
                 self.level_file.write(kmp_file_obj)
 
             clear_temp_folder()
+            self.root_directory.name = ""
             self.root_directory.extract_to(full_path)
 
             self.set_has_unsaved_changes(False)
