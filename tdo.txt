@@ -2,12 +2,11 @@ improve rendering
 * flesh out options for full/partial view
 
 functionality
-* up and down parent select
 * route point data editor should instead be the route editor with setFocus for the relevant point
 
 bugs
 * fix copy/paste of areas with different types
-* when disabling a single use group, disable the group and the flag. 
+* szs saving
 
 presentation
 * improve json files

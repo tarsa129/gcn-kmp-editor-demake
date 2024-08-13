@@ -10,6 +10,7 @@ from math import sin, cos, atan2
 import json
 from PIL import Image
 
+
 from PySide6 import QtCore, QtGui, QtWidgets
 
 import opengltext
@@ -2547,14 +2548,7 @@ class GenEditor(QtWidgets.QMainWindow):
 
         self.update_3d()
 
-    def select_prev_objects(self):
-        if self.level_view.connecting_mode == "linedraw":
-            if self.level_view.linedraw_count > 1:
-                self.level_view.linedraw_count -= 1
-            self.update_3d()
-            return
-
-        selected, positions, rotations = self.level_file.get_prev_points(self.level_view.selected)
+    def change_selection(self, selected, positions, rotations):
         if selected:
             if self.level_view.shift_is_pressed:
                 self.level_view.selected.extend(selected)
@@ -2570,6 +2564,17 @@ class GenEditor(QtWidgets.QMainWindow):
         self.level_view.do_redraw()
         self.level_view.select_update.emit()
 
+
+    def select_prev_objects(self):
+        if self.level_view.connecting_mode == "linedraw":
+            if self.level_view.linedraw_count > 1:
+                self.level_view.linedraw_count -= 1
+            self.update_3d()
+            return
+
+        selected, positions, rotations = self.level_file.get_prev_points(self.level_view.selected)
+        self.change_selection(selected, positions, rotations)
+
     def select_next_objects(self):
         if self.level_view.connecting_mode == "linedraw":
             self.level_view.linedraw_count += 1
@@ -2577,20 +2582,16 @@ class GenEditor(QtWidgets.QMainWindow):
             return
 
         selected, positions, rotations = self.level_file.get_next_points(self.level_view.selected)
-        if selected:
-            if self.level_view.shift_is_pressed:
-                self.level_view.selected.extend(selected)
-                self.level_view.selected_positions.extend(positions)
-                self.level_view.selected_rotations.extend(rotations)
-            else:
-                self.level_view.selected =  selected
-                self.level_view.selected_positions = positions
-                self.level_view.selected_rotations = rotations
+        self.change_selection(selected, positions, rotations)
 
-            self.level_view.gizmo.move_to_average(self.level_view.selected,
-                                                self.level_view.selected_positions)
-        self.level_view.do_redraw()
-        self.level_view.select_update.emit()
+    def select_child_objects(self):
+        selected, positions, rotations = self.level_file.get_children(self.level_view.selected)
+        self.change_selection(selected, positions, rotations)
+
+    def select_parent_objects(self):
+        selected, positions, rotations = self.level_file.get_parents(self.level_view.selected)
+        self.change_selection(selected, positions, rotations)
+
 
     def update_3d(self):
         self.level_view.gizmo.move_to_average(self.level_view.selected,

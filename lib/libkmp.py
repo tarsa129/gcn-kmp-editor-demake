@@ -5,6 +5,7 @@ from .vectors import Vector3, Vector2, Rotation, Vector3Relative
 from collections import OrderedDict
 from io import BytesIO
 from copy import deepcopy, copy
+from itertools import chain
 
 import os
 
@@ -179,8 +180,12 @@ class RotatedObject(PositionedObject):
             setattr(rotation, axis, value)
         self.rotation = rotation
 
+class ParentObject():
 
-class RoutedObject(PositionedObject):
+    def get_child(self):
+        return [None]
+
+class RoutedObject(PositionedObject, ParentObject):
     def __init__(self, position):
         PositionedObject.__init__(self, position)
         self.route_obj = None
@@ -217,6 +222,11 @@ class RoutedObject(PositionedObject):
             self.route_obj.append(other.route_obj)
 
         return self
+
+    def get_child(self):
+        if self.route_obj is not None and len(self.route_obj.points) > 0:
+            return self.route_obj.points
+        return [None]
 
 
 class KMPPoint(PositionedObject):
@@ -2004,6 +2014,13 @@ class Area(RoutedObject, RotatedObject):
             if __class__.level_file.object_areas.boo_obj is None:
                 __class__.level_file.object_areas.boo_obj = MapObject.new(396)
 
+    def get_child(self):
+        if self.type == 0:
+            return [self.camera]
+        elif self.type == 3:
+            return super().get_child()
+        return [None]
+
     def __iadd__(self, other):
         self = RoutedObject.__iadd__(self, other)
         self.rotation += other.rotation
@@ -2129,6 +2146,7 @@ class ReplayAreas(Areas):
             selected_points.extend(route.get_selected())
         selected_points.extend( [camera for camera in self.get_cameras() if camera.selected])
         return selected_points
+
 # Section 8
 # Cameras
 class FOV:
@@ -2561,7 +2579,7 @@ class CannonPoint(RotatedObject):
     def write(self, f):
         self.write_position(f)
         self.rotation.write(f)
-        print(self.shoot_effect)
+        #print(self.shoot_effect)
         f.write(pack(">Hh", self.id, self.shoot_effect) )
 
 
@@ -3754,6 +3772,33 @@ class KMP(object):
                     prev_positions.append(prev_point.position)
         return prev_points, prev_positions, prev_rotations
 
+    def get_children(self, selected):
+        parent_objects = [x for x in selected if isinstance(x, ParentObject)]
+
+        child_objects = [x.get_child() for x in parent_objects]
+        child_objects = list(set(chain.from_iterable(child_objects)))
+        child_objects = [x for x in child_objects if x is not None]
+
+        positions = [child.position for child in child_objects]
+        rotations = [child.rotation for child in child_objects if isinstance(child, RotatedObject)]
+
+        return child_objects, positions, rotations
+
+    def get_parents(self, selected):
+        parent_objects = []
+
+        for selected_obj in selected:
+            if isinstance(selected_obj, ReplayCamera):
+                parent_objects.extend( [area for area in self.replayareas if area.camera == selected_obj] )
+            elif isinstance(selected_obj, RoutePoint):
+                route = self.get_route_of_point(selected_obj)
+                parent_objects.extend(self.route_used_by(route))
+
+        positions = [child.position for child in parent_objects]
+        rotations = [child.rotation for child in parent_objects if isinstance(child, RotatedObject)]
+
+        return parent_objects, positions, rotations
+
     def set_selected(self, points, state=True):
 
         #set everything unselected
@@ -3856,7 +3901,6 @@ class KMP(object):
                     items.append(control)
                 if control.next_control in items:
                     sep_graph[1] = control.next_control.id
-            
 
         print("make all paths unique")
 
